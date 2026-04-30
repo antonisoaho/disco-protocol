@@ -1,0 +1,113 @@
+@use 'sass:map';
+@use '../variables' as *;
+
+// BEM: auth-panel — email/password gate (mobile-first, 44px tap targets).
+
+.auth-panel {
+  width: 100%;
+  max-width: 22rem;
+  margin-inline: auto;
+}
+
+.auth-panel__title {
+  margin: 0 0 calc(#{$space-unit} * 2);
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: $color-text;
+}
+
+.auth-panel__hint {
+  margin: 0 0 calc(#{$space-unit} * 4);
+  font-size: 0.875rem;
+  color: $color-text-muted;
+  line-height: 1.45;
+}
+
+.auth-panel__form {
+  display: flex;
+  flex-direction: column;
+  gap: calc(#{$space-unit} * 4);
+}
+
+.auth-panel__field {
+  display: flex;
+  flex-direction: column;
+  gap: calc(#{$space-unit} * 2);
+}
+
+.auth-panel__label {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: $color-text;
+}
+
+.auth-panel__input {
+  width: 100%;
+  min-height: 44px;
+  padding: calc(#{$space-unit} * 3);
+  font-size: 1rem;
+  color: $color-text;
+  background: $color-bg;
+  border: 1px solid $color-border;
+  border-radius: $radius-md;
+  box-sizing: border-box;
+
+  &:focus {
+    outline: none;
+    border-color: $color-text-muted;
+  }
+
+  &:focus-visible {
+    outline: 2px solid $color-text;
+    outline-offset: 2px;
+  }
+}
+
+.auth-panel__error {
+  margin: 0;
+  font-size: 0.875rem;
+  color: map.get($score-color, double-bogey-plus);
+}
+
+.auth-panel__submit {
+  min-height: 44px;
+  padding: calc(#{$space-unit} * 3);
+  font-size: 1rem;
+  font-weight: 600;
+  color: #fff;
+  background: map.get($score-color, birdie);
+  border: none;
+  border-radius: $radius-md;
+  cursor: pointer;
+
+  &:disabled {
+    opacity: 0.65;
+    cursor: not-allowed;
+  }
+
+  &:focus-visible {
+    outline: 2px solid map.get($score-color, eagle);
+    outline-offset: 2px;
+  }
+}
+
+.auth-panel__toggle {
+  margin-top: calc(#{$space-unit} * 4);
+  padding: calc(#{$space-unit} * 2);
+  width: 100%;
+  min-height: 44px;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: map.get($score-color, birdie);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 4px;
+
+  &:focus-visible {
+    outline: 2px solid map.get($score-color, birdie);
+    outline-offset: 2px;
+    border-radius: $radius-sm;
+  }
+}
