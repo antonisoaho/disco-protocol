@@ -1,0 +1,52 @@
+@use '../variables' as *;
+
+// BEM block: app shell (mobile-first). Workers: extend with new __elements / --modifiers only.
+// Safe area: pad the shell so fixed headers/toolbars respect notches (iOS / Android gestures).
+
+.app-shell {
+  min-height: 100svh;
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+  padding-top: env(safe-area-inset-top, 0);
+  padding-right: env(safe-area-inset-right, 0);
+  padding-bottom: env(safe-area-inset-bottom, 0);
+  padding-left: env(safe-area-inset-left, 0);
+}
+
+.app-shell__header {
+  flex-shrink: 0;
+  padding: calc(#{$space-unit} * 4) calc(#{$space-unit} * 4) calc(#{$space-unit} * 2);
+  border-bottom: 1px solid $color-border;
+  background: $color-surface;
+}
+
+.app-shell__title {
+  margin: 0;
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: $color-text;
+  letter-spacing: -0.02em;
+}
+
+.app-shell__tagline {
+  margin: calc(#{$space-unit} * 1) 0 0;
+  font-size: 0.875rem;
+  color: $color-text-muted;
+}
+
+.app-shell__main {
+  flex: 1 1 auto;
+  padding: calc(#{$space-unit} * 4);
+  max-width: 42rem;
+  width: 100%;
+  margin-inline: auto;
+}
+
+.app-shell__placeholder {
+  margin: 0;
+  font-size: 0.9375rem;
+  line-height: 1.5;
+  color: $color-text-muted;
+}

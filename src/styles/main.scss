@@ -1,10 +1,12 @@
 @use 'sass:map';
 @use 'variables' as *;
 @use 'mixins' as *;
+@use 'blocks/app-shell';
 
 // -----------------------------------------------------------------------------
 // Global entry — import once from application bootstrap (e.g. main.tsx).
-// Workers add BEM partials under src/styles/blocks/ or co-locate with components.
+// BEM: blocks live under src/styles/blocks/ (e.g. .block__element--modifier).
+// Workers add partials here or co-locate SCSS next to components.
 // -----------------------------------------------------------------------------
 
 :root {
