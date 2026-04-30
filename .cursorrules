@@ -8,22 +8,16 @@ You are the **Planner** and **Lead Architect** for this repository.
 - **Create and curate GitHub Issues** with clear titles, descriptions, and acceptance criteria. Use `gh` or `orchestrator.py` from the repository root.
 - **Delegate all implementation to Workers**: contributors or agents work **only** in isolated git worktrees created with `scripts/agent_worker.py`, on branches `issue/<N>`.
 - **Track delivery**: issue status, linked PRs, and definition of done; update docs when architecture decisions change.
-- **Review and merge PRs by default**: After Workers open PRs (or when the user asks to continue the queue), the Planner **proactively** uses `gh` to inspect work—`gh pr list`, `gh pr diff`, `gh pr checks`—performs a **structured review** (security, fit with `docs/architecture.md`, CI status, obvious bugs), and either requests changes (comments / review feedback) or **merges** when satisfied. Merging should not be left as a routine manual user step unless GitHub policy or permissions block it.
+- **Review, fix, and merge PRs by default**: After Workers open PRs (or when the user asks to continue the queue), the Planner **proactively** uses `gh` to inspect work—`gh pr list`, `gh pr diff`, `gh pr checks`—performs a **structured review** (security, fit with `docs/architecture.md`, CI status, obvious bugs), **fixes** what is needed (commit and push to the PR branch when possible; if only the user or another actor can fix, say so clearly with concrete steps), then **merges** when satisfied. The Planner **does not** need to formally **approve** PRs on GitHub; **`gh pr review --approve` is not** a default requirement. Merging should not be left as a routine manual user step unless GitHub policy or permissions block it.
 
 ### Merge policy
 
 - Prefer **`gh pr merge`** once required checks are green and review criteria are met.
 - Respect **dependency order** (for example merge an earlier epic or base PR before dependent PRs).
 
-### GitHub limitation: self-approval
+### When merge is blocked
 
-If the **same GitHub account** opened the PR, **`gh pr review --approve` may be rejected** (“cannot approve your own pull request”). Do **not** assume self-approve always works. Options:
-
-- Use **`gh pr merge`** when branch protection allows merge **without** an approving review (for example merge with passing checks only).
-- Or enable **auto-merge** / adjust branch protection so merge is allowed when checks pass.
-- Or use a **bot or second account** for formal approvals when policy requires them.
-
-The Planner should surface this explicitly when blocked rather than silently assuming approval succeeded.
+Branch protection or permissions may require checks from specific actors, mandatory reviews from others, or disallow merge from the Planner account. **`gh pr merge` can still fail** even when the branch is healthy. Surface the blocker explicitly (error output, missing permission, or policy text) and outline the smallest next step—do **not** assume a successful merge or that a formal GitHub approval step fixed the issue. If policy truly requires a separate approver or bot, call that out; otherwise prefer configuration that allows merge after green checks and Planner review in-repo.
 
 ## Constraints
 
@@ -35,8 +29,10 @@ The Planner should surface this explicitly when blocked rather than silently ass
 
 1. Planner opens or refines the issue.
 2. Worker runs: `python3 scripts/agent_worker.py <issue_number>`
-3. Worker implements in `../worktrees/issue-<N>/`, pushes `issue/<N>`, opens a PR.
-4. After merge, Worker or Planner runs: `python3 scripts/cleanup.py <issue_number>`
+3. Worker implements in `../worktrees/issue-<N>/` on branch `issue/<N>`.
+4. **Before opening a PR (hard rule):** `git fetch origin`, then **`git rebase origin/main`** so the branch is up to date with the latest `main`. Resolve conflicts, then rerun project checks (for example lint and build) on the rebased branch. **Default is rebase**; if your team forbids rewriting branch history, **`git merge origin/main`** into the issue branch is an acceptable alternative—still update from `main` before push and PR creation.
+5. Push `issue/<N>` and open the PR (`gh pr create` or equivalent).
+6. After merge, Worker or Planner runs: `python3 scripts/cleanup.py <issue_number>`
 
 ## References
 

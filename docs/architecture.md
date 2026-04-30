@@ -85,10 +85,10 @@ Security rules must enforce: only participants and owner mutate scores; only adm
 
 1. Planner breaks work into GitHub Issues (epics below).
 2. Worker: `python3 scripts/agent_worker.py <N>`.
-3. PR from `issue/<N>`; review + CI.
+3. Before opening a PR: `git fetch origin` and **`git rebase origin/main`** (or merge `origin/main` if the team disallows rebase); then push and open PR from `issue/<N>`; CI must pass on the updated branch.
 4. Merge → `python3 scripts/cleanup.py <N>`.
 
-By default the **Planner** uses GitHub CLI to review open PRs and merge when checks and criteria are satisfied, unless repository policy blocks automated merge from the same actor (see `.cursorrules` for self-approval limits).
+By default the **Planner** uses GitHub CLI to **review**, **fix** if needed, and **merge** when checks and criteria are satisfied—**without** requiring a formal GitHub PR approval step—unless repository policy blocks merge (see `.cursorrules`).
 
 ## 9. Epic backlog (GitHub Issues)
 
