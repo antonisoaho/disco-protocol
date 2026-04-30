@@ -15,14 +15,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    return onAuthStateChanged(auth, async (u) => {
-      try {
-        if (u) await ensureUserProfile(u)
-      } catch (err) {
-        console.error('ensureUserProfile failed', err)
-      } finally {
-        setUser(u)
-        setLoading(false)
+    return onAuthStateChanged(auth, (u) => {
+      // Update React state immediately; do not block on Firestore or the UI
+      // stays on the sign-in form after a successful Firebase sign-in.
+      setUser(u)
+      setLoading(false)
+      if (u) {
+        void ensureUserProfile(u).catch((err) => {
+          console.error('ensureUserProfile failed', err)
+        })
       }
     })
   }, [])
