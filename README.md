@@ -19,7 +19,7 @@ Plan → Issue → Worktree → PR → Review → Merge → Cleanup
 2. **Issue** — Track on GitHub (`orchestrator.py` or `gh`).
 3. **Worktree** — `python3 scripts/agent_worker.py <N>` → `../worktrees/issue-<N>/`, branch `issue/<N>`.
 4. **PR** — Push and open a pull request.
-5. **Review / merge** — CI and code review.
+5. **Review / merge** — By default the **Planner** drives this with `gh`: inspect diffs and checks, do a structured review (security, architecture fit, CI, obvious bugs), request changes or **merge** when satisfied. The human maintainer is optional unless branch protection or permissions require their action (for example when the same account cannot self-approve; see `.cursorrules`).
 6. **Cleanup** — `python3 scripts/cleanup.py <N>` after the PR is merged.
 
 All orchestration docs and comments are in **English**.
