@@ -1,3 +1,5 @@
+import { useState } from 'react'
+import { CoursePicker } from '../courses/CoursePicker'
 import { AuthPanel } from './AuthPanel'
 import { useAuth } from './useAuth'
 import { ScoringPanel } from '../scoring/ScoringPanel'
@@ -8,6 +10,7 @@ import { ScoringPanel } from '../scoring/ScoringPanel'
  */
 export function ProtectedApp() {
   const { user, loading, signOut } = useAuth()
+  const [signOutError, setSignOutError] = useState<string | null>(null)
 
   if (loading) {
     return (
@@ -42,15 +45,30 @@ export function ProtectedApp() {
             {user.displayName || user.email}
           </p>
         </div>
-        <button type="button" className="app-shell__sign-out" onClick={() => void signOut()}>
+        <button
+          type="button"
+          className="app-shell__sign-out"
+          onClick={() => {
+            setSignOutError(null)
+            void signOut().catch(() => {
+              setSignOutError('Could not sign out. Try again.')
+            })
+          }}
+        >
           Sign out
         </button>
       </header>
+      {signOutError ? (
+        <p className="app-shell__placeholder" role="alert">
+          {signOutError}
+        </p>
+      ) : null}
       <main className="app-shell__main">
         <p className="app-shell__placeholder">
-          Signed in. Your profile is stored at <code className="app-shell__code">users/{user.uid}</code> in
-          Firestore. Shared rounds and offline scoring are enabled below (Scoring epic #4).
+          Signed in. Your profile is at <code className="app-shell__code">users/{user.uid}</code>. Pick a course for
+          the next round, then use shared rounds and offline scoring below.
         </p>
+        <CoursePicker />
         <ScoringPanel user={user} />
       </main>
     </div>

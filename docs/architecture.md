@@ -88,6 +88,8 @@ Security rules must enforce: only participants and owner mutate scores; only adm
 3. PR from `issue/<N>`; review + CI.
 4. Merge → `python3 scripts/cleanup.py <N>`.
 
+By default the **Planner** uses GitHub CLI to review open PRs and merge when checks and criteria are satisfied, unless repository policy blocks automated merge from the same actor (see `.cursorrules` for self-approval limits).
+
 ## 9. Epic backlog (GitHub Issues)
 
 | # | Epic |

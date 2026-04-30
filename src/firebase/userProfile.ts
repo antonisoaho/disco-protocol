@@ -1,5 +1,5 @@
+import { updateProfile, type User } from 'firebase/auth'
 import { doc, getDoc, serverTimestamp, setDoc, type Timestamp } from 'firebase/firestore'
-import type { User } from 'firebase/auth'
 import { db } from './firestore'
 
 export type UserProfileDoc = {
@@ -28,4 +28,8 @@ export async function ensureUserProfile(authUser: User): Promise<void> {
     bio: '',
     createdAt: serverTimestamp(),
   })
+
+  if (!authUser.displayName?.trim()) {
+    await updateProfile(authUser, { displayName })
+  }
 }

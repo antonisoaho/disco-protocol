@@ -1,20 +1,38 @@
+import { FirebaseError } from 'firebase/app'
 import { type FormEvent, useState } from 'react'
 import { useAuth } from './useAuth'
 
-function formatAuthError(message: string): string {
-  if (message.includes('auth/invalid-credential') || message.includes('auth/wrong-password')) {
+function formatAuthError(err: unknown): string {
+  const code = err instanceof FirebaseError ? err.code : null
+  const message = err instanceof Error ? err.message : ''
+
+  if (
+    code === 'auth/invalid-credential' ||
+    code === 'auth/wrong-password' ||
+    code === 'auth/invalid-login-credentials' ||
+    code === 'auth/user-not-found' ||
+    message.includes('auth/invalid-credential') ||
+    message.includes('auth/wrong-password') ||
+    message.includes('auth/invalid-login-credentials')
+  ) {
     return 'Invalid email or password.'
   }
-  if (message.includes('auth/email-already-in-use')) {
+  if (code === 'auth/email-already-in-use' || message.includes('auth/email-already-in-use')) {
     return 'That email is already registered. Try signing in.'
   }
-  if (message.includes('auth/weak-password')) {
+  if (code === 'auth/weak-password' || message.includes('auth/weak-password')) {
     return 'Password should be at least 6 characters.'
   }
-  if (message.includes('auth/invalid-email')) {
+  if (code === 'auth/invalid-email' || message.includes('auth/invalid-email')) {
     return 'Enter a valid email address.'
   }
-  return message.replace(/^Firebase:\s*/i, '').replace(/\s*\(auth\/[^)]+\)\s*\.?$/, '')
+  if (code === 'auth/too-many-requests' || message.includes('auth/too-many-requests')) {
+    return 'Too many attempts. Wait a bit and try again.'
+  }
+  if (code === 'auth/network-request-failed' || message.includes('auth/network-request-failed')) {
+    return 'Network error. Check your connection and try again.'
+  }
+  return message.replace(/^Firebase:\s*/i, '').replace(/\s*\(auth\/[^)]+\)\s*\.?$/, '') || 'Something went wrong.'
 }
 
 export function AuthPanel() {
@@ -36,8 +54,7 @@ export function AuthPanel() {
         await signUpWithEmail(email, password)
       }
     } catch (err) {
-      const msg = err instanceof Error ? err.message : 'Something went wrong.'
-      setError(formatAuthError(msg))
+      setError(formatAuthError(err))
     } finally {
       setBusy(false)
     }

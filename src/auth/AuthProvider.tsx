@@ -13,17 +13,31 @@ import { AuthContext } from './auth-context'
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
+  const [isAdmin, setIsAdmin] = useState(false)
 
   useEffect(() => {
-    return onAuthStateChanged(auth, async (u) => {
-      try {
-        if (u) await ensureUserProfile(u)
-      } catch (err) {
-        console.error('ensureUserProfile failed', err)
-      } finally {
-        setUser(u)
-        setLoading(false)
+    return onAuthStateChanged(auth, (u) => {
+      // Update React state immediately; do not block on Firestore or the UI
+      // stays on the sign-in form after a successful Firebase sign-in.
+      setUser(u)
+      setLoading(false)
+      if (u) {
+        void ensureUserProfile(u).catch((err) => {
+          console.error('ensureUserProfile failed', err)
+        })
       }
+      if (!u) {
+        setIsAdmin(false)
+        return
+      }
+      void u
+        .getIdTokenResult()
+        .then((r) => {
+          setIsAdmin(r.claims.admin === true)
+        })
+        .catch(() => {
+          setIsAdmin(false)
+        })
     })
   }, [])
 
@@ -43,11 +57,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     () => ({
       user,
       loading,
+      isAdmin,
       signInWithEmail,
       signUpWithEmail,
       signOut,
     }),
-    [user, loading, signInWithEmail, signUpWithEmail, signOut],
+    [user, loading, isAdmin, signInWithEmail, signUpWithEmail, signOut],
   )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
