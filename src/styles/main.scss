@@ -2,6 +2,7 @@
 @use 'variables' as *;
 @use 'mixins' as *;
 @use 'blocks/app-shell';
+@use 'blocks/auth-panel';
 
 // -----------------------------------------------------------------------------
 // Global entry — import once from application bootstrap (e.g. main.tsx).

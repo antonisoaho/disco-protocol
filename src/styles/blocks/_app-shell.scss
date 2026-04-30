@@ -1,3 +1,4 @@
+@use 'sass:map';
 @use '../variables' as *;
 
 // BEM block: app shell (mobile-first). Workers: extend with new __elements / --modifiers only.
@@ -20,6 +21,14 @@
   padding: calc(#{$space-unit} * 4) calc(#{$space-unit} * 4) calc(#{$space-unit} * 2);
   border-bottom: 1px solid $color-border;
   background: $color-surface;
+
+  &--row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: calc(#{$space-unit} * 3);
+  }
 }
 
 .app-shell__title {
@@ -34,6 +43,10 @@
   margin: calc(#{$space-unit} * 1) 0 0;
   font-size: 0.875rem;
   color: $color-text-muted;
+
+  &--compact {
+    margin-top: calc(#{$space-unit} * 1);
+  }
 }
 
 .app-shell__main {
@@ -42,6 +55,13 @@
   max-width: 42rem;
   width: 100%;
   margin-inline: auto;
+
+  &--centered {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+  }
 }
 
 .app-shell__placeholder {
@@ -49,4 +69,30 @@
   font-size: 0.9375rem;
   line-height: 1.5;
   color: $color-text-muted;
+}
+
+.app-shell__sign-out {
+  flex-shrink: 0;
+  align-self: center;
+  padding: calc(#{$space-unit} * 2) calc(#{$space-unit} * 4);
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: $color-text;
+  background: $color-bg;
+  border: 1px solid $color-border;
+  border-radius: $radius-md;
+  cursor: pointer;
+  min-height: 44px;
+
+  &:focus-visible {
+    outline: 2px solid map.get($score-color, birdie);
+    outline-offset: 2px;
+  }
+}
+
+.app-shell__code {
+  font-family: $font-family-mono;
+  font-size: 0.8125rem;
+  word-break: break-all;
+  color: $color-text;
 }
