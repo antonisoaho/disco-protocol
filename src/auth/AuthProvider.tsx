@@ -16,25 +16,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isAdmin, setIsAdmin] = useState(false)
 
   useEffect(() => {
-    return onAuthStateChanged(auth, async (u) => {
-      try {
-        if (u) await ensureUserProfile(u)
-      } catch (err) {
-        console.error('ensureUserProfile failed', err)
-      } finally {
-        setUser(u)
-        setLoading(false)
+    return onAuthStateChanged(auth, (u) => {
+      // Update React state immediately; do not block on Firestore or the UI
+      // stays on the sign-in form after a successful Firebase sign-in.
+      setUser(u)
+      setLoading(false)
+      if (u) {
+        void ensureUserProfile(u).catch((err) => {
+          console.error('ensureUserProfile failed', err)
+        })
       }
       if (!u) {
         setIsAdmin(false)
         return
       }
-      try {
-        const r = await u.getIdTokenResult()
-        setIsAdmin(r.claims.admin === true)
-      } catch {
-        setIsAdmin(false)
-      }
+      void u
+        .getIdTokenResult()
+        .then((r) => {
+          setIsAdmin(r.claims.admin === true)
+        })
+        .catch(() => {
+          setIsAdmin(false)
+        })
     })
   }, [])
 
