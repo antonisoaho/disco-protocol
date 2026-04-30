@@ -26,11 +26,11 @@ All orchestration docs and comments are in **English**.
 
 ## Firebase Hosting (merge to `main`)
 
-Merging into **`main`** or **`master`** runs **`.github/workflows/firebase-hosting-merge.yml`**, which builds the app and deploys **`firebase deploy --only hosting`**. Enable **Hosting** for your Firebase project in the [console](https://console.firebase.google.com) before the first deploy succeeds.
+Merging into **`main`** or **`master`** (when triggered paths change) runs **`.github/workflows/firebase-hosting-deploy.yml`**, which builds the app and deploys **`firebase deploy --only hosting`**. Enable **Hosting** for your Firebase project in the [console](https://console.firebase.google.com) before the first deploy succeeds.
 
 **Secrets:** **`FIREBASE_SERVICE_ACCOUNT`** (full service account JSON with Hosting deploy permission) is **required**; the workflow exits with an error if it is missing or empty. The build step uses the same **`VITE_*`** variables as **CI** (see below); unset values use placeholders so the job still runs.
 
-Default Firebase project id in **`.firebaserc`** is **`disco-protocol`**. If your real project id differs (for example **`disc-protocol`**), change **`default`** there—never commit **`.env.local`** or service account JSON.
+The **`default`** project id in **`.firebaserc`** must match your Firebase / GCP project id (this deployment uses **`disc-protocol`**, not the npm package name **`disco-protocol`**). Never commit **`.env.local`** or service account JSON.
 
 **Local:** `npm run deploy:hosting` (runs `build` then Hosting deploy; requires `firebase login` or compatible credentials).
 
