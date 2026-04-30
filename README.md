@@ -1,4 +1,4 @@
-# disco-protocol
+# disc-protocol
 
 **Mobile-first disc golf social web app** (React + Vite, Firebase, PWA). Product direction and data design live in **`docs/architecture.md`**. The **Planner** works in the main clone; **Workers** implement in **git worktrees** (see `.cursorrules`).
 
@@ -31,7 +31,7 @@ Merging into **`main`** or **`master`** (when triggered paths change) runs **`.g
 
 **Secrets:** **`FIREBASE_SERVICE_ACCOUNT`** (full service account JSON with Hosting deploy permission) is **required**; the workflow exits with an error if it is missing or empty. The build step uses the same **`VITE_*`** variables as **CI** (see below); unset values use placeholders so the job still runs.
 
-The **`default`** project id in **`.firebaserc`** must match your Firebase / GCP project id (this deployment uses **`disc-protocol`**, not the npm package name **`disco-protocol`**). Never commit **`.env.local`** or service account JSON.
+The **`default`** project id in **`.firebaserc`** must match your Firebase / GCP project id (**`disc-protocol`** here). If your real project id differs, change **`default`** there—never commit **`.env.local`** or service account JSON.
 
 **Local:** `npm run deploy:hosting` (runs `build` then Hosting deploy; requires `firebase login` or compatible credentials).
 

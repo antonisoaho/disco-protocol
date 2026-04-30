@@ -94,12 +94,12 @@ By default the **Planner** uses GitHub CLI to **review**, **fix** if needed, and
 
 | # | Epic |
 |---|------|
-| [1](https://github.com/antonisoaho/disco-protocol/issues/1) | Scaffolding — Firebase shell, PWA, mobile-first baseline |
-| [2](https://github.com/antonisoaho/disco-protocol/issues/2) | Authentication & user profiles |
-| [3](https://github.com/antonisoaho/disco-protocol/issues/3) | Course engine, templates & admin-only course ops |
-| [4](https://github.com/antonisoaho/disco-protocol/issues/4) | Scoring engine, shared rounds & offline scoring |
-| [5](https://github.com/antonisoaho/disco-protocol/issues/5) | Social graph & following timeline |
-| [6](https://github.com/antonisoaho/disco-protocol/issues/6) | Analytics — H2H, ± par, hole-by-hole |
+| [1](https://github.com/antonisoaho/disc-protocol/issues/1) | Scaffolding — Firebase shell, PWA, mobile-first baseline |
+| [2](https://github.com/antonisoaho/disc-protocol/issues/2) | Authentication & user profiles |
+| [3](https://github.com/antonisoaho/disc-protocol/issues/3) | Course engine, templates & admin-only course ops |
+| [4](https://github.com/antonisoaho/disc-protocol/issues/4) | Scoring engine, shared rounds & offline scoring |
+| [5](https://github.com/antonisoaho/disc-protocol/issues/5) | Social graph & following timeline |
+| [6](https://github.com/antonisoaho/disc-protocol/issues/6) | Analytics — H2H, ± par, hole-by-hole |
 
 Admin behavior is implemented inside the **Course** epic unless split later.
 
