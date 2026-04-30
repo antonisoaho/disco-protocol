@@ -1,5 +1,6 @@
 import { AuthPanel } from './AuthPanel'
 import { useAuth } from './useAuth'
+import { ScoringPanel } from '../scoring/ScoringPanel'
 
 /**
  * Placeholder “protected shell”: everything inside assumes a signed-in user.
@@ -47,9 +48,10 @@ export function ProtectedApp() {
       </header>
       <main className="app-shell__main">
         <p className="app-shell__placeholder">
-          Signed in. Timeline, rounds, and courses will plug into this shell in later epics. Your profile is stored
-          at <code className="app-shell__code">users/{user.uid}</code> in Firestore.
+          Signed in. Your profile is stored at <code className="app-shell__code">users/{user.uid}</code> in
+          Firestore. Shared rounds and offline scoring are enabled below (Scoring epic #4).
         </p>
+        <ScoringPanel user={user} />
       </main>
     </div>
   )

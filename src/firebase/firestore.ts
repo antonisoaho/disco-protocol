@@ -8,18 +8,18 @@ import {
 import { firebaseApp } from './app'
 
 /**
- * Firestore offline cache: enable with `VITE_FIRESTORE_PERSISTENCE=true` once Auth
- * and multi-tab behavior are validated (see Auth epic). Default is memory cache for CI and fresh clones.
+ * IndexedDB-backed cache for offline scoring (Scoring epic). Opt out with `VITE_FIRESTORE_PERSISTENCE=false`
+ * (e.g. tests or debugging). See `docs/scoring-concurrency-offline.md`.
  */
 function createFirestore(): Firestore {
-  if (import.meta.env.VITE_FIRESTORE_PERSISTENCE === 'true') {
-    return initializeFirestore(firebaseApp, {
-      localCache: persistentLocalCache({
-        tabManager: persistentMultipleTabManager(),
-      }),
-    })
+  if (import.meta.env.VITE_FIRESTORE_PERSISTENCE === 'false') {
+    return getFirestore(firebaseApp)
   }
-  return getFirestore(firebaseApp)
+  return initializeFirestore(firebaseApp, {
+    localCache: persistentLocalCache({
+      tabManager: persistentMultipleTabManager(),
+    }),
+  })
 }
 
 export const db: Firestore = createFirestore()

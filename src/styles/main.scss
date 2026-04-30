@@ -3,6 +3,7 @@
 @use 'mixins' as *;
 @use 'blocks/app-shell';
 @use 'blocks/auth-panel';
+@use 'blocks/scoring-panel';
 
 // -----------------------------------------------------------------------------
 // Global entry — import once from application bootstrap (e.g. main.tsx).
