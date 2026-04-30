@@ -24,6 +24,45 @@ Plan → Issue → Worktree → PR → Review → Merge → Cleanup
 
 All orchestration docs and comments are in **English**.
 
+## Firebase Hosting (merge to `main`)
+
+Merging into **`main`** or **`master`** runs **`.github/workflows/firebase-hosting-merge.yml`**, which builds the app and deploys **`firebase deploy --only hosting`**. Enable **Hosting** for your Firebase project in the [console](https://console.firebase.google.com) before the first deploy succeeds.
+
+**Secrets:** **`FIREBASE_SERVICE_ACCOUNT`** (full service account JSON with Hosting deploy permission) is **required**; the workflow exits with an error if it is missing or empty. The build step uses the same **`VITE_*`** variables as **CI** (see below); unset values use placeholders so the job still runs.
+
+Default Firebase project id in **`.firebaserc`** is **`disco-protocol`**. If your real project id differs (for example **`disc-protocol`**), change **`default`** there—never commit **`.env.local`** or service account JSON.
+
+**Local:** `npm run deploy:hosting` (runs `build` then Hosting deploy; requires `firebase login` or compatible credentials).
+
+## GitHub Actions secrets (CI and Hosting)
+
+**CI** (`.github/workflows/ci.yml`) and **Hosting deploy** read these optional **`VITE_*`** repository secrets; when missing, the build uses placeholders so forks without secrets still pass.
+
+| Secret | Purpose |
+|--------|---------|
+| `VITE_FIREBASE_API_KEY` | Firebase web API key |
+| `VITE_FIREBASE_AUTH_DOMAIN` | Auth domain (e.g. `project.firebaseapp.com`) |
+| `VITE_FIREBASE_PROJECT_ID` | GCP / Firebase project id |
+| `VITE_FIREBASE_STORAGE_BUCKET` | Default storage bucket |
+| `VITE_FIREBASE_MESSAGING_SENDER_ID` | FCM sender id |
+| `VITE_FIREBASE_APP_ID` | Firebase web app id |
+
+**Hosting only:** `FIREBASE_SERVICE_ACCOUNT` — JSON key for deploy (never commit this file).
+
+**CLI** (trusted machine; values from `.env.local`, not committed):
+
+```bash
+gh secret set VITE_FIREBASE_API_KEY --body "your-api-key"
+gh secret set VITE_FIREBASE_AUTH_DOMAIN --body "your-project.firebaseapp.com"
+gh secret set VITE_FIREBASE_PROJECT_ID --body "your-project-id"
+gh secret set VITE_FIREBASE_STORAGE_BUCKET --body "your-project.appspot.com"
+gh secret set VITE_FIREBASE_MESSAGING_SENDER_ID --body "123456789012"
+gh secret set VITE_FIREBASE_APP_ID --body "1:123:web:abc"
+gh secret set FIREBASE_SERVICE_ACCOUNT < path/to/serviceAccount.json
+```
+
+**GitHub UI:** Repository **Settings → Secrets and variables → Actions**. Names are case-sensitive.
+
 ## Scripts
 
 | Script | Purpose |
@@ -128,4 +167,5 @@ npm ci
 npm run dev
 npm run build
 npm run lint
+npm run deploy:hosting   # build + Firebase Hosting (needs Firebase auth)
 ```
