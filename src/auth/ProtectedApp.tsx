@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { CoursePicker } from '../courses/CoursePicker'
 import { AuthPanel } from './AuthPanel'
 import { useAuth } from './useAuth'
+import { ScoringPanel } from '../scoring/ScoringPanel'
 
 /**
  * Placeholder “protected shell”: everything inside assumes a signed-in user.
@@ -65,9 +66,10 @@ export function ProtectedApp() {
       <main className="app-shell__main">
         <p className="app-shell__placeholder">
           Signed in. Your profile is at <code className="app-shell__code">users/{user.uid}</code>. Pick a course for
-          the next round (templates live under each course in Firestore).
+          the next round, then use shared rounds and offline scoring below.
         </p>
         <CoursePicker />
+        <ScoringPanel user={user} />
       </main>
     </div>
   )

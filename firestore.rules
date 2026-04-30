@@ -1,7 +1,8 @@
 rules_version = '2';
 
-// Deploy: `firebase deploy --only firestore:rules` (Firebase CLI, project selected).
-// Admin: Firebase Auth custom claim `admin: true` gates canonical course delete/rename and course updates.
+// Deploy: `firebase deploy --only firestore:rules,firestore:indexes` (Firebase CLI, project selected).
+// Course epic (#3): authenticated reads; users create courses/templates; admins gate canonical updates/deletes.
+// Scoring epic (#4): rounds readable per visibility + participants; scores mutable by owner + participants.
 
 service cloud.firestore {
   match /databases/{database}/documents {
@@ -12,6 +13,41 @@ service cloud.firestore {
 
     function isAdmin() {
       return signedIn() && request.auth.token.admin == true;
+    }
+
+    function validVisibility(v) {
+      return v == 'public' || v == 'private' || v == 'unlisted';
+    }
+
+    function isRoundParticipant(data) {
+      return signedIn() && request.auth.uid in data.participantIds;
+    }
+
+    function isRoundOwner(data) {
+      return signedIn() && request.auth.uid == data.ownerId;
+    }
+
+    function canReadRound(data) {
+      return isRoundParticipant(data)
+        || (signedIn() && data.visibility == 'public');
+    }
+
+    function roundImmutableFieldsUnchanged() {
+      return request.resource.data.ownerId == resource.data.ownerId
+        && request.resource.data.courseId == resource.data.courseId
+        && request.resource.data.templateId == resource.data.templateId
+        && request.resource.data.startedAt == resource.data.startedAt
+        && request.resource.data.createdAt == resource.data.createdAt;
+    }
+
+    function participantIdsChangeAllowed() {
+      return request.resource.data.participantIds == resource.data.participantIds
+        || isRoundOwner(resource.data);
+    }
+
+    function visibilityChangeAllowed() {
+      return request.resource.data.visibility == resource.data.visibility
+        || isRoundOwner(resource.data);
     }
 
     match /users/{userId} {
@@ -51,23 +87,32 @@ service cloud.firestore {
     }
 
     match /rounds/{roundId} {
-      allow read: if signedIn() && resource.data.ownerId == request.auth.uid;
+      allow read: if canReadRound(resource.data);
 
       allow create: if signedIn()
         && request.resource.data.ownerId == request.auth.uid
-        && request.resource.data.courseId is string
-        && request.resource.data.templateId is string
-        && request.resource.data.status in ['in_progress', 'completed']
-        && request.resource.data.holeOverrides is map
-        && request.resource.data.startedAt is timestamp;
+        && request.auth.uid in request.resource.data.participantIds
+        && validVisibility(request.resource.data.visibility)
+        && request.resource.data.keys().hasAll([
+          'ownerId',
+          'participantIds',
+          'courseId',
+          'templateId',
+          'visibility',
+          'startedAt',
+          'completedAt',
+          'holeScores',
+          'createdAt',
+          'updatedAt',
+        ]);
 
-      allow update: if signedIn()
-        && resource.data.ownerId == request.auth.uid
-        && request.resource.data.ownerId == resource.data.ownerId
-        && request.resource.data.courseId == resource.data.courseId
-        && request.resource.data.templateId == resource.data.templateId;
+      allow update: if (isRoundOwner(resource.data) || isRoundParticipant(resource.data))
+        && roundImmutableFieldsUnchanged()
+        && participantIdsChangeAllowed()
+        && visibilityChangeAllowed()
+        && validVisibility(request.resource.data.visibility);
 
-      allow delete: if signedIn() && resource.data.ownerId == request.auth.uid;
+      allow delete: if false;
     }
   }
 }

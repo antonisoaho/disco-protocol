@@ -1,0 +1,136 @@
+@use 'sass:map';
+@use '../variables' as *;
+
+.scoring-panel {
+  margin-top: calc(#{$space-unit} * 4);
+  padding: calc(#{$space-unit} * 4);
+  border: 1px solid $color-border;
+  border-radius: $radius-md;
+  background: $color-surface;
+}
+
+.scoring-panel__title {
+  margin: 0 0 calc(#{$space-unit} * 3);
+  font-size: 1.05rem;
+}
+
+.scoring-panel__section {
+  margin-bottom: calc(#{$space-unit} * 5);
+
+  &:last-child {
+    margin-bottom: 0;
+  }
+}
+
+.scoring-panel__label {
+  display: block;
+  margin-bottom: calc(#{$space-unit} * 2);
+  font-size: 0.85rem;
+  color: $color-text-muted;
+}
+
+.scoring-panel__row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: calc(#{$space-unit} * 2);
+  align-items: flex-end;
+  margin-bottom: calc(#{$space-unit} * 3);
+}
+
+.scoring-panel__field {
+  display: flex;
+  flex-direction: column;
+  gap: calc(#{$space-unit} * 1);
+  min-width: 6.5rem;
+
+  &--grow {
+    flex: 1;
+    min-width: 12rem;
+  }
+}
+
+.scoring-panel__input,
+.scoring-panel__select {
+  padding: calc(#{$space-unit} * 2) calc(#{$space-unit} * 3);
+  border-radius: $radius-sm;
+  border: 1px solid $color-border;
+  font: inherit;
+  background: $color-bg;
+  color: $color-text;
+}
+
+.scoring-panel__button {
+  padding: calc(#{$space-unit} * 2) calc(#{$space-unit} * 4);
+  border-radius: $radius-sm;
+  border: 1px solid $color-border;
+  background: $color-bg;
+  color: $color-text;
+  font: inherit;
+  cursor: pointer;
+
+  &:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+  }
+
+  &--inline {
+    margin-left: calc(#{$space-unit} * 2);
+  }
+
+  &--primary {
+    border-color: map.get($score-color, birdie);
+    background: map.get($score-color, birdie);
+    color: #fff;
+  }
+}
+
+.scoring-panel__error {
+  margin: 0 0 calc(#{$space-unit} * 3);
+  color: map.get($score-color, double-bogey-plus);
+  font-size: 0.9rem;
+}
+
+.scoring-panel__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: calc(#{$space-unit} * 2);
+}
+
+.scoring-panel__list-item {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: calc(#{$space-unit} * 2);
+  padding: calc(#{$space-unit} * 3);
+  border: 1px solid $color-border;
+  border-radius: $radius-sm;
+  background: $color-bg;
+}
+
+.scoring-panel__badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 2.25rem;
+  padding: calc(#{$space-unit} * 1) calc(#{$space-unit} * 2);
+  border-radius: $radius-sm;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #fff;
+
+  @each $name, $value in $score-color {
+    &--#{$name} {
+      background: $value;
+    }
+  }
+}
+
+.scoring-panel__muted {
+  margin: 0;
+  font-size: 0.85rem;
+  color: $color-text-muted;
+}
