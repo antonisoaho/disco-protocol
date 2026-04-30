@@ -52,9 +52,41 @@ python3 scripts/cleanup.py 12
 - **SCSS** under `src/styles/`: `_variables.scss` (semantic **score** colors), `_mixins.scss`, `main.scss`
 - **BEM** for UI components (`.block__element--modifier`)
 
+## GitHub Actions secrets (CI)
+
+The **CI** workflow reads the same **`VITE_*`** names as local development. Set them on the repository (or fork) so `npm run build` in Actions uses your real Firebase web config; when a secret is missing or empty, CI falls back to **placeholders** so fork PRs without secrets still build.
+
+If you add a **Firebase Hosting deploy** workflow later, use the same `VITE_*` secrets for its build step plus **`FIREBASE_SERVICE_ACCOUNT`** (service account JSON with Hosting deploy permission).
+
+| Secret | Purpose |
+|--------|---------|
+| `VITE_FIREBASE_API_KEY` | Firebase web API key |
+| `VITE_FIREBASE_AUTH_DOMAIN` | Auth domain (e.g. `project.firebaseapp.com`) |
+| `VITE_FIREBASE_PROJECT_ID` | GCP / Firebase project id |
+| `VITE_FIREBASE_STORAGE_BUCKET` | Default storage bucket |
+| `VITE_FIREBASE_MESSAGING_SENDER_ID` | FCM sender id |
+| `VITE_FIREBASE_APP_ID` | Firebase web app id |
+
+**Hosting deploy** also requires **`FIREBASE_SERVICE_ACCOUNT`**: JSON for a service account with Hosting deploy permission (never commit this file).
+
+**CLI** (from a trusted machine; use values from your local `.env.local`, not committed):
+
+```bash
+gh secret set VITE_FIREBASE_API_KEY --body "your-api-key"
+gh secret set VITE_FIREBASE_AUTH_DOMAIN --body "your-project.firebaseapp.com"
+gh secret set VITE_FIREBASE_PROJECT_ID --body "your-project-id"
+gh secret set VITE_FIREBASE_STORAGE_BUCKET --body "your-project.appspot.com"
+gh secret set VITE_FIREBASE_MESSAGING_SENDER_ID --body "123456789012"
+gh secret set VITE_FIREBASE_APP_ID --body "1:123:web:abc"
+# Deploy only:
+gh secret set FIREBASE_SERVICE_ACCOUNT < path/to/serviceAccount.json
+```
+
+**GitHub UI:** Repository **Settings → Secrets and variables → Actions → New repository secret**. Name must match the table exactly (case-sensitive).
+
 ## Firebase (local)
 
-Copy [`.env.example`](.env.example) to **`.env.local`** and paste your Firebase web config (`VITE_*` keys). Vite only exposes variables prefixed with `VITE_`. The file is gitignored. Names match the Firebase console **Project settings → Your apps → Web app** SDK snippet (`apiKey` → `VITE_FIREBASE_API_KEY`, and so on); see [`src/firebase/app.ts`](src/firebase/app.ts).
+Copy [`.env.example`](.env.example) to **`.env.local`** and paste your Firebase web config (`VITE_*` keys). Vite only exposes variables prefixed with `VITE_`. The file is gitignored (`*.local`, `.env`, `.env.local`). Names match the Firebase console **Project settings → Your apps → Web app** SDK snippet (`apiKey` → `VITE_FIREBASE_API_KEY`, and so on); see [`src/firebase/app.ts`](src/firebase/app.ts).
 
 ### Authentication
 

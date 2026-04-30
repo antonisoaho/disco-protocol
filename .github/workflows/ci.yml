@@ -1,8 +1,11 @@
 name: CI
 
-# Build uses optional repository secrets for VITE_* when set; otherwise CI placeholders
-# (fork PRs still pass). `npm run build` does not run Firebase client init, so a green
-# build does not prove keys are valid—wrong keys surface at runtime as API_KEY_INVALID.
+# Optional Actions secrets (Settings → Secrets and variables → Actions).
+# When unset or empty, the Build step uses placeholders so fork PRs still pass CI:
+#   VITE_FIREBASE_API_KEY, VITE_FIREBASE_AUTH_DOMAIN, VITE_FIREBASE_PROJECT_ID,
+#   VITE_FIREBASE_STORAGE_BUCKET, VITE_FIREBASE_MESSAGING_SENDER_ID, VITE_FIREBASE_APP_ID
+# `npm run build` does not run Firebase client init, so a green build does not prove keys
+# are valid—wrong keys surface at runtime as API_KEY_INVALID.
 
 on:
   push:
