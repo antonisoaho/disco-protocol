@@ -54,11 +54,34 @@ python3 scripts/cleanup.py 12
 
 ## Firebase (local)
 
-Copy [`.env.example`](.env.example) to **`.env.local`** and paste your Firebase web config (`VITE_*` keys). Vite only exposes variables prefixed with `VITE_`. The file is gitignored.
+Copy [`.env.example`](.env.example) to **`.env.local`** and paste your Firebase web config (`VITE_*` keys). Vite only exposes variables prefixed with `VITE_`. The file is gitignored. Names match the Firebase console **Project settings → Your apps → Web app** SDK snippet (`apiKey` → `VITE_FIREBASE_API_KEY`, and so on); see [`src/firebase/app.ts`](src/firebase/app.ts).
 
 ### Authentication
 
 - **Primary sign-in:** email / password (Firebase Auth). OAuth providers can be enabled later in the Firebase console and wired in the client.
+
+### Troubleshooting Identity Toolkit `API_KEY_INVALID`
+
+Typical causes:
+
+1. **Wrong or placeholder `apiKey`** — Copy the web app config again from the Firebase console into `.env.local` (or into GitHub Actions secrets for any workflow that **builds the app users load**, for example Hosting on merge). CI may build successfully with placeholder `VITE_*` values because `readFirebaseConfig()` runs in the browser, not during `npm run build`.
+2. **API key restrictions (GCP)** — In [Google Cloud Console → APIs & Services → Credentials](https://console.cloud.google.com/apis/credentials), open the browser key used by Firebase. For HTTP referrer restrictions, include your Firebase Hosting origin(s), `http://localhost:*`, and any dev URL you use. Ensure the **Identity Toolkit API** is enabled for the project and the key is allowed to call it (or use “Don’t restrict key” temporarily to confirm).
+3. **Stale deploy** — After updating secrets or `.env.local`, rebuild and redeploy the client.
+
+## GitHub Actions (CI)
+
+[`.github/workflows/ci.yml`](.github/workflows/ci.yml) passes optional repository secrets **`VITE_FIREBASE_*`** into the build when set (Settings → Secrets and variables → Actions). If they are missing, the workflow uses **CI placeholders** so forked PRs still pass. That artifact is fine for lint/build checks only; do **not** ship it to end users without replacing env with real Firebase web config.
+
+If you add a **Firebase Hosting** (or other) deploy workflow that runs `npm run build` before upload, configure the same **`VITE_*`** secrets there for production—**without** falling back to placeholders—or the live site can show **`API_KEY_INVALID`** at sign-in.
+
+```bash
+gh secret set VITE_FIREBASE_API_KEY --body "your-web-api-key"
+gh secret set VITE_FIREBASE_AUTH_DOMAIN --body "your-project.firebaseapp.com"
+gh secret set VITE_FIREBASE_PROJECT_ID --body "your-project-id"
+gh secret set VITE_FIREBASE_STORAGE_BUCKET --body "your-project.appspot.com"
+gh secret set VITE_FIREBASE_MESSAGING_SENDER_ID --body "123456789012"
+gh secret set VITE_FIREBASE_APP_ID --body "1:123:web:abc"
+```
 - **Profiles:** on first successful sign-in, the app creates `users/{uid}` in Firestore with `displayName`, `photoUrl`, `bio`, and `createdAt` (see `src/firebase/userProfile.ts`).
 - **Security rules:** [`firestore.rules`](firestore.rules) restrict `users/{userId}` to the signed-in owner. Deploy with `firebase deploy --only firestore:rules` after `firebase login` and project selection.
 
