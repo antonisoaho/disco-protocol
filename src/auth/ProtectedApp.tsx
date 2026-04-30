@@ -1,3 +1,4 @@
+import { CoursePicker } from '../courses/CoursePicker'
 import { AuthPanel } from './AuthPanel'
 import { useAuth } from './useAuth'
 
@@ -47,9 +48,10 @@ export function ProtectedApp() {
       </header>
       <main className="app-shell__main">
         <p className="app-shell__placeholder">
-          Signed in. Timeline, rounds, and courses will plug into this shell in later epics. Your profile is stored
-          at <code className="app-shell__code">users/{user.uid}</code> in Firestore.
+          Signed in. Your profile is at <code className="app-shell__code">users/{user.uid}</code>. Pick a course for
+          the next round (templates live under each course in Firestore).
         </p>
+        <CoursePicker />
       </main>
     </div>
   )

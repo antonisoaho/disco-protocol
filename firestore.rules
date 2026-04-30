@@ -1,12 +1,73 @@
 rules_version = '2';
 
 // Deploy: `firebase deploy --only firestore:rules` (Firebase CLI, project selected).
-// Course epic: gate destructive course ops with request.auth.token.admin == true.
+// Admin: Firebase Auth custom claim `admin: true` gates canonical course delete/rename and course updates.
 
 service cloud.firestore {
   match /databases/{database}/documents {
+
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function isAdmin() {
+      return signedIn() && request.auth.token.admin == true;
+    }
+
     match /users/{userId} {
-      allow read, write: if request.auth != null && request.auth.uid == userId;
+      allow read, write: if signedIn() && request.auth.uid == userId;
+    }
+
+    match /courses/{courseId} {
+      allow read: if signedIn();
+
+      allow create: if signedIn()
+        && request.resource.data.createdBy == request.auth.uid
+        && request.resource.data.name is string
+        && request.resource.data.slug is string
+        && request.resource.data.createdAt is timestamp;
+
+      // Canonical fields live on the course doc; only admins may update or delete.
+      allow update, delete: if isAdmin();
+
+      match /templates/{templateId} {
+        allow read: if signedIn();
+
+        allow create: if signedIn()
+          && request.resource.data.createdBy == request.auth.uid
+          && request.resource.data.label is string
+          && request.resource.data.holes is list
+          && request.resource.data.source in ['official', 'crowd', 'derived']
+          && request.resource.data.createdAt is timestamp;
+
+        allow update: if signedIn() && (
+          isAdmin() || resource.data.createdBy == request.auth.uid
+        );
+
+        allow delete: if signedIn() && (
+          isAdmin() || resource.data.createdBy == request.auth.uid
+        );
+      }
+    }
+
+    match /rounds/{roundId} {
+      allow read: if signedIn() && resource.data.ownerId == request.auth.uid;
+
+      allow create: if signedIn()
+        && request.resource.data.ownerId == request.auth.uid
+        && request.resource.data.courseId is string
+        && request.resource.data.templateId is string
+        && request.resource.data.status in ['in_progress', 'completed']
+        && request.resource.data.holeOverrides is map
+        && request.resource.data.startedAt is timestamp;
+
+      allow update: if signedIn()
+        && resource.data.ownerId == request.auth.uid
+        && request.resource.data.ownerId == resource.data.ownerId
+        && request.resource.data.courseId == resource.data.courseId
+        && request.resource.data.templateId == resource.data.templateId;
+
+      allow delete: if signedIn() && resource.data.ownerId == request.auth.uid;
     }
   }
 }

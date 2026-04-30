@@ -13,6 +13,7 @@ import { AuthContext } from './auth-context'
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
+  const [isAdmin, setIsAdmin] = useState(false)
 
   useEffect(() => {
     return onAuthStateChanged(auth, async (u) => {
@@ -23,6 +24,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       } finally {
         setUser(u)
         setLoading(false)
+      }
+      if (!u) {
+        setIsAdmin(false)
+        return
+      }
+      try {
+        const r = await u.getIdTokenResult()
+        setIsAdmin(r.claims.admin === true)
+      } catch {
+        setIsAdmin(false)
       }
     })
   }, [])
@@ -43,11 +54,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     () => ({
       user,
       loading,
+      isAdmin,
       signInWithEmail,
       signUpWithEmail,
       signOut,
     }),
-    [user, loading, signInWithEmail, signUpWithEmail, signOut],
+    [user, loading, isAdmin, signInWithEmail, signUpWithEmail, signOut],
   )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
