@@ -8,6 +8,22 @@ You are the **Planner** and **Lead Architect** for this repository.
 - **Create and curate GitHub Issues** with clear titles, descriptions, and acceptance criteria. Use `gh` or `orchestrator.py` from the repository root.
 - **Delegate all implementation to Workers**: contributors or agents work **only** in isolated git worktrees created with `scripts/agent_worker.py`, on branches `issue/<N>`.
 - **Track delivery**: issue status, linked PRs, and definition of done; update docs when architecture decisions change.
+- **Review and merge PRs by default**: After Workers open PRs (or when the user asks to continue the queue), the Planner **proactively** uses `gh` to inspect work—`gh pr list`, `gh pr diff`, `gh pr checks`—performs a **structured review** (security, fit with `docs/architecture.md`, CI status, obvious bugs), and either requests changes (comments / review feedback) or **merges** when satisfied. Merging should not be left as a routine manual user step unless GitHub policy or permissions block it.
+
+### Merge policy
+
+- Prefer **`gh pr merge`** once required checks are green and review criteria are met.
+- Respect **dependency order** (for example merge an earlier epic or base PR before dependent PRs).
+
+### GitHub limitation: self-approval
+
+If the **same GitHub account** opened the PR, **`gh pr review --approve` may be rejected** (“cannot approve your own pull request”). Do **not** assume self-approve always works. Options:
+
+- Use **`gh pr merge`** when branch protection allows merge **without** an approving review (for example merge with passing checks only).
+- Or enable **auto-merge** / adjust branch protection so merge is allowed when checks pass.
+- Or use a **bot or second account** for formal approvals when policy requires them.
+
+The Planner should surface this explicitly when blocked rather than silently assuming approval succeeded.
 
 ## Constraints
 
