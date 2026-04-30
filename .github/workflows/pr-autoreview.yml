@@ -1,0 +1,90 @@
+name: PR auto-review
+
+# Runs lint + build on pull requests and posts a single sticky summary comment.
+# Does not replace human review or branch-protection required reviewers.
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+concurrency:
+  group: pr-autoreview-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Use Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "lts/*"
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Build
+        env:
+          VITE_FIREBASE_API_KEY: ${{ secrets.VITE_FIREBASE_API_KEY || 'ci-placeholder' }}
+          VITE_FIREBASE_AUTH_DOMAIN: ${{ secrets.VITE_FIREBASE_AUTH_DOMAIN || 'ci-placeholder.firebaseapp.com' }}
+          VITE_FIREBASE_PROJECT_ID: ${{ secrets.VITE_FIREBASE_PROJECT_ID || 'ci-placeholder' }}
+          VITE_FIREBASE_STORAGE_BUCKET: ${{ secrets.VITE_FIREBASE_STORAGE_BUCKET || 'ci-placeholder.appspot.com' }}
+          VITE_FIREBASE_MESSAGING_SENDER_ID: ${{ secrets.VITE_FIREBASE_MESSAGING_SENDER_ID || '000000000000' }}
+          VITE_FIREBASE_APP_ID: ${{ secrets.VITE_FIREBASE_APP_ID || '1:000000000000:web:0000000000000000000000' }}
+        run: npm run build
+
+  review:
+    needs: verify
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Write sticky comment body
+        env:
+          VERIFY_RESULT: ${{ needs.verify.result }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          set -euo pipefail
+          short_sha="${HEAD_SHA:0:7}"
+          {
+            echo "## Auto-review"
+            echo
+            if [ "$VERIFY_RESULT" = "success" ]; then
+              echo "**Verify:** passed (lint + build)."
+              echo
+              echo "- **Lint:** passed"
+              echo "- **Build:** passed"
+            elif [ "$VERIFY_RESULT" = "failure" ]; then
+              echo "**Verify:** failed."
+              echo
+              echo "Check the **Install dependencies**, **Lint**, and **Build** steps in the workflow run below. The first failing step is the one to fix (dependency install issues appear before lint; lint failures appear before build)."
+            else
+              echo "**Verify:** did not complete successfully (result: \`$VERIFY_RESULT\`)."
+              echo
+              echo "Open the workflow run below for details."
+            fi
+            echo
+            echo "- **PR head SHA:** \`$HEAD_SHA\` (\`$short_sha\`)"
+            echo "- **Workflow run:** [View run]($RUN_URL)"
+            echo
+            echo "---"
+            echo "*This is an automated check and PR summary. It is not a substitute for human code review and does not satisfy branch-protection **required reviewers**.*"
+          } > pr-auto-review.md
+
+      - name: Post or update sticky PR comment
+        uses: marocchino/sticky-pull-request-comment@v2
+        with:
+          header: pr-auto-review
+          recreate: true
+          path: pr-auto-review.md

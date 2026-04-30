@@ -68,9 +68,21 @@ Typical causes:
 2. **API key restrictions (GCP)** — In [Google Cloud Console → APIs & Services → Credentials](https://console.cloud.google.com/apis/credentials), open the browser key used by Firebase. For HTTP referrer restrictions, include your Firebase Hosting origin(s), `http://localhost:*`, and any dev URL you use. Ensure the **Identity Toolkit API** is enabled for the project and the key is allowed to call it (or use “Don’t restrict key” temporarily to confirm).
 3. **Stale deploy** — After updating secrets or `.env.local`, rebuild and redeploy the client.
 
-## GitHub Actions (CI)
+## GitHub Actions (CI & auto-review)
 
-[`.github/workflows/ci.yml`](.github/workflows/ci.yml) passes optional repository secrets **`VITE_FIREBASE_*`** into the build when set (Settings → Secrets and variables → Actions). If they are missing, the workflow uses **CI placeholders** so forked PRs still pass. That artifact is fine for lint/build checks only; do **not** ship it to end users without replacing env with real Firebase web config.
+### CI on default branch
+
+[`.github/workflows/ci.yml`](.github/workflows/ci.yml) runs on **push** to `main` / `master` and on **workflow_dispatch**. It installs dependencies, runs **lint**, and **build** with the same optional **`VITE_FIREBASE_*`** secrets (or CI placeholders when unset) as PR auto-review.
+
+### PR auto-review
+
+[`.github/workflows/pr-autoreview.yml`](.github/workflows/pr-autoreview.yml) runs on **pull_request** (`opened`, `synchronize`, `reopened`, `ready_for_review`). It runs the same **verify** steps as CI (`npm ci`, `npm run lint`, `npm run build`) and then posts or updates a **sticky PR comment** with lint/build outcome, the PR head commit SHA, and a link to the workflow run. If verify fails, the comment tells you to use the linked run and which steps to inspect.
+
+Auto-review is **not** a substitute for human review and **does not** replace branch-protection **required reviewers** or a formal GitHub **Approve**; it is an automated check plus a visible summary on the PR.
+
+### Secrets and placeholders
+
+Both workflows pass optional repository secrets **`VITE_FIREBASE_*`** into the build when set (Settings → Secrets and variables → Actions). If they are missing, the workflow uses **CI placeholders** so forked PRs still pass. That artifact is fine for lint/build checks only; do **not** ship it to end users without replacing env with real Firebase web config.
 
 If you add a **Firebase Hosting** (or other) deploy workflow that runs `npm run build` before upload, configure the same **`VITE_*`** secrets there for production—**without** falling back to placeholders—or the live site can show **`API_KEY_INVALID`** at sign-in.
 
