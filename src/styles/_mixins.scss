@@ -1,0 +1,48 @@
+@use 'sass:map';
+@use 'variables' as *;
+
+// -----------------------------------------------------------------------------
+// BEM-oriented helpers (Workers: prefer composition over deep nesting)
+// -----------------------------------------------------------------------------
+
+/// Respond from mobile-first base upward.
+@mixin from-md {
+  @media (min-width: $breakpoint-md) {
+    @content;
+  }
+}
+
+@mixin from-lg {
+  @media (min-width: $breakpoint-lg) {
+    @content;
+  }
+}
+
+/// Foreground/background for a score semantic token (eagle, birdie, par, …).
+@mixin score-surface($token) {
+  $bg: map.get($score-color, $token);
+
+  @if $bg == null {
+    @error "Unknown score token: #{$token}";
+  }
+
+  background-color: $bg;
+  color: #ffffff;
+}
+
+/// Resolve integer (score − par) to a semantic token. Worse than bogey maps to double-bogey-plus; better than eagle maps to eagle.
+@function score-token-from-delta($delta) {
+  @if $delta <= -2 {
+    @return eagle;
+  }
+  @if $delta == -1 {
+    @return birdie;
+  }
+  @if $delta == 0 {
+    @return par;
+  }
+  @if $delta == 1 {
+    @return bogey;
+  }
+  @return double-bogey-plus;
+}

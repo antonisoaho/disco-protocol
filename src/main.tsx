@@ -1,5 +1,7 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
+import './firebase/app'
+import './styles/main.scss'
 import './index.css'
 import App from './App.tsx'
 

@@ -1,0 +1,43 @@
+@use 'sass:map';
+@use 'variables' as *;
+@use 'mixins' as *;
+
+// -----------------------------------------------------------------------------
+// Global entry — import once from application bootstrap (e.g. main.tsx).
+// Workers add BEM partials under src/styles/blocks/ or co-locate with components.
+// -----------------------------------------------------------------------------
+
+:root {
+  color-scheme: light;
+  font-family: $font-family-sans;
+  line-height: 1.45;
+  color: $color-text;
+  background-color: $color-bg;
+
+  // Expose score palette as CSS variables for charts / inline styles when needed.
+  @each $name, $value in $score-color {
+    --score-#{$name}: #{$value};
+  }
+
+  --color-bg: #{$color-bg};
+  --color-surface: #{$color-surface};
+  --color-text: #{$color-text};
+  --color-text-muted: #{$color-text-muted};
+  --color-border: #{$color-border};
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100svh;
+  -webkit-font-smoothing: antialiased;
+}
+
+#root {
+  min-height: 100svh;
+}

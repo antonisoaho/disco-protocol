@@ -1,73 +1,66 @@
-# React + TypeScript + Vite
+# disco-protocol
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+**Mobile-first disc golf social web app** (React + Vite, Firebase, PWA). Product direction and data design live in **`docs/architecture.md`**. The **Planner** works in the main clone; **Workers** implement in **git worktrees** (see `.cursorrules`).
 
-Currently, two official plugins are available:
+## Prerequisites
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+- **Git** and GitHub remote **`origin`**
+- **GitHub CLI**: [https://cli.github.com](https://cli.github.com) — `gh auth login`
+- **Python 3.10+** (stdlib only for orchestration scripts)
+- **Node.js** + npm (see `package.json`)
 
-## React Compiler
+## Workflow
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
-
-## Expanding the ESLint configuration
-
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
-
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```text
+Plan → Issue → Worktree → PR → Review → Merge → Cleanup
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+1. **Plan** — Planner breaks work into issues with acceptance criteria (no feature code in main workspace per `.cursorrules`).
+2. **Issue** — Track on GitHub (`orchestrator.py` or `gh`).
+3. **Worktree** — `python3 scripts/agent_worker.py <N>` → `../worktrees/issue-<N>/`, branch `issue/<N>`.
+4. **PR** — Push and open a pull request.
+5. **Review / merge** — CI and code review.
+6. **Cleanup** — `python3 scripts/cleanup.py <N>` after the PR is merged.
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+All orchestration docs and comments are in **English**.
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+## Scripts
+
+| Script | Purpose |
+|--------|---------|
+| `orchestrator.py` | `gh` helper: `create`, `list`, `show`, `track` |
+| `scripts/agent_worker.py` | New worktree + branch for issue **N** |
+| `scripts/cleanup.py` | Remove worktree + local branch after merge (`--force` skips `gh` check) |
+
+### Examples
+
+```bash
+python3 orchestrator.py create --title "Task" --body "Acceptance: …"
+python3 orchestrator.py track
+
+python3 scripts/agent_worker.py 12
+cd ../worktrees/issue-12
+
+python3 scripts/cleanup.py 12
+```
+
+- Worktree path: `<parent-of-repo>/worktrees/issue-<N>/`
+- Branch: `issue/<N>`
+
+## Styling
+
+- **SCSS** under `src/styles/`: `_variables.scss` (semantic **score** colors), `_mixins.scss`, `main.scss`
+- **BEM** for UI components (`.block__element--modifier`)
+
+## Firebase (local)
+
+Copy [`.env.example`](.env.example) to **`.env.local`** and paste your Firebase web config (`VITE_*` keys). Vite only exposes variables prefixed with `VITE_`. The file is gitignored.
+
+## Application commands
+
+```bash
+npm ci
+npm run dev
+npm run build
+npm run lint
 ```

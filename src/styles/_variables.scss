@@ -1,0 +1,46 @@
+// -----------------------------------------------------------------------------
+// Design tokens — mobile-first Disc Golf social app
+// BEM: use these tokens inside .block__element--modifier; avoid leaking raw hex into components.
+// -----------------------------------------------------------------------------
+
+// Semantic score colors: relative to par (hole score − hole par).
+// Keys are semantic names; values are the canonical palette for UI (badges, charts, timeline).
+$score-color: (
+  eagle: #0d5c2e,
+  // -2
+  birdie: #1f8a4d,
+  // -1
+  par: #5c6370,
+  // 0
+  bogey: #c45c26,
+  // +1
+  double-bogey-plus: #9e1b1b,
+  // +2 and worse (double bogey or higher)
+);
+
+// Maps integer delta-to-par to a semantic key in $score-color (for theming and mixins).
+$score-par-delta-token: (
+  -2: eagle,
+  -1: birdie,
+  0: par,
+  1: bogey,
+  2: double-bogey-plus,
+);
+
+// Layout & typography (foundation for BEM blocks)
+$breakpoint-md: 768px;
+$breakpoint-lg: 1024px;
+
+$font-family-sans: system-ui, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+$font-family-mono: ui-monospace, Consolas, monospace;
+
+$space-unit: 0.25rem;
+$radius-sm: 4px;
+$radius-md: 8px;
+
+// Neutral surface tokens (light default; dark can be layered later by Workers)
+$color-bg: #ffffff;
+$color-surface: #f6f7f9;
+$color-text: #1c1f26;
+$color-text-muted: #5c6370;
+$color-border: #e2e5eb;
