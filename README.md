@@ -12,15 +12,16 @@
 ## Workflow
 
 ```text
-Plan → Issue → Worktree → PR → Review → Merge → Cleanup
+Plan → Issue → Worktree → Rebase main → PR → Review → Fix → Merge → Cleanup
 ```
 
 1. **Plan** — Planner breaks work into issues with acceptance criteria (no feature code in main workspace per `.cursorrules`).
 2. **Issue** — Track on GitHub (`orchestrator.py` or `gh`).
 3. **Worktree** — `python3 scripts/agent_worker.py <N>` → `../worktrees/issue-<N>/`, branch `issue/<N>`.
-4. **PR** — Push and open a pull request.
-5. **Review / merge** — By default the **Planner** drives this with `gh`: inspect diffs and checks, do a structured review (security, architecture fit, CI, obvious bugs), request changes or **merge** when satisfied. The human maintainer is optional unless branch protection or permissions require their action (for example when the same account cannot self-approve; see `.cursorrules`).
-6. **Cleanup** — `python3 scripts/cleanup.py <N>` after the PR is merged.
+4. **Sync with `main` before PR** — In the worktree: `git fetch origin`, then **`git rebase origin/main`** (resolve conflicts, rerun lint/build). If rebase is not allowed for your team, merge **`origin/main`** into the branch instead; default is **rebase**.
+5. **PR** — Push and open a pull request only after the branch is up to date with `main`.
+6. **Review, fix, merge** — By default the **Planner** drives this with `gh`: inspect diffs and checks, structured review (security, architecture fit, CI, obvious bugs), **fix** what is needed (push to the PR branch when possible), then **`gh pr merge`** when satisfied. Formal **`gh pr review --approve`** is **not** required for the Planner role. The human maintainer is optional unless branch protection or permissions block merge (see `.cursorrules`).
+7. **Cleanup** — `python3 scripts/cleanup.py <N>` after the PR is merged.
 
 All orchestration docs and comments are in **English**.
 
