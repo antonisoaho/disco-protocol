@@ -79,3 +79,9 @@ jobs:
           VITE_FIREBASE_MESSAGING_SENDER_ID: ${{ secrets.VITE_FIREBASE_MESSAGING_SENDER_ID || '000000000000' }}
           VITE_FIREBASE_APP_ID: ${{ secrets.VITE_FIREBASE_APP_ID || '1:000000000000:web:0000000000000000000000' }}
         run: npm run build
+
+      - name: React Doctor score gate
+        # Block merges unless react-doctor score is strictly greater than 95.
+        run: |
+          npx -y react-doctor@latest . --json --yes --diff --fail-on none > react-doctor-report.json
+          node -e "const fs = require('node:fs'); const report = JSON.parse(fs.readFileSync('react-doctor-report.json', 'utf8')); const score = report?.summary?.score ?? report?.projects?.[0]?.score?.score; if (typeof score !== 'number') { console.error('Unable to read react-doctor score from JSON output.'); process.exit(2); } console.log('react-doctor score:', score); if (score <= 95) { console.error('react-doctor score must be > 95 to pass CI.'); process.exit(1); }"
