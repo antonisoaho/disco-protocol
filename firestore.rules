@@ -72,9 +72,17 @@ service cloud.firestore {
         || isRoundOwner(resource.data);
     }
 
-    function courseOriginFieldsUnchanged() {
+    function courseOriginFieldsAllowed() {
       return request.resource.data.courseSource == resource.data.courseSource
-        && request.resource.data.courseDraft == resource.data.courseDraft;
+        && (
+          request.resource.data.courseSource != 'fresh'
+          ? request.resource.data.courseDraft == resource.data.courseDraft
+          : (
+            request.resource.data.courseDraft is map
+            && request.resource.data.courseDraft.name is string
+            && request.resource.data.courseDraft.holes is list
+          )
+        );
     }
 
     function promotionChangeAllowed() {
@@ -161,7 +169,7 @@ service cloud.firestore {
         && roundImmutableFieldsUnchanged()
         && participantIdsChangeAllowed()
         && visibilityChangeAllowed()
-        && courseOriginFieldsUnchanged()
+        && courseOriginFieldsAllowed()
         && promotionChangeAllowed()
         && validVisibility(request.resource.data.visibility)
         && validCourseSource(request.resource.data.courseSource)

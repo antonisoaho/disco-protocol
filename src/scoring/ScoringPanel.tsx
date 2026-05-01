@@ -5,6 +5,8 @@ import type { CourseRoundSelection } from '../courses/courseData'
 import {
   FreshRoundDraftValidationError,
   normalizeFreshCourseDraft,
+  normalizeFreshCourseDraftForPromotion,
+  type FreshRoundDraftIssue,
 } from '../firebase/freshRoundCourse'
 import { strokesParDeltaToSemantic } from '../lib/scoreSemantic'
 import type { RoundDoc, RoundVisibility } from '../firebase/roundTypes'
@@ -14,6 +16,7 @@ import {
   createRound,
   recordHoleScoreTransaction,
   subscribeMyRounds,
+  updateFreshRoundHoleMetadata,
 } from '../firebase/rounds'
 import {
   aggregateScoreProtocol,
@@ -29,25 +32,38 @@ type Props = {
 const DEFAULT_ROUND_HOLE_COUNT = 18
 const DEFAULT_FRESH_HOLE_COUNT = 9
 
-type FreshHoleRow = {
-  par: string
-  lengthMeters: string
+function normalizeFreshHoleCount(value: number): number {
+  if (!Number.isFinite(value)) return DEFAULT_FRESH_HOLE_COUNT
+  return Math.min(36, Math.max(1, Math.floor(value)))
 }
 
-function createFreshHoleRows(count: number): FreshHoleRow[] {
-  return Array.from({ length: count }, () => ({
-    par: '3',
-    lengthMeters: '',
-  }))
-}
-
-function resizeFreshHoleRows(current: FreshHoleRow[], count: number): FreshHoleRow[] {
-  const safeCount = Math.min(36, Math.max(1, Math.floor(count)))
-  const next = current.slice(0, safeCount)
-  while (next.length < safeCount) {
-    next.push({ par: '3', lengthMeters: '' })
+function formatDraftIssues(issues: FreshRoundDraftIssue[]): string {
+  if (issues.length === 0) {
+    return 'Fresh hole metadata is incomplete.'
   }
-  return next
+
+  const perHole = new Map<number, Set<string>>()
+  const generalMessages = new Set<string>()
+
+  for (const issue of issues) {
+    const holeMatch = issue.path.match(/^holes\.(\d+)\.(par|lengthMeters)$/)
+    if (holeMatch) {
+      const holeNumber = Number(holeMatch[1]) + 1
+      const field = holeMatch[2] === 'par' ? 'par' : 'length'
+      if (!perHole.has(holeNumber)) {
+        perHole.set(holeNumber, new Set<string>())
+      }
+      perHole.get(holeNumber)?.add(field)
+      continue
+    }
+    generalMessages.add(issue.message)
+  }
+
+  const holeMessages = Array.from(perHole.entries())
+    .sort(([a], [b]) => a - b)
+    .map(([holeNumber, fields]) => `Hole ${holeNumber}: ${Array.from(fields).join(' + ')}`)
+
+  return [...holeMessages, ...Array.from(generalMessages)].join('. ')
 }
 
 function formatStartedAt(ts: Timestamp): string {
@@ -86,13 +102,12 @@ export function ScoringPanel({ user, selectedCourseTemplate }: Props) {
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [startMode, setStartMode] = useState<'saved' | 'fresh'>('saved')
   const [freshCourseName, setFreshCourseName] = useState('')
-  const [freshHoleRows, setFreshHoleRows] = useState<FreshHoleRow[]>(() =>
-    createFreshHoleRows(DEFAULT_FRESH_HOLE_COUNT),
-  )
+  const [freshHoleCount, setFreshHoleCount] = useState(DEFAULT_FRESH_HOLE_COUNT)
   const [visibility, setVisibility] = useState<RoundVisibility>('private')
   const [holeNumber, setHoleNumber] = useState(1)
   const [strokes, setStrokes] = useState(3)
   const [par, setPar] = useState(3)
+  const [freshHoleEdits, setFreshHoleEdits] = useState<Record<string, { par: string; lengthMeters: string }>>({})
   const [inviteUid, setInviteUid] = useState('')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -115,8 +130,6 @@ export function ScoringPanel({ user, selectedCourseTemplate }: Props) {
     [items, selectedId],
   )
 
-  const freshHoleCount = freshHoleRows.length
-
   const selectedHoleCount = useMemo(
     () => (selected ? inferRoundHoleCount(selected.data) : null),
     [selected],
@@ -136,6 +149,29 @@ export function ScoringPanel({ user, selectedCourseTemplate }: Props) {
       return null
     }
   }, [selected])
+
+  const selectedFreshHole = useMemo(() => {
+    if (!selected || selected.data.courseSource !== 'fresh') {
+      return null
+    }
+    return selected.data.courseDraft?.holes.find((entry) => entry.number === holeNumber) ?? null
+  }, [holeNumber, selected])
+
+  const freshHoleEditKey =
+    selected && selected.data.courseSource === 'fresh' ? `${selected.id}:${holeNumber}` : null
+  const freshHoleInputValues = useMemo(
+    () =>
+      freshHoleEditKey
+        ? (freshHoleEdits[freshHoleEditKey] ?? {
+            par: typeof selectedFreshHole?.par === 'number' ? String(selectedFreshHole.par) : '',
+            lengthMeters:
+              typeof selectedFreshHole?.lengthMeters === 'number'
+                ? String(selectedFreshHole.lengthMeters)
+                : '',
+          })
+        : { par: '', lengthMeters: '' },
+    [freshHoleEditKey, freshHoleEdits, selectedFreshHole],
+  )
 
   const onCreateRound = useCallback(async () => {
     setBusy(true)
@@ -161,9 +197,9 @@ export function ScoringPanel({ user, selectedCourseTemplate }: Props) {
       } else {
         const courseDraft = normalizeFreshCourseDraft({
           name: freshCourseName,
-          holes: freshHoleRows.map((row) => ({
-            par: row.par,
-            lengthMeters: row.lengthMeters,
+          holes: Array.from({ length: freshHoleCount }, () => ({
+            par: null,
+            lengthMeters: null,
           })),
         })
         id = await createRound({
@@ -179,7 +215,7 @@ export function ScoringPanel({ user, selectedCourseTemplate }: Props) {
       setHoleNumber(1)
     } catch (e) {
       if (e instanceof FreshRoundDraftValidationError) {
-        setError(e.issues[0]?.message ?? 'Fresh course details are invalid.')
+        setError(formatDraftIssues(e.issues))
       } else {
         setError(e instanceof Error ? e.message : 'Failed to create round')
       }
@@ -188,7 +224,7 @@ export function ScoringPanel({ user, selectedCourseTemplate }: Props) {
     }
   }, [
     freshCourseName,
-    freshHoleRows,
+    freshHoleCount,
     selectedCourseTemplate,
     startMode,
     uid,
@@ -218,6 +254,41 @@ export function ScoringPanel({ user, selectedCourseTemplate }: Props) {
     }
   }, [holeNumber, par, selectedHoleCount, selectedId, strokes, uid])
 
+  const onSaveFreshHoleMetadata = useCallback(async () => {
+    if (!selectedId || !selected || selected.data.courseSource !== 'fresh' || !freshHoleEditKey) return
+    setBusy(true)
+    setError(null)
+    setNotice(null)
+    try {
+      await updateFreshRoundHoleMetadata({
+        roundId: selectedId,
+        actorUid: uid,
+        holeNumber,
+        metadata: {
+          par: freshHoleInputValues.par,
+          lengthMeters: freshHoleInputValues.lengthMeters,
+        },
+      })
+      setFreshHoleEdits((current) => {
+        const next = { ...current }
+        delete next[freshHoleEditKey]
+        return next
+      })
+      setNotice(`Saved hole ${holeNumber} metadata.`)
+      if (freshHoleInputValues.par.trim().length > 0) {
+        setPar(Number(freshHoleInputValues.par))
+      }
+    } catch (e) {
+      if (e instanceof FreshRoundDraftValidationError) {
+        setError(formatDraftIssues(e.issues))
+      } else {
+        setError(e instanceof Error ? e.message : 'Failed to save hole metadata')
+      }
+    } finally {
+      setBusy(false)
+    }
+  }, [freshHoleEditKey, freshHoleInputValues, holeNumber, selected, selectedId, uid])
+
   const onAddParticipant = useCallback(async () => {
     if (!selectedId || !inviteUid.trim()) return
     setBusy(true)
@@ -234,7 +305,20 @@ export function ScoringPanel({ user, selectedCourseTemplate }: Props) {
   }, [inviteUid, selectedId])
 
   const onComplete = useCallback(async () => {
-    if (!selectedId) return
+    if (!selectedId || !selected) return
+    if (selected.data.courseSource === 'fresh') {
+      try {
+        normalizeFreshCourseDraftForPromotion(selected.data.courseDraft)
+      } catch (e) {
+        if (e instanceof FreshRoundDraftValidationError) {
+          setError(
+            `Round cannot be completed yet. Fill missing hole metadata first. ${formatDraftIssues(e.issues)}`,
+          )
+          return
+        }
+        throw e
+      }
+    }
     setBusy(true)
     setError(null)
     setNotice(null)
@@ -245,14 +329,16 @@ export function ScoringPanel({ user, selectedCourseTemplate }: Props) {
       } else if (result.promotionStatus === 'pending') {
         setNotice('Round completed. Promotion is pending and will need a retry once online.')
       } else if (result.promotionStatus === 'failed') {
-        setError('Round completed, but promotion failed because draft data is incomplete.')
+        setError(
+          `Round cannot be completed yet. Fill missing hole metadata first. ${formatDraftIssues(result.validationIssues ?? [])}`,
+        )
       }
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to complete round')
     } finally {
       setBusy(false)
     }
-  }, [selectedId, uid])
+  }, [selected, selectedId, uid])
 
   const onRetryPromotion = useCallback(async () => {
     if (!selectedId) return
@@ -265,6 +351,10 @@ export function ScoringPanel({ user, selectedCourseTemplate }: Props) {
         setNotice('Promotion succeeded. Fresh course is now available in saved courses.')
       } else if (result.promotionStatus === 'pending') {
         setNotice('Still pending. Retry again when network connectivity returns.')
+      } else if (result.promotionStatus === 'failed') {
+        setError(
+          `Promotion is still blocked by missing hole metadata. ${formatDraftIssues(result.validationIssues ?? [])}`,
+        )
       }
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to retry promotion')
@@ -317,7 +407,7 @@ export function ScoringPanel({ user, selectedCourseTemplate }: Props) {
         ) : (
           <>
             <p className="scoring-panel__muted">
-              Fresh setup is saved on the round now and promoted into canonical courses when you complete the round.
+              Start quickly with name and hole count, then add par/length per hole while you play.
             </p>
             <div className="scoring-panel__row">
               <div className="scoring-panel__field scoring-panel__field--grow">
@@ -345,57 +435,11 @@ export function ScoringPanel({ user, selectedCourseTemplate }: Props) {
                   max={36}
                   value={freshHoleCount}
                   onChange={(e) => {
-                    const next = Number(e.target.value)
-                    const safe = Number.isInteger(next) ? next : DEFAULT_FRESH_HOLE_COUNT
-                    setFreshHoleRows((current) => resizeFreshHoleRows(current, safe))
+                    setFreshHoleCount(normalizeFreshHoleCount(Number(e.target.value)))
                   }}
                 />
               </div>
             </div>
-            <ol className="scoring-panel__fresh-list">
-              {freshHoleRows.map((hole, index) => (
-                <li key={`fresh-hole-${index + 1}`} className="scoring-panel__fresh-item">
-                  <span className="scoring-panel__fresh-hole">Hole {index + 1}</span>
-                  <label className="scoring-panel__label" htmlFor={`fresh-hole-par-${index + 1}`}>
-                    Par
-                  </label>
-                  <input
-                    id={`fresh-hole-par-${index + 1}`}
-                    className="scoring-panel__input"
-                    type="number"
-                    min={2}
-                    max={9}
-                    value={hole.par}
-                    onChange={(e) =>
-                      setFreshHoleRows((current) =>
-                        current.map((row, rowIndex) =>
-                          rowIndex === index ? { ...row, par: e.target.value } : row,
-                        ),
-                      )
-                    }
-                  />
-                  <label className="scoring-panel__label" htmlFor={`fresh-hole-length-${index + 1}`}>
-                    Length (m)
-                  </label>
-                  <input
-                    id={`fresh-hole-length-${index + 1}`}
-                    className="scoring-panel__input"
-                    type="number"
-                    min={1}
-                    max={5000}
-                    value={hole.lengthMeters}
-                    onChange={(e) =>
-                      setFreshHoleRows((current) =>
-                        current.map((row, rowIndex) =>
-                          rowIndex === index ? { ...row, lengthMeters: e.target.value } : row,
-                        ),
-                      )
-                    }
-                    placeholder="optional"
-                  />
-                </li>
-              ))}
-            </ol>
           </>
         )}
         <div className="scoring-panel__row">
@@ -516,7 +560,7 @@ export function ScoringPanel({ user, selectedCourseTemplate }: Props) {
                         if (data.courseSource === 'fresh') {
                           setHoleNumber(1)
                           const firstHole = data.courseDraft?.holes[0]
-                          if (firstHole) {
+                          if (typeof firstHole?.par === 'number') {
                             setPar(firstHole.par)
                           }
                         }
@@ -549,6 +593,64 @@ export function ScoringPanel({ user, selectedCourseTemplate }: Props) {
               {selected.data.coursePromotion?.status ?? 'none'}
             </p>
           ) : null}
+          {selected.data.courseSource === 'fresh' ? (
+            <div className="scoring-panel__row scoring-panel__fresh-editor">
+              <div className="scoring-panel__field">
+                <label className="scoring-panel__label" htmlFor="fresh-hole-par-current">
+                  Hole {holeNumber} par
+                </label>
+                <input
+                  id="fresh-hole-par-current"
+                  className="scoring-panel__input"
+                  type="number"
+                  min={2}
+                  max={9}
+                  value={freshHoleInputValues.par}
+                  onChange={(e) =>
+                    setFreshHoleEdits((current) => ({
+                      ...current,
+                      [`${selected.id}:${holeNumber}`]: {
+                        par: e.target.value,
+                        lengthMeters: freshHoleInputValues.lengthMeters,
+                      },
+                    }))
+                  }
+                  placeholder="required"
+                />
+              </div>
+              <div className="scoring-panel__field">
+                <label className="scoring-panel__label" htmlFor="fresh-hole-length-current">
+                  Hole {holeNumber} length (m)
+                </label>
+                <input
+                  id="fresh-hole-length-current"
+                  className="scoring-panel__input"
+                  type="number"
+                  min={1}
+                  max={5000}
+                  value={freshHoleInputValues.lengthMeters}
+                  onChange={(e) =>
+                    setFreshHoleEdits((current) => ({
+                      ...current,
+                      [`${selected.id}:${holeNumber}`]: {
+                        par: freshHoleInputValues.par,
+                        lengthMeters: e.target.value,
+                      },
+                    }))
+                  }
+                  placeholder="required"
+                />
+              </div>
+              <button
+                type="button"
+                className="scoring-panel__button"
+                onClick={() => void onSaveFreshHoleMetadata()}
+                disabled={busy}
+              >
+                Save hole metadata
+              </button>
+            </div>
+          ) : null}
           <div className="scoring-panel__row">
             <div className="scoring-panel__field">
               <label className="scoring-panel__label" htmlFor="hole-n">
@@ -562,17 +664,36 @@ export function ScoringPanel({ user, selectedCourseTemplate }: Props) {
                 max={selectedHoleCount ?? 36}
                 value={holeNumber}
                 onChange={(e) => {
-                  const nextHole = Number(e.target.value)
+                  const maxHole = selectedHoleCount ?? 36
+                  const nextHole = Math.min(maxHole, Math.max(1, Number(e.target.value)))
                   setHoleNumber(nextHole)
                   if (selected.data.courseSource === 'fresh') {
                     const draftHole = selected.data.courseDraft?.holes.find((entry) => entry.number === nextHole)
-                    if (draftHole) {
+                    if (typeof draftHole?.par === 'number') {
                       setPar(draftHole.par)
                     }
                   }
                 }}
               />
             </div>
+            <button
+              type="button"
+              className="scoring-panel__button"
+              onClick={() => setHoleNumber((current) => Math.max(1, current - 1))}
+              disabled={busy || holeNumber <= 1}
+            >
+              Prev hole
+            </button>
+            <button
+              type="button"
+              className="scoring-panel__button"
+              onClick={() =>
+                setHoleNumber((current) => Math.min(selectedHoleCount ?? 36, current + 1))
+              }
+              disabled={busy || holeNumber >= (selectedHoleCount ?? 36)}
+            >
+              Next hole
+            </button>
             <div className="scoring-panel__field">
               <label className="scoring-panel__label" htmlFor="strokes">
                 Strokes
@@ -596,7 +717,7 @@ export function ScoringPanel({ user, selectedCourseTemplate }: Props) {
                 className="scoring-panel__input"
                 type="number"
                 min={2}
-                max={6}
+                max={9}
                 value={par}
                 onChange={(e) => setPar(Number(e.target.value))}
               />

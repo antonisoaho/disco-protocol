@@ -15,7 +15,7 @@ export type RoundCourseSource = 'saved' | 'fresh'
 
 export type RoundCourseDraftHole = {
   number: number
-  par: number
+  par?: number | null
   lengthMeters?: number | null
 }
 

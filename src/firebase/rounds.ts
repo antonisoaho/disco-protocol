@@ -24,8 +24,12 @@ import {
 import { COLLECTIONS } from './paths'
 import { db } from './firestore'
 import {
+  FreshRoundDraftValidationError,
+  applyFreshHoleMetadataToDraft,
   buildFreshCoursePromotionPlan,
   resolveFreshRoundCourseRefs,
+  type FreshHoleInput,
+  type FreshRoundDraftIssue,
 } from './freshRoundCourse'
 import type {
   RoundCourseDraft,
@@ -142,6 +146,41 @@ export async function recordHoleScoreTransaction(
   })
 }
 
+export async function updateFreshRoundHoleMetadata(params: {
+  roundId: string
+  actorUid: string
+  holeNumber: number
+  metadata: FreshHoleInput
+}): Promise<void> {
+  const ref = doc(db, ROUNDS, params.roundId)
+
+  await runTransaction(db, async (tx) => {
+    const snap = await tx.get(ref)
+    if (!snap.exists()) {
+      throw new Error('Round not found')
+    }
+    const data = snap.data() as RoundDoc
+    if (!data.participantIds.includes(params.actorUid)) {
+      throw new Error('Not a participant of this round')
+    }
+    if (data.courseSource !== 'fresh' || !data.courseDraft) {
+      throw new Error('Round does not support fresh hole metadata edits')
+    }
+
+    const nextDraft = applyFreshHoleMetadataToDraft({
+      draft: data.courseDraft,
+      holeNumber: params.holeNumber,
+      par: params.metadata.par ?? null,
+      lengthMeters: params.metadata.lengthMeters ?? null,
+    })
+
+    tx.update(ref, {
+      courseDraft: nextDraft,
+      updatedAt: serverTimestamp(),
+    })
+  })
+}
+
 /** Owner adds another registered user; rules require `ownerId` for participant array changes. */
 export async function addParticipantToRound(
   roundId: string,
@@ -156,6 +195,7 @@ export async function addParticipantToRound(
 
 export type CompleteRoundResult = {
   promotionStatus: 'not_needed' | 'created' | 'already_created' | 'pending' | 'failed'
+  validationIssues?: FreshRoundDraftIssue[]
 }
 
 export async function completeRoundAndPromote(
@@ -192,29 +232,53 @@ export async function completeRoundAndPromote(
       }
 
       if (!data.courseDraft || data.courseDraft.holes.length === 0) {
+        const issues: FreshRoundDraftIssue[] = [
+          {
+            code: 'invalid_hole_count',
+            path: 'holes',
+            message: 'Set a hole count and fill missing hole metadata before completing this round.',
+          },
+        ]
         tx.update(ref, {
-          completedAt: serverTimestamp(),
           updatedAt: serverTimestamp(),
           coursePromotion: {
             status: 'failed',
             targetCourseId: data.coursePromotion?.targetCourseId ?? data.courseId,
             targetTemplateId: data.coursePromotion?.targetTemplateId ?? data.templateId,
             promotedAt: null,
-            errorCode: 'missing_draft',
+            errorCode: 'incomplete_draft',
           },
         })
-        return { promotionStatus: 'failed' as const }
+        return { promotionStatus: 'failed' as const, validationIssues: issues }
       }
 
-      const plan = buildFreshCoursePromotionPlan({
-        roundId,
-        ownerId: data.ownerId,
-        draft: data.courseDraft,
-        existingRefs: {
-          courseId: data.coursePromotion?.targetCourseId ?? data.courseId,
-          templateId: data.coursePromotion?.targetTemplateId ?? data.templateId,
-        },
-      })
+      let plan
+      try {
+        plan = buildFreshCoursePromotionPlan({
+          roundId,
+          ownerId: data.ownerId,
+          draft: data.courseDraft,
+          existingRefs: {
+            courseId: data.coursePromotion?.targetCourseId ?? data.courseId,
+            templateId: data.coursePromotion?.targetTemplateId ?? data.templateId,
+          },
+        })
+      } catch (error) {
+        if (error instanceof FreshRoundDraftValidationError) {
+          tx.update(ref, {
+            updatedAt: serverTimestamp(),
+            coursePromotion: {
+              status: 'failed',
+              targetCourseId: data.coursePromotion?.targetCourseId ?? data.courseId,
+              targetTemplateId: data.coursePromotion?.targetTemplateId ?? data.templateId,
+              promotedAt: null,
+              errorCode: 'incomplete_holes',
+            },
+          })
+          return { promotionStatus: 'failed' as const, validationIssues: error.issues }
+        }
+        throw error
+      }
 
       const courseRef = doc(db, COLLECTIONS.courses, plan.courseId)
       const templateRef = doc(
