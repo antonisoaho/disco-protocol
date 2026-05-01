@@ -21,7 +21,7 @@ Plan → Issue → Worktree → Rebase main → PR → Review → Fix → Merge 
 4. **Sync with `main` before PR** — In the worktree: `git fetch origin`, then **`git rebase origin/main`** (resolve conflicts, rerun lint/build). If rebase is not allowed for your team, merge **`origin/main`** into the branch instead; default is **rebase**.
 5. **PR** — Push and open a pull request only after the branch is up to date with `main`.
 6. **Review, fix, merge** — By default the **Planner** drives this with `gh`: inspect diffs and checks, structured review (security, architecture fit, CI, obvious bugs), **fix** what is needed (push to the PR branch when possible), then **`gh pr merge`** when satisfied. Formal **`gh pr review --approve`** is **not** required for the Planner role. The human maintainer is optional unless branch protection or permissions block merge (see `.cursorrules`).
-7. **Cleanup (always)** — after merge **or abandon**, run `python3 scripts/cleanup.py <N>` to delete `../worktrees/issue-<N>/` and prune stale worktree records.
+7. **Cleanup (always)** — after merge **or abandon**, run `python3 scripts/cleanup.py <N>` to delete `../worktrees/issue-<N>/` and prune stale worktree records. If merged, fetch/update `main` in the planner clone before cleanup.
 
 All orchestration docs and comments are in **English**.
 

@@ -21,6 +21,8 @@ You are the **Planner** and **Lead Architect** for this repository.
 - Prefer **`gh pr merge`** once required checks are green and review criteria are met.
 - For Worker/subagent PRs, review-plus-merge is mandatory in-session when checks are green and no policy/permission blocker exists.
 - Respect **dependency order** (for example merge an earlier epic or base PR before dependent PRs).
+- After a Worker pushes `issue/<N>` and opens the PR, the Planner (or designated merger) should run **`gh pr checks`**, complete review, and then run **`gh pr merge`** as soon as merge criteria are met (unless blocked by policy/permissions).
+- Workers should not assume they merged their own PR; Planners should not leave merge as a routine manual user step when unblocked.
 
 ### When merge is blocked
 
@@ -45,7 +47,8 @@ Branch protection or permissions may require checks from specific actors, mandat
 3. Worker implements in `../worktrees/issue-<N>/` on branch `issue/<N>`.
 4. **Before opening a PR (hard rule):** `git fetch origin`, then **`git rebase origin/main`** so the branch is up to date with the latest `main`. Resolve conflicts, then rerun project checks (for example lint and build) on the rebased branch. **Default is rebase**; if your team forbids rewriting branch history, **`git merge origin/main`** into the issue branch is an acceptable alternative—still update from `main` before push and PR creation.
 5. Push `issue/<N>` and open the PR (`gh pr create` or equivalent).
-6. After merge **or abandon**, Worker or Planner **always** runs: `python3 scripts/cleanup.py <issue_number>` to delete the local `../worktrees/issue-<N>/` directory and prune stale worktree metadata.
+6. Planner (or designated merger) runs `gh pr checks`, performs review, and merges with `gh pr merge` once checks are green and review criteria are met (unless blocked; see **When merge is blocked**).
+7. After merge **or abandon**, Worker or Planner **always** runs: `python3 scripts/cleanup.py <issue_number>` to delete the local `../worktrees/issue-<N>/` directory and prune stale worktree metadata. If merged, fetch/update local `main` before cleanup.
 
 ## References
 
