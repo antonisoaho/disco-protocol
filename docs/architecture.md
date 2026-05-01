@@ -48,6 +48,14 @@ A **mobile-first** social web application for disc golf: users log **hole-by-hol
 - **± par**: aggregate and trends per user, per course template, date range.
 - **Hole-by-hole**: compare average strokes vs par per hole for two users or vs field (expensive queries → precomputed aggregates or Cloud Functions).
 
+### 3.6 Score protocol (v1 baseline)
+
+- Every round stores a **score protocol envelope**: `scoreProtocolVersion` + `holeCount` + `holeScores`.
+- `holeScores` remains a map keyed by canonical decimal hole strings (`"1"`, `"2"`, ...). Each hole entry must include integer `strokes` and integer `par` snapshot.
+- **Invariants (v1)**: supported version only (`1`), `holeCount` in allowed range, hole keys normalize to positive integers, no duplicate keys after normalization (`"1"` and `"01"` may not coexist), hole numbers cannot exceed `holeCount`, strokes/par must stay in configured numeric bounds.
+- Aggregation is protocol-driven: totals (`strokes`, `par`, `delta`) and missing-hole detection derive from normalized protocol data only (not UI assumptions).
+- **Extensibility rule**: future protocol changes are additive through explicit version bumps (`scoreProtocolVersion = 2+`) with dedicated normalization/validation adapters; clients must reject unknown versions until migration logic is implemented.
+
 ## 4. Firestore data model (initial sketch)
 
 Names are indicative; Workers normalize to consistent `camelCase` and collection IDs.

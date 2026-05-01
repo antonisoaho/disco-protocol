@@ -10,10 +10,17 @@ import {
   recordHoleScoreTransaction,
   subscribeMyRounds,
 } from '../firebase/rounds'
+import {
+  aggregateScoreProtocol,
+  normalizeHoleScoreUpdate,
+  normalizeScoreProtocol,
+} from './protocol'
 
 type Props = {
   user: User
 }
+
+const DEFAULT_ROUND_HOLE_COUNT = 18
 
 function formatStartedAt(ts: Timestamp): string {
   try {
@@ -23,12 +30,34 @@ function formatStartedAt(ts: Timestamp): string {
   }
 }
 
+function inferRoundHoleCount(data: RoundDoc): number {
+  if (
+    typeof data.holeCount === 'number' &&
+    Number.isInteger(data.holeCount) &&
+    data.holeCount >= 1
+  ) {
+    return data.holeCount
+  }
+
+  const fromScores = Object.keys(data.holeScores ?? {})
+    .map((key) => Number(key))
+    .filter((value) => Number.isInteger(value) && value >= 1)
+    .reduce((max, value) => Math.max(max, value), 0)
+
+  return Math.max(DEFAULT_ROUND_HOLE_COUNT, fromScores)
+}
+
+function formatDelta(delta: number): string {
+  return delta > 0 ? `+${delta}` : `${delta}`
+}
+
 export function ScoringPanel({ user }: Props) {
   const uid = user.uid
   const [items, setItems] = useState<{ id: string; data: RoundDoc }[]>([])
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [courseId, setCourseId] = useState('demo-course')
   const [templateId, setTemplateId] = useState('demo-template')
+  const [roundHoleCount, setRoundHoleCount] = useState(DEFAULT_ROUND_HOLE_COUNT)
   const [visibility, setVisibility] = useState<RoundVisibility>('private')
   const [holeNumber, setHoleNumber] = useState(1)
   const [strokes, setStrokes] = useState(3)
@@ -54,14 +83,36 @@ export function ScoringPanel({ user }: Props) {
     [items, selectedId],
   )
 
+  const selectedHoleCount = useMemo(
+    () => (selected ? inferRoundHoleCount(selected.data) : null),
+    [selected],
+  )
+
+  const selectedSummary = useMemo(() => {
+    if (!selected) return null
+
+    try {
+      const protocol = normalizeScoreProtocol({
+        version: selected.data.scoreProtocolVersion,
+        holeCount: inferRoundHoleCount(selected.data),
+        holeScores: selected.data.holeScores ?? {},
+      })
+      return aggregateScoreProtocol(protocol)
+    } catch {
+      return null
+    }
+  }, [selected])
+
   const onCreateRound = useCallback(async () => {
     setBusy(true)
     setError(null)
     try {
+      const safeHoleCount = Math.min(36, Math.max(1, roundHoleCount))
       const id = await createRound({
         ownerId: uid,
         courseId: courseId.trim() || 'demo-course',
         templateId: templateId.trim() || 'demo-template',
+        holeCount: safeHoleCount,
         visibility,
         participantIds: [uid],
       })
@@ -71,20 +122,30 @@ export function ScoringPanel({ user }: Props) {
     } finally {
       setBusy(false)
     }
-  }, [courseId, templateId, uid, visibility])
+  }, [courseId, roundHoleCount, templateId, uid, visibility])
 
   const onSaveHole = useCallback(async () => {
     if (!selectedId) return
     setBusy(true)
     setError(null)
     try {
-      await recordHoleScoreTransaction(selectedId, uid, holeNumber, strokes, par)
+      const normalized = normalizeHoleScoreUpdate(
+        { holeNumber, strokes, par },
+        { holeCount: selectedHoleCount },
+      )
+      await recordHoleScoreTransaction(
+        selectedId,
+        uid,
+        normalized.holeNumber,
+        normalized.strokes,
+        normalized.par,
+      )
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to save hole')
     } finally {
       setBusy(false)
     }
-  }, [holeNumber, par, selectedId, strokes, uid])
+  }, [holeNumber, par, selectedHoleCount, selectedId, strokes, uid])
 
   const onAddParticipant = useCallback(async () => {
     if (!selectedId || !inviteUid.trim()) return
@@ -166,6 +227,23 @@ export function ScoringPanel({ user }: Props) {
               <option value="public">public</option>
             </select>
           </div>
+          <div className="scoring-panel__field">
+            <label className="scoring-panel__label" htmlFor="hole-count">
+              holes
+            </label>
+            <input
+              id="hole-count"
+              className="scoring-panel__input"
+              type="number"
+              min={1}
+              max={36}
+              value={roundHoleCount}
+              onChange={(e) => {
+                const next = Number(e.target.value)
+                setRoundHoleCount(Number.isInteger(next) ? next : DEFAULT_ROUND_HOLE_COUNT)
+              }}
+            />
+          </div>
           <button
             type="button"
             className="scoring-panel__button scoring-panel__button--primary"
@@ -188,6 +266,19 @@ export function ScoringPanel({ user }: Props) {
               const lastKey = keys.length ? keys[keys.length - 1] : null
               const last = lastKey ? data.holeScores[lastKey] : null
               const semantic = last ? strokesParDeltaToSemantic(last.strokes, last.par) : 'par'
+              const summary = (() => {
+                try {
+                  return aggregateScoreProtocol(
+                    normalizeScoreProtocol({
+                      version: data.scoreProtocolVersion,
+                      holeCount: inferRoundHoleCount(data),
+                      holeScores: data.holeScores ?? {},
+                    }),
+                  )
+                } catch {
+                  return null
+                }
+              })()
               return (
                 <li key={id} className="scoring-panel__list-item">
                   <div>
@@ -196,6 +287,12 @@ export function ScoringPanel({ user }: Props) {
                       {data.visibility} · {formatStartedAt(data.startedAt)}
                       {data.completedAt ? ' · completed' : ''}
                     </p>
+                    {summary ? (
+                      <p className="scoring-panel__muted">
+                        {summary.totalStrokes}/{summary.totalPar} ({formatDelta(summary.totalDelta)}) ·{' '}
+                        {summary.scoredHoles}/{inferRoundHoleCount(data)} holes
+                      </p>
+                    ) : null}
                   </div>
                   <div>
                     {last ? (
@@ -224,6 +321,13 @@ export function ScoringPanel({ user }: Props) {
       {selected ? (
         <div className="scoring-panel__section">
           <span className="scoring-panel__label">Hole score (transaction, last-write-wins per hole)</span>
+          {selectedSummary ? (
+            <p className="scoring-panel__muted">
+              Round total {selectedSummary.totalStrokes}/{selectedSummary.totalPar} (
+              {formatDelta(selectedSummary.totalDelta)}) · {selectedSummary.scoredHoles}/{selectedHoleCount} holes
+              scored
+            </p>
+          ) : null}
           <div className="scoring-panel__row">
             <div className="scoring-panel__field">
               <label className="scoring-panel__label" htmlFor="hole-n">
@@ -234,7 +338,7 @@ export function ScoringPanel({ user }: Props) {
                 className="scoring-panel__input"
                 type="number"
                 min={1}
-                max={27}
+                max={selectedHoleCount ?? 36}
                 value={holeNumber}
                 onChange={(e) => setHoleNumber(Number(e.target.value))}
               />
