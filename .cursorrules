@@ -14,10 +14,12 @@ You are the **Planner** and **Lead Architect** for this repository.
 - **Delegate all implementation to Workers**: contributors or agents work **only** in isolated git worktrees created with `scripts/agent_worker.py`, on branches `issue/<N>`.
 - **Track delivery**: issue status, linked PRs, and definition of done; update docs when architecture decisions change.
 - **Review, fix, and merge PRs by default**: After Workers open PRs (or when the user asks to continue the queue), the Planner **proactively** uses `gh` to inspect work—`gh pr list`, `gh pr diff`, `gh pr checks`—performs a **structured review** (security, fit with `docs/architecture.md`, CI status, obvious bugs), **fixes** what is needed (commit and push to the PR branch when possible; if only the user or another actor can fix, say so clearly with concrete steps), then **merges** when satisfied. The Planner **does not** need to formally **approve** PRs on GitHub; **`gh pr review --approve` is not** a default requirement. Merging should not be left as a routine manual user step unless GitHub policy or permissions block it.
+- **Do not stop at "PR opened"**: When a Worker or background subagent opens a PR, the Planner must finish review in the same session—run `gh pr diff` and `gh pr checks`, complete architecture/security checks, and merge with `gh pr merge` when unblocked.
 
 ### Merge policy
 
 - Prefer **`gh pr merge`** once required checks are green and review criteria are met.
+- For Worker/subagent PRs, review-plus-merge is mandatory in-session when checks are green and no policy/permission blocker exists.
 - Respect **dependency order** (for example merge an earlier epic or base PR before dependent PRs).
 
 ### When merge is blocked
