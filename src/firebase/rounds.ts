@@ -16,6 +16,10 @@ import {
   type QuerySnapshot,
   type Unsubscribe,
 } from 'firebase/firestore'
+import {
+  SCORE_PROTOCOL_V1,
+  normalizeHoleScoreUpdate,
+} from '../scoring/protocol'
 import { db } from './firestore'
 import type { RoundDoc, RoundVisibility } from './roundTypes'
 
@@ -25,6 +29,7 @@ export type CreateRoundInput = {
   ownerId: string
   courseId: string
   templateId: string
+  holeCount?: number | null
   visibility?: RoundVisibility
   /** Initial participants; must include `ownerId`. */
   participantIds: string[]
@@ -40,6 +45,8 @@ export async function createRound(input: CreateRoundInput): Promise<string> {
     participantIds: input.participantIds,
     courseId: input.courseId,
     templateId: input.templateId,
+    scoreProtocolVersion: SCORE_PROTOCOL_V1,
+    holeCount: input.holeCount ?? null,
     visibility,
     startedAt: serverTimestamp(),
     completedAt: null,
@@ -60,7 +67,6 @@ export async function recordHoleScoreTransaction(
   strokes: number,
   par: number,
 ): Promise<void> {
-  const key = String(holeNumber)
   const ref = doc(db, ROUNDS, roundId)
 
   await runTransaction(db, async (tx) => {
@@ -72,11 +78,15 @@ export async function recordHoleScoreTransaction(
     if (!data.participantIds.includes(actorUid)) {
       throw new Error('Not a participant of this round')
     }
+    const normalized = normalizeHoleScoreUpdate(
+      { holeNumber, strokes, par },
+      { holeCount: data.holeCount ?? null },
+    )
     const nextHoleScores = {
       ...data.holeScores,
-      [key]: {
-        strokes,
-        par,
+      [normalized.holeKey]: {
+        strokes: normalized.strokes,
+        par: normalized.par,
         updatedAt: serverTimestamp(),
         updatedBy: actorUid,
       },

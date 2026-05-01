@@ -16,6 +16,10 @@ export type RoundDoc = {
   participantIds: string[]
   courseId: string
   templateId: string
+  /** Score protocol schema version (currently v1). */
+  scoreProtocolVersion?: number
+  /** Layout hole count snapshot for protocol validation and aggregation. */
+  holeCount?: number | null
   visibility: RoundVisibility
   startedAt: Timestamp
   completedAt: Timestamp | null
