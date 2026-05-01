@@ -23,6 +23,8 @@ on:
       - "package-lock.json"
       - "firebase.json"
       - ".firebaserc"
+      - "firestore.rules"
+      - "firestore.indexes.json"
       - ".github/workflows/firebase-hosting-deploy.yml"
 
 permissions:
@@ -71,5 +73,5 @@ jobs:
         with:
           credentials_json: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
 
-      - name: Deploy Hosting
-        run: npx firebase deploy --only hosting --non-interactive
+      - name: Deploy Firebase Hosting and Firestore config
+        run: npx firebase deploy --only hosting,firestore:rules,firestore:indexes --non-interactive
