@@ -245,35 +245,11 @@
   color: $color-text-muted;
 }
 
-.scoring-panel__fresh-editor {
-  padding: calc(#{$space-unit} * 2);
-  border: 1px dashed $color-border;
-  border-radius: $radius-sm;
-  background: color-mix(in srgb, $color-bg 70%, $color-surface);
-}
-
-.scoring-panel__fresh-list {
-  list-style: none;
-  margin: 0 0 calc(#{$space-unit} * 3);
-  padding: 0;
-  display: grid;
-  gap: calc(#{$space-unit} * 2);
-}
-
-.scoring-panel__fresh-item {
-  display: grid;
-  grid-template-columns: minmax(5.5rem, auto) repeat(2, minmax(0, 1fr));
-  gap: calc(#{$space-unit} * 2);
-  align-items: end;
-  padding: calc(#{$space-unit} * 2);
-  border: 1px solid $color-border;
-  border-radius: $radius-sm;
-  background: $color-bg;
-}
-
 .scoring-panel__scorecard-wrap {
   margin-top: calc(#{$space-unit} * 2);
   overflow-x: auto;
+  overflow-y: auto;
+  max-height: min(70vh, 34rem);
   border: 1px solid $color-border;
   border-radius: $radius-sm;
   background: $color-bg;
@@ -319,6 +295,14 @@
   min-width: 7.5rem;
 }
 
+.scoring-panel__scorecard-participants {
+  margin-top: calc(#{$space-unit} * 2);
+  padding: calc(#{$space-unit} * 2);
+  border: 1px solid $color-border;
+  border-radius: $radius-sm;
+  background: color-mix(in srgb, $color-bg 70%, $color-surface);
+}
+
 .scoring-panel__scorecard-input {
   width: 5.5rem;
   padding: calc(#{$space-unit} * 1) calc(#{$space-unit} * 2);
@@ -329,8 +313,11 @@
   font: inherit;
 }
 
-.scoring-panel__scorecard-badge {
-  margin-left: calc(#{$space-unit} * 1.5);
+.scoring-panel__scorecard-notation {
+  margin-left: calc(#{$space-unit} * 1.25);
+  min-width: 2rem;
+  min-height: 2rem;
+  font-size: 0.8rem;
 }
 
 .scoring-panel__scorecard-total-meta {
@@ -340,7 +327,8 @@
   color: $color-text-muted;
 }
 
-.scoring-panel__fresh-hole {
-  font-weight: 600;
-  color: $color-text;
+.scoring-panel__scorecard-actions {
+  justify-content: space-between;
+  margin-top: calc(#{$space-unit} * 2);
+  margin-bottom: 0;
 }
