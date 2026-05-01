@@ -21,7 +21,7 @@ Plan → Issue → Worktree → Rebase main → PR → Review → Fix → Merge 
 4. **Sync with `main` before PR** — In the worktree: `git fetch origin`, then **`git rebase origin/main`** (resolve conflicts, rerun lint/build). If rebase is not allowed for your team, merge **`origin/main`** into the branch instead; default is **rebase**.
 5. **PR** — Push and open a pull request only after the branch is up to date with `main`.
 6. **Review, fix, merge** — By default the **Planner** drives this with `gh`: inspect diffs and checks, structured review (security, architecture fit, CI, obvious bugs), **fix** what is needed (push to the PR branch when possible), then **`gh pr merge`** when satisfied. Formal **`gh pr review --approve`** is **not** required for the Planner role. The human maintainer is optional unless branch protection or permissions block merge (see `.cursorrules`).
-7. **Cleanup** — `python3 scripts/cleanup.py <N>` after the PR is merged.
+7. **Cleanup (always)** — after merge **or abandon**, run `python3 scripts/cleanup.py <N>` to delete `../worktrees/issue-<N>/` and prune stale worktree records.
 
 All orchestration docs and comments are in **English**.
 
@@ -70,7 +70,7 @@ gh secret set FIREBASE_SERVICE_ACCOUNT < path/to/serviceAccount.json
 |--------|---------|
 | `orchestrator.py` | `gh` helper: `create`, `list`, `show`, `track` |
 | `scripts/agent_worker.py` | New worktree + branch for issue **N** |
-| `scripts/cleanup.py` | Remove worktree + local branch after merge (`--force` skips `gh` check) |
+| `scripts/cleanup.py` | Remove issue worktree + local branch; safe-by-default checks, `--dry-run` preview, `--force` override |
 
 ### Examples
 

@@ -43,7 +43,7 @@ Branch protection or permissions may require checks from specific actors, mandat
 3. Worker implements in `../worktrees/issue-<N>/` on branch `issue/<N>`.
 4. **Before opening a PR (hard rule):** `git fetch origin`, then **`git rebase origin/main`** so the branch is up to date with the latest `main`. Resolve conflicts, then rerun project checks (for example lint and build) on the rebased branch. **Default is rebase**; if your team forbids rewriting branch history, **`git merge origin/main`** into the issue branch is an acceptable alternative—still update from `main` before push and PR creation.
 5. Push `issue/<N>` and open the PR (`gh pr create` or equivalent).
-6. After merge, Worker or Planner runs: `python3 scripts/cleanup.py <issue_number>`
+6. After merge **or abandon**, Worker or Planner **always** runs: `python3 scripts/cleanup.py <issue_number>` to delete the local `../worktrees/issue-<N>/` directory and prune stale worktree metadata.
 
 ## References
 
