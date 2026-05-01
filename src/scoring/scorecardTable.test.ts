@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import {
   buildScorecardColumns,
+  collectScorecardEditedHoleNumbers,
+  computeGrandTotals,
   computeParticipantTotals,
   getOutcomeForScore,
 } from './scorecardTable'
@@ -13,7 +15,7 @@ describe('buildScorecardColumns', () => {
         'u-2': 'Byron',
       }),
     ).toEqual([
-      { key: 'hole', kind: 'hole', label: 'Hole' },
+      { key: 'hole', kind: 'hole', label: 'Hole #' },
       { key: 'par', kind: 'par', label: 'Par' },
       { key: 'length', kind: 'length', label: 'Length' },
       { key: 'player:u-1', kind: 'participant', label: 'Ada', participantId: 'u-1' },
@@ -37,6 +39,38 @@ describe('computeParticipantTotals', () => {
     ).toEqual({
       'u-1': { totalStrokes: 7, totalPar: 6, totalDelta: 1, scoredHoles: 2 },
       'u-2': { totalStrokes: 2, totalPar: 3, totalDelta: -1, scoredHoles: 1 },
+    })
+  })
+})
+
+describe('collectScorecardEditedHoleNumbers', () => {
+  it('collects unique hole numbers from par, length, and score edits', () => {
+    expect(
+      collectScorecardEditedHoleNumbers({
+        'par:1': '3',
+        'length:2': '85',
+        'score:u-1:2': '4',
+        'score:u-2:2': '3',
+        'score:u-2:11': '5',
+        'score:u-2:bad': 'x',
+      }),
+    ).toEqual([1, 2, 11])
+  })
+})
+
+describe('computeGrandTotals', () => {
+  it('aggregates participant totals into one footer summary', () => {
+    expect(
+      computeGrandTotals({
+        'u-1': { totalStrokes: 34, totalPar: 36, totalDelta: -2, scoredHoles: 9 },
+        'u-2': { totalStrokes: 31, totalPar: 30, totalDelta: 1, scoredHoles: 8 },
+      }),
+    ).toEqual({
+      totalStrokes: 65,
+      totalPar: 66,
+      totalDelta: -1,
+      scoredHoles: 17,
+      participantCount: 2,
     })
   })
 })

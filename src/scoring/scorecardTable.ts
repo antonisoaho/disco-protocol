@@ -1,7 +1,7 @@
 import { strokesParDeltaToSemantic, type ScoreSemantic } from '../lib/scoreSemantic'
 
 export type ScorecardColumn =
-  | { key: 'hole'; kind: 'hole'; label: 'Hole' }
+  | { key: 'hole'; kind: 'hole'; label: 'Hole #' }
   | { key: 'par'; kind: 'par'; label: 'Par' }
   | { key: 'length'; kind: 'length'; label: 'Length' }
   | { key: string; kind: 'participant'; label: string; participantId: string }
@@ -20,6 +20,14 @@ export type ParticipantTotals = {
   scoredHoles: number
 }
 
+export type ScorecardGrandTotals = {
+  totalStrokes: number
+  totalPar: number
+  totalDelta: number
+  scoredHoles: number
+  participantCount: number
+}
+
 export type HoleOutcome = {
   semantic: ScoreSemantic
   label: string
@@ -32,7 +40,7 @@ export function buildScorecardColumns(
   displayNameByUid: Record<string, string>,
 ): ScorecardColumn[] {
   const baseColumns: ScorecardColumn[] = [
-    { key: 'hole', kind: 'hole', label: 'Hole' },
+    { key: 'hole', kind: 'hole', label: 'Hole #' },
     { key: 'par', kind: 'par', label: 'Par' },
     { key: 'length', kind: 'length', label: 'Length' },
   ]
@@ -75,6 +83,48 @@ export function computeParticipantTotals(
     }
   }
   return totals
+}
+
+export function collectScorecardEditedHoleNumbers(edits: Record<string, string>): number[] {
+  const holeNumbers = new Set<number>()
+  for (const key of Object.keys(edits)) {
+    if (key.startsWith('par:') || key.startsWith('length:')) {
+      const hole = Number(key.split(':')[1])
+      if (Number.isInteger(hole) && hole >= 1) {
+        holeNumbers.add(hole)
+      }
+      continue
+    }
+    if (key.startsWith('score:')) {
+      const parts = key.split(':')
+      const hole = Number(parts[2])
+      if (Number.isInteger(hole) && hole >= 1) {
+        holeNumbers.add(hole)
+      }
+    }
+  }
+  return Array.from(holeNumbers).sort((a, b) => a - b)
+}
+
+export function computeGrandTotals(participantTotals: Record<string, ParticipantTotals>): ScorecardGrandTotals {
+  const values = Object.values(participantTotals)
+  let totalStrokes = 0
+  let totalPar = 0
+  let totalDelta = 0
+  let scoredHoles = 0
+  for (const totals of values) {
+    totalStrokes += totals.totalStrokes
+    totalPar += totals.totalPar
+    totalDelta += totals.totalDelta
+    scoredHoles += totals.scoredHoles
+  }
+  return {
+    totalStrokes,
+    totalPar,
+    totalDelta,
+    scoredHoles,
+    participantCount: values.length,
+  }
 }
 
 function outcomeLabel(delta: number): string {
