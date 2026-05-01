@@ -10,7 +10,31 @@ name: CI
 on:
   push:
     branches: [main, master]
+    paths:
+      - "src/**"
+      - "public/**"
+      - "index.html"
+      - "package.json"
+      - "package-lock.json"
+      - "tsconfig.json"
+      - "tsconfig.*.json"
+      - "eslint.config.js"
+      - "vite.config.ts"
+      - "vitest.config.ts"
+      - ".github/workflows/ci.yml"
   pull_request:
+    paths:
+      - "src/**"
+      - "public/**"
+      - "index.html"
+      - "package.json"
+      - "package-lock.json"
+      - "tsconfig.json"
+      - "tsconfig.*.json"
+      - "eslint.config.js"
+      - "vite.config.ts"
+      - "vitest.config.ts"
+      - ".github/workflows/ci.yml"
   workflow_dispatch:
 
 concurrency:
@@ -35,6 +59,9 @@ jobs:
 
       - name: Lint
         run: npm run lint
+
+      - name: Test
+        run: npm run test
 
       - name: Build
         env:
