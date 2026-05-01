@@ -11,11 +11,37 @@ export type HoleScoreEntry = {
   updatedBy: string
 }
 
+export type RoundCourseSource = 'saved' | 'fresh'
+
+export type RoundCourseDraftHole = {
+  number: number
+  par: number
+  lengthMeters?: number | null
+}
+
+export type RoundCourseDraft = {
+  name: string
+  holes: RoundCourseDraftHole[]
+}
+
+export type RoundCoursePromotionStatus = 'none' | 'pending' | 'created' | 'failed'
+
+export type RoundCoursePromotion = {
+  status: RoundCoursePromotionStatus
+  targetCourseId?: string | null
+  targetTemplateId?: string | null
+  promotedAt?: Timestamp | null
+  errorCode?: string | null
+}
+
 export type RoundDoc = {
   ownerId: string
   participantIds: string[]
   courseId: string
   templateId: string
+  courseSource?: RoundCourseSource
+  courseDraft?: RoundCourseDraft | null
+  coursePromotion?: RoundCoursePromotion | null
   /** Score protocol schema version (currently v1). */
   scoreProtocolVersion?: number
   /** Layout hole count snapshot for protocol validation and aggregation. */

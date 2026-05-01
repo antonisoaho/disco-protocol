@@ -82,12 +82,30 @@
     background: map.get($score-color, birdie);
     color: #fff;
   }
+
+  &--active {
+    border-color: map.get($score-color, eagle);
+    box-shadow: 0 0 0 1px color-mix(in srgb, map.get($score-color, eagle) 35%, transparent);
+  }
 }
 
 .scoring-panel__error {
   margin: 0 0 calc(#{$space-unit} * 3);
   color: map.get($score-color, double-bogey-plus);
   font-size: 0.9rem;
+}
+
+.scoring-panel__notice {
+  margin: 0 0 calc(#{$space-unit} * 3);
+  color: map.get($score-color, birdie);
+  font-size: 0.9rem;
+}
+
+.scoring-panel__mode-switch {
+  display: flex;
+  flex-wrap: wrap;
+  gap: calc(#{$space-unit} * 2);
+  margin-bottom: calc(#{$space-unit} * 2);
 }
 
 .scoring-panel__selection {
@@ -147,4 +165,28 @@
   margin: 0;
   font-size: 0.85rem;
   color: $color-text-muted;
+}
+
+.scoring-panel__fresh-list {
+  list-style: none;
+  margin: 0 0 calc(#{$space-unit} * 3);
+  padding: 0;
+  display: grid;
+  gap: calc(#{$space-unit} * 2);
+}
+
+.scoring-panel__fresh-item {
+  display: grid;
+  grid-template-columns: minmax(5.5rem, auto) repeat(2, minmax(0, 1fr));
+  gap: calc(#{$space-unit} * 2);
+  align-items: end;
+  padding: calc(#{$space-unit} * 2);
+  border: 1px solid $color-border;
+  border-radius: $radius-sm;
+  background: $color-bg;
+}
+
+.scoring-panel__fresh-hole {
+  font-weight: 600;
+  color: $color-text;
 }

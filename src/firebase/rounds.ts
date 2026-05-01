@@ -1,8 +1,8 @@
 import {
-  addDoc,
   arrayUnion,
   collection,
   doc,
+  getDoc,
   getDocs,
   limit,
   onSnapshot,
@@ -10,6 +10,7 @@ import {
   query,
   runTransaction,
   serverTimestamp,
+  setDoc,
   updateDoc,
   where,
   type FirestoreError,
@@ -20,31 +21,74 @@ import {
   SCORE_PROTOCOL_V1,
   normalizeHoleScoreUpdate,
 } from '../scoring/protocol'
+import { COLLECTIONS } from './paths'
 import { db } from './firestore'
-import type { RoundDoc, RoundVisibility } from './roundTypes'
+import {
+  buildFreshCoursePromotionPlan,
+  resolveFreshRoundCourseRefs,
+} from './freshRoundCourse'
+import type {
+  RoundCourseDraft,
+  RoundDoc,
+  RoundVisibility,
+} from './roundTypes'
 
 const ROUNDS = 'rounds'
 
-export type CreateRoundInput = {
+type BaseCreateRoundInput = {
   ownerId: string
-  courseId: string
-  templateId: string
   holeCount?: number | null
   visibility?: RoundVisibility
   /** Initial participants; must include `ownerId`. */
   participantIds: string[]
 }
 
+type CreateSavedRoundInput = BaseCreateRoundInput & {
+  courseSource?: 'saved'
+  courseId: string
+  templateId: string
+}
+
+type CreateFreshRoundInput = BaseCreateRoundInput & {
+  courseSource: 'fresh'
+  courseDraft: RoundCourseDraft
+  courseId?: string
+  templateId?: string
+}
+
+export type CreateRoundInput = CreateSavedRoundInput | CreateFreshRoundInput
+
 /**
  * Creates a round document. Caller must ensure `participantIds` includes the owner.
  */
 export async function createRound(input: CreateRoundInput): Promise<string> {
   const visibility = input.visibility ?? 'private'
-  const ref = await addDoc(collection(db, ROUNDS), {
+  const roundRef = doc(collection(db, ROUNDS))
+  const isFreshRound = input.courseSource === 'fresh'
+  const refs = isFreshRound
+    ? resolveFreshRoundCourseRefs(roundRef.id, input.courseDraft.name, {
+        courseId: input.courseId,
+        templateId: input.templateId,
+      })
+    : {
+        courseId: input.courseId,
+        templateId: input.templateId,
+      }
+
+  await setDoc(roundRef, {
     ownerId: input.ownerId,
     participantIds: input.participantIds,
-    courseId: input.courseId,
-    templateId: input.templateId,
+    courseId: refs.courseId,
+    templateId: refs.templateId,
+    courseSource: isFreshRound ? 'fresh' : 'saved',
+    courseDraft: isFreshRound ? input.courseDraft : null,
+    coursePromotion: {
+      status: 'none',
+      targetCourseId: isFreshRound ? refs.courseId : null,
+      targetTemplateId: isFreshRound ? refs.templateId : null,
+      promotedAt: null,
+      errorCode: null,
+    },
     scoreProtocolVersion: SCORE_PROTOCOL_V1,
     holeCount: input.holeCount ?? null,
     visibility,
@@ -54,7 +98,7 @@ export async function createRound(input: CreateRoundInput): Promise<string> {
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
   })
-  return ref.id
+  return roundRef.id
 }
 
 /**
@@ -108,6 +152,130 @@ export async function addParticipantToRound(
     participantIds: arrayUnion(newParticipantUid),
     updatedAt: serverTimestamp(),
   })
+}
+
+export type CompleteRoundResult = {
+  promotionStatus: 'not_needed' | 'created' | 'already_created' | 'pending' | 'failed'
+}
+
+export async function completeRoundAndPromote(
+  roundId: string,
+  actorUid: string,
+): Promise<CompleteRoundResult> {
+  const ref = doc(db, ROUNDS, roundId)
+  const initialSnap = await getDoc(ref)
+  if (!initialSnap.exists()) {
+    throw new Error('Round not found')
+  }
+  const initialData = initialSnap.data() as RoundDoc
+  if (!initialData.participantIds.includes(actorUid)) {
+    throw new Error('Not a participant of this round')
+  }
+
+  try {
+    return await runTransaction(db, async (tx) => {
+      const snap = await tx.get(ref)
+      if (!snap.exists()) {
+        throw new Error('Round not found')
+      }
+      const data = snap.data() as RoundDoc
+      if (!data.participantIds.includes(actorUid)) {
+        throw new Error('Not a participant of this round')
+      }
+
+      if (data.courseSource !== 'fresh') {
+        tx.update(ref, {
+          completedAt: serverTimestamp(),
+          updatedAt: serverTimestamp(),
+        })
+        return { promotionStatus: 'not_needed' as const }
+      }
+
+      if (!data.courseDraft || data.courseDraft.holes.length === 0) {
+        tx.update(ref, {
+          completedAt: serverTimestamp(),
+          updatedAt: serverTimestamp(),
+          coursePromotion: {
+            status: 'failed',
+            targetCourseId: data.coursePromotion?.targetCourseId ?? data.courseId,
+            targetTemplateId: data.coursePromotion?.targetTemplateId ?? data.templateId,
+            promotedAt: null,
+            errorCode: 'missing_draft',
+          },
+        })
+        return { promotionStatus: 'failed' as const }
+      }
+
+      const plan = buildFreshCoursePromotionPlan({
+        roundId,
+        ownerId: data.ownerId,
+        draft: data.courseDraft,
+        existingRefs: {
+          courseId: data.coursePromotion?.targetCourseId ?? data.courseId,
+          templateId: data.coursePromotion?.targetTemplateId ?? data.templateId,
+        },
+      })
+
+      const courseRef = doc(db, COLLECTIONS.courses, plan.courseId)
+      const templateRef = doc(
+        db,
+        COLLECTIONS.courses,
+        plan.courseId,
+        COLLECTIONS.templates,
+        plan.templateId,
+      )
+      const courseSnap = await tx.get(courseRef)
+      const templateSnap = await tx.get(templateRef)
+      const alreadyCreated = courseSnap.exists() && templateSnap.exists()
+
+      if (!courseSnap.exists()) {
+        tx.set(courseRef, {
+          ...plan.course,
+          createdAt: serverTimestamp(),
+        })
+      }
+      if (!templateSnap.exists()) {
+        tx.set(templateRef, {
+          ...plan.template,
+          createdAt: serverTimestamp(),
+        })
+      }
+
+      tx.update(ref, {
+        completedAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+        coursePromotion: {
+          status: 'created',
+          targetCourseId: plan.courseId,
+          targetTemplateId: plan.templateId,
+          promotedAt: serverTimestamp(),
+          errorCode: null,
+        },
+      })
+
+      return { promotionStatus: alreadyCreated ? ('already_created' as const) : ('created' as const) }
+    })
+  } catch (error) {
+    const firestoreError = error as FirestoreError
+    if (
+      initialData.courseSource === 'fresh' &&
+      (firestoreError.code === 'unavailable' || firestoreError.code === 'deadline-exceeded')
+    ) {
+      await updateDoc(ref, {
+        completedAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+        coursePromotion: {
+          status: 'pending',
+          targetCourseId: initialData.coursePromotion?.targetCourseId ?? initialData.courseId,
+          targetTemplateId: initialData.coursePromotion?.targetTemplateId ?? initialData.templateId,
+          promotedAt: initialData.coursePromotion?.promotedAt ?? null,
+          errorCode: 'offline_pending',
+        },
+      })
+      return { promotionStatus: 'pending' }
+    }
+    throw error
+  }
 }
 
 export async function markRoundCompleted(roundId: string): Promise<void> {
