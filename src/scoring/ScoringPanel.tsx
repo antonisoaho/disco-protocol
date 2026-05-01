@@ -20,13 +20,11 @@ import {
   completeRoundAndPromote,
   createRound,
   recordParticipantHoleScoreTransaction,
-  recordHoleScoreTransaction,
   subscribeMyRounds,
   updateFreshRoundHoleMetadata,
 } from '../firebase/rounds'
 import {
   aggregateScoreProtocol,
-  normalizeHoleScoreUpdate,
   normalizeScoreProtocol,
 } from './protocol'
 import {
@@ -182,9 +180,6 @@ export function ScoringPanel({ user, selectedCourseTemplate }: Props) {
   const [freshCourseName, setFreshCourseName] = useState('')
   const [freshHoleCount, setFreshHoleCount] = useState(DEFAULT_FRESH_HOLE_COUNT)
   const [visibility, setVisibility] = useState<RoundVisibility>('private')
-  const [holeNumber, setHoleNumber] = useState(1)
-  const [strokes, setStrokes] = useState(3)
-  const [par, setPar] = useState(3)
   const [newRoundParticipants, setNewRoundParticipants] = useState<string[]>([uid])
   const [inviteSelections, setInviteSelections] = useState<string[]>([])
   const [directoryEntries, setDirectoryEntries] = useState<UserDirectoryEntry[]>([])
@@ -319,15 +314,28 @@ export function ScoringPanel({ user, selectedCourseTemplate }: Props) {
     return map
   }, [selected])
 
+  const selectedSavedParByHole = useMemo(() => {
+    const map: Record<number, number> = {}
+    if (!selected || selected.data.courseSource !== 'saved' || !selectedParticipantScores) {
+      return map
+    }
+    for (const participantId of selected.data.participantIds) {
+      const holeMap = selectedParticipantScores[participantId] ?? {}
+      for (const [holeKey, score] of Object.entries(holeMap)) {
+        const parsedHole = Number(holeKey)
+        if (!Number.isInteger(parsedHole) || parsedHole < 1) continue
+        if (typeof map[parsedHole] === 'number') continue
+        map[parsedHole] = score.par
+      }
+    }
+    return map
+  }, [selected, selectedParticipantScores])
+
   const selectedScorecardScores = useMemo(() => {
     if (!selected || !selectedParticipantScores) return null
     const next: Record<string, Record<string, { strokes: number; par: number }>> = {}
     for (const [participantId, holeMap] of Object.entries(selectedParticipantScores)) {
       next[participantId] = { ...holeMap }
-    }
-
-    if (selected.data.courseSource !== 'fresh') {
-      return next
     }
 
     for (const participantId of selected.data.participantIds) {
@@ -344,9 +352,13 @@ export function ScoringPanel({ user, selectedCourseTemplate }: Props) {
         const parInput = scorecardEdits[`par:${hole}`]
         const parsedPar = parInput !== undefined ? parseIntegerInput(parInput) : null
         const fallbackPar =
-          selectedFreshHoleByNumber[hole]?.par ??
-          next[participantId][holeKey]?.par ??
-          null
+          selected.data.courseSource === 'fresh'
+            ? selectedFreshHoleByNumber[hole]?.par ??
+              next[participantId][holeKey]?.par ??
+              null
+            : selectedSavedParByHole[hole] ??
+              next[participantId][holeKey]?.par ??
+              null
         if (parsedPar === null && typeof fallbackPar !== 'number') continue
         next[participantId][holeKey] = {
           strokes: strokesValue,
@@ -355,7 +367,7 @@ export function ScoringPanel({ user, selectedCourseTemplate }: Props) {
       }
     }
     return next
-  }, [scorecardEdits, selected, selectedFreshHoleByNumber, selectedParticipantScores])
+  }, [scorecardEdits, selected, selectedFreshHoleByNumber, selectedParticipantScores, selectedSavedParByHole])
 
   const selectedParticipantTotals = useMemo(() => {
     if (!selected || !selectedScorecardScores) return {}
@@ -420,7 +432,6 @@ export function ScoringPanel({ user, selectedCourseTemplate }: Props) {
       }
       setSelectedId(id)
       setScorecardEdits({})
-      setHoleNumber(1)
     } catch (e) {
       if (e instanceof FreshRoundDraftValidationError) {
         setError(formatDraftIssues(e.issues))
@@ -440,31 +451,8 @@ export function ScoringPanel({ user, selectedCourseTemplate }: Props) {
     visibility,
   ])
 
-  const onSaveHole = useCallback(async () => {
-    if (!selectedId) return
-    setBusy(true)
-    setError(null)
-    try {
-      const normalized = normalizeHoleScoreUpdate(
-        { holeNumber, strokes, par },
-        { holeCount: selectedHoleCount },
-      )
-      await recordHoleScoreTransaction(
-        selectedId,
-        uid,
-        normalized.holeNumber,
-        normalized.strokes,
-        normalized.par,
-      )
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'Failed to save hole')
-    } finally {
-      setBusy(false)
-    }
-  }, [holeNumber, par, selectedHoleCount, selectedId, strokes, uid])
-
-  const onSaveFreshScorecard = useCallback(async () => {
-    if (!selectedId || !selected || selected.data.courseSource !== 'fresh') return
+  const onSaveScorecard = useCallback(async () => {
+    if (!selectedId || !selected) return
     if (scorecardEditedHoles.length === 0) {
       setNotice('No unsaved scorecard changes.')
       return
@@ -480,11 +468,22 @@ export function ScoringPanel({ user, selectedCourseTemplate }: Props) {
 
     for (const rowHoleNumber of scorecardEditedHoles) {
       const draftHole = selectedFreshHoleByNumber[rowHoleNumber] ?? null
+      const savedHolePar = selectedSavedParByHole[rowHoleNumber]
       const parInput = scorecardEdits[`par:${rowHoleNumber}`]
       const lengthInput = scorecardEdits[`length:${rowHoleNumber}`]
-      const resolvedParInput = parInput ?? (typeof draftHole?.par === 'number' ? String(draftHole.par) : '')
+      const resolvedParInput =
+        parInput ??
+        (selected.data.courseSource === 'fresh'
+          ? typeof draftHole?.par === 'number'
+            ? String(draftHole.par)
+            : ''
+          : typeof savedHolePar === 'number'
+            ? String(savedHolePar)
+            : '')
       const resolvedLengthInput =
-        lengthInput ?? (typeof draftHole?.lengthMeters === 'number' ? String(draftHole.lengthMeters) : '')
+        selected.data.courseSource === 'fresh'
+          ? lengthInput ?? (typeof draftHole?.lengthMeters === 'number' ? String(draftHole.lengthMeters) : '')
+          : ''
 
       const participantScoresToSave: Array<{ participantUid: string; strokes: number }> = []
       for (const participantUid of selected.data.participantIds) {
@@ -518,15 +517,17 @@ export function ScoringPanel({ user, selectedCourseTemplate }: Props) {
     setNotice(null)
     try {
       for (const row of rowsToSave) {
-        await updateFreshRoundHoleMetadata({
-          roundId: selectedId,
-          actorUid: uid,
-          holeNumber: row.holeNumber,
-          metadata: {
-            par: row.parInput,
-            lengthMeters: row.lengthInput,
-          },
-        })
+        if (selected.data.courseSource === 'fresh') {
+          await updateFreshRoundHoleMetadata({
+            roundId: selectedId,
+            actorUid: uid,
+            holeNumber: row.holeNumber,
+            metadata: {
+              par: row.parInput,
+              lengthMeters: row.lengthInput,
+            },
+          })
+        }
 
         await Promise.all(
           row.participantScoresToSave.map((participant) =>
@@ -546,14 +547,16 @@ export function ScoringPanel({ user, selectedCourseTemplate }: Props) {
         const next = { ...current }
         for (const row of rowsToSave) {
           delete next[`par:${row.holeNumber}`]
-          delete next[`length:${row.holeNumber}`]
+          if (selected.data.courseSource === 'fresh') {
+            delete next[`length:${row.holeNumber}`]
+          }
           for (const participantUid of selected.data.participantIds) {
             delete next[`score:${participantUid}:${row.holeNumber}`]
           }
         }
         return next
       })
-      setNotice(`Saved ${rowsToSave.length} scorecard row${rowsToSave.length > 1 ? 's' : ''}.`)
+      setNotice(`Saved ${rowsToSave.length} scorecard hole${rowsToSave.length > 1 ? 's' : ''}.`)
     } catch (e) {
       if (e instanceof FreshRoundDraftValidationError) {
         setError(formatDraftIssues(e.issues))
@@ -568,6 +571,7 @@ export function ScoringPanel({ user, selectedCourseTemplate }: Props) {
     scorecardEdits,
     selected,
     selectedFreshHoleByNumber,
+    selectedSavedParByHole,
     selectedId,
     uid,
   ])
@@ -895,13 +899,6 @@ export function ScoringPanel({ user, selectedCourseTemplate }: Props) {
                       onClick={() => {
                         setSelectedId(id)
                         setScorecardEdits({})
-                        if (data.courseSource === 'fresh') {
-                          setHoleNumber(1)
-                          const firstHole = data.courseDraft?.holes[0]
-                          if (typeof firstHole?.par === 'number') {
-                            setPar(firstHole.par)
-                          }
-                        }
                       }}
                       disabled={busy}
                     >
@@ -919,8 +916,8 @@ export function ScoringPanel({ user, selectedCourseTemplate }: Props) {
         <div className="scoring-panel__section">
           <span className="scoring-panel__label">
             {selected.data.courseSource === 'fresh'
-              ? 'Fresh scorecard (entire round)'
-              : 'Hole score (transaction, last-write-wins per hole)'}
+              ? 'Fresh scorecard (single save)'
+              : 'Saved scorecard (single save)'}
           </span>
           {selectedSummary ? (
             <p className="scoring-panel__muted">
@@ -985,295 +982,231 @@ export function ScoringPanel({ user, selectedCourseTemplate }: Props) {
               </button>
             </div>
           ) : null}
-          {selected.data.courseSource === 'fresh' ? (
-            <>
-              <div className="scoring-panel__scorecard-wrap">
-                <table className="scoring-panel__scorecard" aria-label="Fresh round scorecard table">
-                  <thead>
-                    <tr>
-                      {selectedParticipantColumns.map((column) => (
-                        <th key={column.key} scope="col">
-                          {column.label}
-                        </th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {Array.from({ length: selectedHoleCount ?? 0 }, (_, index) => {
-                      const rowHoleNumber = index + 1
-                      const draftHole = selectedFreshHoleByNumber[rowHoleNumber] ?? null
-                      const parValue =
-                        scorecardEdits[`par:${rowHoleNumber}`] ??
-                        (typeof draftHole?.par === 'number' ? String(draftHole.par) : '')
-                      const lengthValue =
-                        scorecardEdits[`length:${rowHoleNumber}`] ??
-                        (typeof draftHole?.lengthMeters === 'number' ? String(draftHole.lengthMeters) : '')
-                      return (
-                        <tr key={rowHoleNumber}>
-                          <th scope="row" className="scoring-panel__scorecard-hole">
-                            {rowHoleNumber}
-                          </th>
-                          <td>
-                            <input
-                              className="scoring-panel__scorecard-input"
-                              type="number"
-                              min={2}
-                              max={9}
-                              value={parValue}
-                              onChange={(e) =>
-                                setScorecardEdits((current) => ({
-                                  ...current,
-                                  [`par:${rowHoleNumber}`]: e.target.value,
-                                }))
-                              }
-                              placeholder="Par"
-                              aria-label={`Hole ${rowHoleNumber} par`}
-                            />
-                          </td>
-                          <td>
+          <div className="scoring-panel__scorecard-wrap">
+            <table
+              className="scoring-panel__scorecard"
+              aria-label={`${selected.data.courseSource === 'fresh' ? 'Fresh' : 'Saved'} round scorecard table`}
+            >
+              <thead>
+                <tr>
+                  {selectedParticipantColumns.map((column) => (
+                    <th key={column.key} scope="col">
+                      {column.label}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {Array.from({ length: selectedHoleCount ?? 0 }, (_, index) => {
+                  const rowHoleNumber = index + 1
+                  const draftHole = selectedFreshHoleByNumber[rowHoleNumber] ?? null
+                  const savedPar = selectedSavedParByHole[rowHoleNumber]
+                  const parValue =
+                    scorecardEdits[`par:${rowHoleNumber}`] ??
+                    (selected.data.courseSource === 'fresh'
+                      ? typeof draftHole?.par === 'number'
+                        ? String(draftHole.par)
+                        : ''
+                      : typeof savedPar === 'number'
+                        ? String(savedPar)
+                        : '')
+                  const lengthValue =
+                    scorecardEdits[`length:${rowHoleNumber}`] ??
+                    (typeof draftHole?.lengthMeters === 'number' ? String(draftHole.lengthMeters) : '')
+                  return (
+                    <tr key={rowHoleNumber}>
+                      <th scope="row" className="scoring-panel__scorecard-hole">
+                        {rowHoleNumber}
+                      </th>
+                      <td>
+                        <input
+                          className="scoring-panel__scorecard-input"
+                          type="number"
+                          min={2}
+                          max={9}
+                          value={parValue}
+                          onChange={(e) =>
+                            setScorecardEdits((current) => ({
+                              ...current,
+                              [`par:${rowHoleNumber}`]: e.target.value,
+                            }))
+                          }
+                          placeholder="Par"
+                          aria-label={`Hole ${rowHoleNumber} par`}
+                        />
+                      </td>
+                      <td>
+                        {selected.data.courseSource === 'fresh' ? (
+                          <input
+                            className="scoring-panel__scorecard-input"
+                            type="number"
+                            min={1}
+                            max={5000}
+                            value={lengthValue}
+                            onChange={(e) =>
+                              setScorecardEdits((current) => ({
+                                ...current,
+                                [`length:${rowHoleNumber}`]: e.target.value,
+                              }))
+                            }
+                            placeholder="Length"
+                            aria-label={`Hole ${rowHoleNumber} length`}
+                          />
+                        ) : (
+                          <span
+                            className="scoring-panel__muted"
+                            aria-label={`Hole ${rowHoleNumber} length is fixed by saved course`}
+                          >
+                            —
+                          </span>
+                        )}
+                      </td>
+                      {selectedParticipantOnlyColumns.map((column) => {
+                        const participantUid = 'participantId' in column ? column.participantId : ''
+                        if (!participantUid) return <td key={`${column.key}:empty`}>—</td>
+                        const scoreKey = `score:${participantUid}:${rowHoleNumber}`
+                        const persistedScore =
+                          selectedScorecardScores?.[participantUid]?.[String(rowHoleNumber)] ?? null
+                        const scoreValue =
+                          scorecardEdits[scoreKey] ?? (persistedScore ? String(persistedScore.strokes) : '')
+                        const parsedPar = parseIntegerInput(parValue)
+                        const scorePar =
+                          parsedPar ??
+                          persistedScore?.par ??
+                          (selected.data.courseSource === 'fresh'
+                            ? typeof draftHole?.par === 'number'
+                              ? draftHole.par
+                              : null
+                            : typeof savedPar === 'number'
+                              ? savedPar
+                              : null)
+                        const parsedScore = parseIntegerInput(scoreValue)
+                        const notation =
+                          parsedScore !== null && typeof scorePar === 'number'
+                            ? strokesParDeltaToNotation(parsedScore, scorePar)
+                            : null
+
+                        return (
+                          <td key={column.key} className="scoring-panel__scorecard-cell">
                             <input
                               className="scoring-panel__scorecard-input"
                               type="number"
                               min={1}
-                              max={5000}
-                              value={lengthValue}
+                              max={99}
+                              value={scoreValue}
                               onChange={(e) =>
                                 setScorecardEdits((current) => ({
                                   ...current,
-                                  [`length:${rowHoleNumber}`]: e.target.value,
+                                  [scoreKey]: e.target.value,
                                 }))
                               }
-                              placeholder="Length"
-                              aria-label={`Hole ${rowHoleNumber} length`}
+                              placeholder="Strokes"
+                              aria-label={`Hole ${rowHoleNumber} strokes for ${column.label}`}
                             />
-                          </td>
-                          {selectedParticipantOnlyColumns.map((column) => {
-                            const participantUid = 'participantId' in column ? column.participantId : ''
-                            if (!participantUid) return <td key={`${column.key}:empty`}>—</td>
-                            const scoreKey = `score:${participantUid}:${rowHoleNumber}`
-                            const persistedScore =
-                              selectedScorecardScores?.[participantUid]?.[String(rowHoleNumber)] ?? null
-                            const scoreValue =
-                              scorecardEdits[scoreKey] ?? (persistedScore ? String(persistedScore.strokes) : '')
-                            const parsedPar = parseIntegerInput(parValue)
-                            const scorePar =
-                              parsedPar ??
-                              persistedScore?.par ??
-                              (typeof draftHole?.par === 'number' ? draftHole.par : null)
-                            const parsedScore = parseIntegerInput(scoreValue)
-                            const notation =
-                              parsedScore !== null && typeof scorePar === 'number'
-                                ? strokesParDeltaToNotation(parsedScore, scorePar)
-                                : null
-
-                            return (
-                              <td key={column.key} className="scoring-panel__scorecard-cell">
-                                <input
-                                  className="scoring-panel__scorecard-input"
-                                  type="number"
-                                  min={1}
-                                  max={99}
-                                  value={scoreValue}
-                                  onChange={(e) =>
-                                    setScorecardEdits((current) => ({
-                                      ...current,
-                                      [scoreKey]: e.target.value,
-                                    }))
-                                  }
-                                  placeholder="Strokes"
-                                  aria-label={`Hole ${rowHoleNumber} strokes for ${column.label}`}
+                            {notation && parsedScore !== null ? (
+                              <span
+                                className={`scoring-panel__notation scoring-panel__scorecard-notation ${scoreTierToNotationClassName(
+                                  notation.tier,
+                                )}`}
+                                aria-label={`${column.label} hole ${rowHoleNumber}: ${notation.label} (${formatDelta(
+                                  notation.delta,
+                                )})`}
+                                title={`${notation.label} (${formatDelta(notation.delta)} vs par)`}
+                              >
+                                <ScoreNotationValue
+                                  strokes={parsedScore}
+                                  decorationShape={notation.decorationShape}
+                                  decorationLayers={notation.decorationLayers}
                                 />
-                                {notation && parsedScore !== null ? (
-                                  <span
-                                    className={`scoring-panel__notation scoring-panel__scorecard-notation ${scoreTierToNotationClassName(
-                                      notation.tier,
-                                    )}`}
-                                    aria-label={`${column.label} hole ${rowHoleNumber}: ${notation.label} (${formatDelta(
-                                      notation.delta,
-                                    )})`}
-                                    title={`${notation.label} (${formatDelta(notation.delta)} vs par)`}
-                                  >
-                                    <ScoreNotationValue
-                                      strokes={parsedScore}
-                                      decorationShape={notation.decorationShape}
-                                      decorationLayers={notation.decorationLayers}
-                                    />
-                                  </span>
-                                ) : null}
-                              </td>
-                            )
-                          })}
-                        </tr>
-                      )
-                    })}
-                  </tbody>
-                  <tfoot>
-                    <tr>
-                      <th scope="row">Per-player total</th>
-                      <td>—</td>
-                      <td>—</td>
-                      {selectedParticipantOnlyColumns.map((column) => {
-                        const participantUid = 'participantId' in column ? column.participantId : ''
-                        const totals = selectedParticipantTotals[participantUid] ?? {
-                          totalStrokes: 0,
-                          totalPar: 0,
-                          totalDelta: 0,
-                          scoredHoles: 0,
-                        }
-                        return (
-                          <td key={`${column.key}:totals`}>
-                            <strong>
-                              {totals.totalStrokes}/{totals.totalPar}
-                            </strong>
-                            <span className="scoring-panel__scorecard-total-meta">
-                              {totals.scoredHoles > 0 ? `${formatDelta(totals.totalDelta)} · ${totals.scoredHoles}` : 'no scores'}
-                            </span>
+                              </span>
+                            ) : null}
                           </td>
                         )
                       })}
                     </tr>
-                    <tr>
-                      <th scope="row" colSpan={3}>
-                        Grand total
-                      </th>
-                      <td colSpan={Math.max(1, selectedParticipantOnlyColumns.length)}>
+                  )
+                })}
+              </tbody>
+              <tfoot>
+                <tr>
+                  <th scope="row">Per-player total</th>
+                  <td>—</td>
+                  <td>—</td>
+                  {selectedParticipantOnlyColumns.map((column) => {
+                    const participantUid = 'participantId' in column ? column.participantId : ''
+                    const totals = selectedParticipantTotals[participantUid] ?? {
+                      totalStrokes: 0,
+                      totalPar: 0,
+                      totalDelta: 0,
+                      scoredHoles: 0,
+                    }
+                    return (
+                      <td key={`${column.key}:totals`}>
                         <strong>
-                          {selectedGrandTotals.totalStrokes}/{selectedGrandTotals.totalPar}
+                          {totals.totalStrokes}/{totals.totalPar}
                         </strong>
                         <span className="scoring-panel__scorecard-total-meta">
-                          {formatDelta(selectedGrandTotals.totalDelta)} · {selectedGrandTotals.scoredHoles} scored
-                          entries across {selectedGrandTotals.participantCount} participant
-                          {selectedGrandTotals.participantCount === 1 ? '' : 's'}
+                          {totals.scoredHoles > 0 ? `${formatDelta(totals.totalDelta)} · ${totals.scoredHoles}` : 'no scores'}
                         </span>
                       </td>
-                    </tr>
-                  </tfoot>
-                </table>
-              </div>
-              <div className="scoring-panel__row scoring-panel__scorecard-actions">
-                <p className="scoring-panel__muted">
-                  {scorecardEditedHoles.length > 0
-                    ? `${scorecardEditedHoles.length} hole row${scorecardEditedHoles.length > 1 ? 's' : ''} pending save`
-                    : 'All scorecard edits are saved.'}
-                </p>
-                <button
-                  type="button"
-                  className="scoring-panel__button scoring-panel__button--primary"
-                  onClick={() => void onSaveFreshScorecard()}
-                  disabled={busy || scorecardEditedHoles.length === 0}
-                >
-                  Save scorecard changes
-                </button>
-              </div>
-            </>
-          ) : null}
-          {selected.data.courseSource === 'saved' ? (
-            <div className="scoring-panel__row">
-              <div className="scoring-panel__field">
-                <label className="scoring-panel__label" htmlFor="hole-n">
-                  Hole
-                </label>
-                <input
-                  id="hole-n"
-                  className="scoring-panel__input"
-                  type="number"
-                  min={1}
-                  max={selectedHoleCount ?? 36}
-                  value={holeNumber}
-                  onChange={(e) => {
-                    const maxHole = selectedHoleCount ?? 36
-                    const nextHole = Math.min(maxHole, Math.max(1, Number(e.target.value)))
-                    setHoleNumber(nextHole)
-                  }}
-                />
-              </div>
+                    )
+                  })}
+                </tr>
+                <tr>
+                  <th scope="row" colSpan={3}>
+                    Grand total
+                  </th>
+                  <td colSpan={Math.max(1, selectedParticipantOnlyColumns.length)}>
+                    <strong>
+                      {selectedGrandTotals.totalStrokes}/{selectedGrandTotals.totalPar}
+                    </strong>
+                    <span className="scoring-panel__scorecard-total-meta">
+                      {formatDelta(selectedGrandTotals.totalDelta)} · {selectedGrandTotals.scoredHoles} scored
+                      entries across {selectedGrandTotals.participantCount} participant
+                      {selectedGrandTotals.participantCount === 1 ? '' : 's'}
+                    </span>
+                  </td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+          <div className="scoring-panel__row scoring-panel__scorecard-actions">
+            <p className="scoring-panel__muted">
+              {scorecardEditedHoles.length > 0
+                ? `${scorecardEditedHoles.length} hole${scorecardEditedHoles.length > 1 ? 's' : ''} pending save`
+                : 'All scorecard edits are saved.'}
+            </p>
+            <button
+              type="button"
+              className="scoring-panel__button scoring-panel__button--primary"
+              onClick={() => void onSaveScorecard()}
+              disabled={busy || scorecardEditedHoles.length === 0}
+            >
+              Save scorecard changes
+            </button>
+          </div>
+          <div className="scoring-panel__row">
+            <button
+              type="button"
+              className="scoring-panel__button scoring-panel__button--primary"
+              onClick={() => void onComplete()}
+              disabled={busy}
+            >
+              Mark complete
+            </button>
+            {selected.data.courseSource === 'fresh' &&
+            (selected.data.coursePromotion?.status === 'pending' ||
+              selected.data.coursePromotion?.status === 'failed') ? (
               <button
                 type="button"
                 className="scoring-panel__button"
-                onClick={() => setHoleNumber((current) => Math.max(1, current - 1))}
-                disabled={busy || holeNumber <= 1}
-              >
-                Prev hole
-              </button>
-              <button
-                type="button"
-                className="scoring-panel__button"
-                onClick={() =>
-                  setHoleNumber((current) => Math.min(selectedHoleCount ?? 36, current + 1))
-                }
-                disabled={busy || holeNumber >= (selectedHoleCount ?? 36)}
-              >
-                Next hole
-              </button>
-              <div className="scoring-panel__field">
-                <label className="scoring-panel__label" htmlFor="strokes">
-                  Strokes
-                </label>
-                <input
-                  id="strokes"
-                  className="scoring-panel__input"
-                  type="number"
-                  min={1}
-                  max={99}
-                  value={strokes}
-                  onChange={(e) => setStrokes(Number(e.target.value))}
-                />
-              </div>
-              <div className="scoring-panel__field">
-                <label className="scoring-panel__label" htmlFor="par">
-                  Par snapshot
-                </label>
-                <input
-                  id="par"
-                  className="scoring-panel__input"
-                  type="number"
-                  min={2}
-                  max={9}
-                  value={par}
-                  onChange={(e) => setPar(Number(e.target.value))}
-                />
-              </div>
-              <button
-                type="button"
-                className="scoring-panel__button scoring-panel__button--primary"
-                onClick={() => void onSaveHole()}
+                onClick={() => void onRetryPromotion()}
                 disabled={busy}
               >
-                Save hole
+                Retry promotion
               </button>
-              <button
-                type="button"
-                className="scoring-panel__button"
-                onClick={() => void onComplete()}
-                disabled={busy}
-              >
-                Mark complete
-              </button>
-            </div>
-          ) : null}
-          {selected.data.courseSource === 'fresh' ? (
-            <div className="scoring-panel__row">
-              <button
-                type="button"
-                className="scoring-panel__button scoring-panel__button--primary"
-                onClick={() => void onComplete()}
-                disabled={busy}
-              >
-                Mark complete
-              </button>
-              {(selected.data.coursePromotion?.status === 'pending' ||
-                selected.data.coursePromotion?.status === 'failed') ? (
-                <button
-                  type="button"
-                  className="scoring-panel__button"
-                  onClick={() => void onRetryPromotion()}
-                  disabled={busy}
-                >
-                  Retry promotion
-                </button>
-              ) : null}
-            </div>
-          ) : null}
+            ) : null}
+          </div>
           {selected.data.ownerId === uid && selected.data.courseSource === 'saved' ? (
             <div className="scoring-panel__row">
               <div className="scoring-panel__field scoring-panel__field--grow">
