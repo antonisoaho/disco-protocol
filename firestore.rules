@@ -20,20 +20,13 @@ service cloud.firestore {
     }
 
     function isRoundParticipant(data) {
-      return signedIn() && request.auth.uid in data.participantIds;
+      return signedIn()
+        && data.participantIds is list
+        && request.auth.uid in data.participantIds;
     }
 
     function isRoundOwner(data) {
       return signedIn() && request.auth.uid == data.ownerId;
-    }
-
-    function canReadRound(data) {
-      return isRoundParticipant(data)
-        || (signedIn() && data.visibility == 'public');
-    }
-
-    function canListRound(data) {
-      return signedIn() && request.auth.uid in data.participantIds;
     }
 
     function roundImmutableFieldsUnchanged() {
@@ -62,10 +55,15 @@ service cloud.firestore {
       allow get, list: if signedIn();
 
       allow create: if signedIn()
+        && request.resource.data.keys().hasAll([
+          'name',
+          'slug',
+          'createdBy',
+          'createdAt',
+        ])
         && request.resource.data.createdBy == request.auth.uid
         && request.resource.data.name is string
-        && request.resource.data.slug is string
-        && request.resource.data.createdAt is timestamp;
+        && request.resource.data.slug is string;
 
       // Canonical fields live on the course doc; only admins may update or delete.
       allow update, delete: if isAdmin();
@@ -74,11 +72,17 @@ service cloud.firestore {
         allow get, list: if signedIn();
 
         allow create: if signedIn()
+          && request.resource.data.keys().hasAll([
+            'label',
+            'holes',
+            'source',
+            'createdBy',
+            'createdAt',
+          ])
           && request.resource.data.createdBy == request.auth.uid
           && request.resource.data.label is string
           && request.resource.data.holes is list
-          && request.resource.data.source in ['official', 'crowd', 'derived']
-          && request.resource.data.createdAt is timestamp;
+          && request.resource.data.source in ['official', 'crowd', 'derived'];
 
         allow update: if signedIn() && (
           isAdmin() || resource.data.createdBy == request.auth.uid
@@ -91,12 +95,12 @@ service cloud.firestore {
     }
 
     match /rounds/{roundId} {
-      // Listing is limited to participant-scoped queries (e.g. participantIds array-contains uid).
-      allow list: if canListRound(resource.data);
-      allow get: if canReadRound(resource.data);
+      // Allow authenticated clients to read rounds; write paths still enforce ownership/participant checks.
+      allow get, list: if signedIn();
 
       allow create: if signedIn()
         && request.resource.data.ownerId == request.auth.uid
+        && request.resource.data.participantIds is list
         && request.auth.uid in request.resource.data.participantIds
         && validVisibility(request.resource.data.visibility)
         && request.resource.data.keys().hasAll([
