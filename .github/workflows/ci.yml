@@ -61,7 +61,7 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Verify React Doctor
+      - name: React Doctor (score > 95)
         run: npm run verify:doctor
 
       - name: Lint
