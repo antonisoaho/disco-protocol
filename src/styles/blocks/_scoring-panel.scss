@@ -122,6 +122,33 @@
   color: $color-text;
 }
 
+.scoring-panel__participant-list {
+  max-height: 12rem;
+  overflow-y: auto;
+  border: 1px solid $color-border;
+  border-radius: $radius-sm;
+  background: $color-bg;
+}
+
+.scoring-panel__participant-option {
+  display: flex;
+  gap: calc(#{$space-unit} * 2);
+  align-items: flex-start;
+  padding: calc(#{$space-unit} * 2) calc(#{$space-unit} * 3);
+  font-size: 0.875rem;
+  color: $color-text;
+
+  input {
+    margin-top: calc(#{$space-unit} * 0.5);
+  }
+}
+
+.scoring-panel__participant-subtitle {
+  display: block;
+  color: $color-text-muted;
+  font-size: 0.75rem;
+}
+
 .scoring-panel__list {
   list-style: none;
   margin: 0;
@@ -242,6 +269,75 @@
   border: 1px solid $color-border;
   border-radius: $radius-sm;
   background: $color-bg;
+}
+
+.scoring-panel__scorecard-wrap {
+  margin-top: calc(#{$space-unit} * 2);
+  overflow-x: auto;
+  border: 1px solid $color-border;
+  border-radius: $radius-sm;
+  background: $color-bg;
+}
+
+.scoring-panel__scorecard {
+  width: max-content;
+  min-width: 100%;
+  border-collapse: collapse;
+  font-size: 0.8125rem;
+
+  th,
+  td {
+    border: 1px solid $color-border;
+    padding: calc(#{$space-unit} * 2);
+    white-space: nowrap;
+    text-align: left;
+    vertical-align: middle;
+    background: $color-bg;
+  }
+
+  thead th {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    background: $color-surface;
+  }
+
+  tfoot th,
+  tfoot td {
+    background: color-mix(in srgb, $color-surface 75%, $color-bg);
+  }
+}
+
+.scoring-panel__scorecard-hole {
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  background: $color-surface;
+}
+
+.scoring-panel__scorecard-cell {
+  min-width: 7.5rem;
+}
+
+.scoring-panel__scorecard-input {
+  width: 5.5rem;
+  padding: calc(#{$space-unit} * 1) calc(#{$space-unit} * 2);
+  border: 1px solid $color-border;
+  border-radius: $radius-sm;
+  background: $color-bg;
+  color: $color-text;
+  font: inherit;
+}
+
+.scoring-panel__scorecard-badge {
+  margin-left: calc(#{$space-unit} * 1.5);
+}
+
+.scoring-panel__scorecard-total-meta {
+  display: block;
+  margin-top: calc(#{$space-unit} * 1);
+  font-size: 0.75rem;
+  color: $color-text-muted;
 }
 
 .scoring-panel__fresh-hole {

@@ -32,6 +32,7 @@ import {
   type FreshRoundDraftIssue,
 } from './freshRoundCourse'
 import type {
+  ParticipantHoleScores,
   RoundCourseDraft,
   RoundDoc,
   RoundVisibility,
@@ -61,6 +62,26 @@ type CreateFreshRoundInput = BaseCreateRoundInput & {
 }
 
 export type CreateRoundInput = CreateSavedRoundInput | CreateFreshRoundInput
+
+function buildInitialParticipantHoleScores(participantIds: string[]): ParticipantHoleScores {
+  const scores: ParticipantHoleScores = {}
+  for (const participantId of participantIds) {
+    if (!participantId || scores[participantId]) continue
+    scores[participantId] = {}
+  }
+  return scores
+}
+
+function cloneParticipantHoleScores(
+  participantHoleScores: RoundDoc['participantHoleScores'],
+): Record<string, Record<string, unknown>> {
+  const next: Record<string, Record<string, unknown>> = {}
+  if (!participantHoleScores) return next
+  for (const [participantId, holeMap] of Object.entries(participantHoleScores)) {
+    next[participantId] = { ...holeMap }
+  }
+  return next
+}
 
 /**
  * Creates a round document. Caller must ensure `participantIds` includes the owner.
@@ -99,6 +120,7 @@ export async function createRound(input: CreateRoundInput): Promise<string> {
     startedAt: serverTimestamp(),
     completedAt: null,
     holeScores: {},
+    participantHoleScores: buildInitialParticipantHoleScores(input.participantIds),
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
   })
@@ -130,17 +152,72 @@ export async function recordHoleScoreTransaction(
       { holeNumber, strokes, par },
       { holeCount: data.holeCount ?? null },
     )
+    const scoreEntry = {
+      strokes: normalized.strokes,
+      par: normalized.par,
+      updatedAt: serverTimestamp(),
+      updatedBy: actorUid,
+    }
     const nextHoleScores = {
       ...data.holeScores,
-      [normalized.holeKey]: {
-        strokes: normalized.strokes,
-        par: normalized.par,
-        updatedAt: serverTimestamp(),
-        updatedBy: actorUid,
-      },
+      [normalized.holeKey]: scoreEntry,
+    }
+    const nextParticipantHoleScores = cloneParticipantHoleScores(data.participantHoleScores)
+    nextParticipantHoleScores[actorUid] = {
+      ...(nextParticipantHoleScores[actorUid] ?? {}),
+      [normalized.holeKey]: scoreEntry,
     }
     tx.update(ref, {
       holeScores: nextHoleScores,
+      participantHoleScores: nextParticipantHoleScores,
+      updatedAt: serverTimestamp(),
+    })
+  })
+}
+
+export async function recordParticipantHoleScoreTransaction(
+  roundId: string,
+  actorUid: string,
+  participantUid: string,
+  holeNumber: number,
+  strokes: number,
+  par: number,
+): Promise<void> {
+  const ref = doc(db, ROUNDS, roundId)
+
+  await runTransaction(db, async (tx) => {
+    const snap = await tx.get(ref)
+    if (!snap.exists()) {
+      throw new Error('Round not found')
+    }
+    const data = snap.data() as RoundDoc
+    if (!data.participantIds.includes(actorUid)) {
+      throw new Error('Not a participant of this round')
+    }
+    if (!data.participantIds.includes(participantUid)) {
+      throw new Error('Target participant is not in this round')
+    }
+    if (actorUid !== participantUid && actorUid !== data.ownerId) {
+      throw new Error('Only owner can edit another participant score')
+    }
+    const normalized = normalizeHoleScoreUpdate(
+      { holeNumber, strokes, par },
+      { holeCount: data.holeCount ?? null },
+    )
+    const scoreEntry = {
+      strokes: normalized.strokes,
+      par: normalized.par,
+      updatedAt: serverTimestamp(),
+      updatedBy: actorUid,
+    }
+    const nextParticipantHoleScores = cloneParticipantHoleScores(data.participantHoleScores)
+    nextParticipantHoleScores[participantUid] = {
+      ...(nextParticipantHoleScores[participantUid] ?? {}),
+      [normalized.holeKey]: scoreEntry,
+    }
+
+    tx.update(ref, {
+      participantHoleScores: nextParticipantHoleScores,
       updatedAt: serverTimestamp(),
     })
   })
