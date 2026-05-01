@@ -1,26 +1,28 @@
 import { describe, expect, it } from 'vitest'
 import {
   FreshRoundDraftValidationError,
+  applyFreshHoleMetadataToDraft,
   buildFreshCoursePromotionPlan,
   normalizeFreshCourseDraft,
+  normalizeFreshCourseDraftForPromotion,
   resolveFreshRoundCourseRefs,
 } from './freshRoundCourse'
 
 describe('normalizeFreshCourseDraft', () => {
-  it('normalizes course name and hole rows from user input', () => {
+  it('normalizes course name and accepts empty hole metadata at round start', () => {
     const normalized = normalizeFreshCourseDraft({
       name: '  Lake   View   Meadows  ',
       holes: [
-        { par: '3', lengthMeters: '87' },
-        { par: 4, lengthMeters: '' },
+        { par: '', lengthMeters: '' },
+        { par: null, lengthMeters: undefined },
       ],
     })
 
     expect(normalized).toEqual({
       name: 'Lake View Meadows',
       holes: [
-        { number: 1, par: 3, lengthMeters: 87 },
-        { number: 2, par: 4, lengthMeters: null },
+        { number: 1, par: null, lengthMeters: null },
+        { number: 2, par: null, lengthMeters: null },
       ],
     })
   })
@@ -34,7 +36,7 @@ describe('normalizeFreshCourseDraft', () => {
     ).toThrow(FreshRoundDraftValidationError)
   })
 
-  it('rejects invalid hole values with issue details', () => {
+  it('rejects invalid provided hole values with issue details', () => {
     try {
       normalizeFreshCourseDraft({
         name: 'Maple',
@@ -48,6 +50,74 @@ describe('normalizeFreshCourseDraft', () => {
       expect(typed.issues.map((issue) => issue.path).sort()).toEqual([
         'holes.0.lengthMeters',
         'holes.0.par',
+      ])
+    }
+  })
+})
+
+describe('applyFreshHoleMetadataToDraft', () => {
+  it('updates metadata for one hole while preserving others', () => {
+    const draft = normalizeFreshCourseDraft({
+      name: 'Lake View Meadows',
+      holes: [
+        { par: '', lengthMeters: '' },
+        { par: '', lengthMeters: '' },
+      ],
+    })
+
+    const updated = applyFreshHoleMetadataToDraft({
+      draft,
+      holeNumber: 2,
+      par: '4',
+      lengthMeters: '112',
+    })
+
+    expect(updated.holes).toEqual([
+      { number: 1, par: null, lengthMeters: null },
+      { number: 2, par: 4, lengthMeters: 112 },
+    ])
+  })
+})
+
+describe('normalizeFreshCourseDraftForPromotion', () => {
+  it('returns a promotion-ready draft with required values', () => {
+    const draft = normalizeFreshCourseDraft({
+      name: 'Lake View Meadows',
+      holes: [
+        { par: 3, lengthMeters: 82 },
+        { par: 4, lengthMeters: 106 },
+      ],
+    })
+
+    const normalized = normalizeFreshCourseDraftForPromotion(draft)
+    expect(normalized).toEqual({
+      name: 'Lake View Meadows',
+      holes: [
+        { number: 1, par: 3, lengthMeters: 82 },
+        { number: 2, par: 4, lengthMeters: 106 },
+      ],
+    })
+  })
+
+  it('lists missing required fields per hole', () => {
+    const draft = normalizeFreshCourseDraft({
+      name: 'Lake View Meadows',
+      holes: [
+        { par: '', lengthMeters: '' },
+        { par: 4, lengthMeters: '' },
+      ],
+    })
+
+    try {
+      normalizeFreshCourseDraftForPromotion(draft)
+      throw new Error('expected validation to fail')
+    } catch (error) {
+      expect(error).toBeInstanceOf(FreshRoundDraftValidationError)
+      const typed = error as FreshRoundDraftValidationError
+      expect(typed.issues.map((issue) => issue.path)).toEqual([
+        'holes.0.par',
+        'holes.0.lengthMeters',
+        'holes.1.lengthMeters',
       ])
     }
   })
@@ -110,5 +180,20 @@ describe('buildFreshCoursePromotionPlan', () => {
       derivedFromRoundId: 'roundABC123',
       isDefault: true,
     })
+  })
+
+  it('rejects incomplete metadata before promotion', () => {
+    const draft = normalizeFreshCourseDraft({
+      name: 'Lake View Meadows',
+      holes: [{ par: '', lengthMeters: '' }],
+    })
+
+    expect(() =>
+      buildFreshCoursePromotionPlan({
+        roundId: 'roundABC123',
+        ownerId: 'user-1',
+        draft,
+      }),
+    ).toThrow(FreshRoundDraftValidationError)
   })
 })

@@ -167,6 +167,13 @@
   color: $color-text-muted;
 }
 
+.scoring-panel__fresh-editor {
+  padding: calc(#{$space-unit} * 2);
+  border: 1px dashed $color-border;
+  border-radius: $radius-sm;
+  background: color-mix(in srgb, $color-bg 70%, $color-surface);
+}
+
 .scoring-panel__fresh-list {
   list-style: none;
   margin: 0 0 calc(#{$space-unit} * 3);

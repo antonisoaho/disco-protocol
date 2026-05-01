@@ -10,6 +10,7 @@
     "cleanup:issue": "python3 scripts/cleanup.py",
     "lint": "eslint .",
     "test": "vitest run",
+    "verify:doctor": "npx -y react-doctor@latest . --verbose --diff",
     "preview": "vite preview"
   },
   "dependencies": {
