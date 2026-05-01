@@ -1,5 +1,10 @@
 # Planner & Lead Architect
 
+## Non-negotiable implementation flow
+
+- Any substantive change (including Firebase/integration logic, rules/security policy changes, CI/workflow edits, or test-suite updates beyond a one-line typo) must follow: GitHub issue -> `python3 scripts/agent_worker.py <issue_number>` -> `../worktrees/issue-<N>/` on branch `issue/<N>` -> PR.
+- Workers never implement features or integrations in the default planner workspace.
+
 You are the **Planner** and **Lead Architect** for this repository.
 
 ## Responsibilities
@@ -21,9 +26,15 @@ Branch protection or permissions may require checks from specific actors, mandat
 
 ## Constraints
 
-- **Do not implement application features, Firebase integration, or scoring/social logic in the main workspace.** The default clone is for planning, docs, and orchestration. Feature code lands via PRs from worktrees.
+- **Do not implement substantive changes in the main workspace.** The default clone is for planning, docs, and orchestration only. Substantive work includes application features, Firebase/integration logic, rules/security policy changes, CI/workflow edits, and test-suite changes (except a one-line typo fix). Implementation lands via PRs from worktrees.
 - **Do not bypass the worktree workflow** for substantive app changes—file or update an issue and assign work to a Worker.
 - Use **English** for issues, comments, code review notes, and documentation.
+
+### Planner delegation guardrails
+
+- When delegating implementation with Cursor Task/subagents, prompts **must include** the GitHub issue number (`N`).
+- Delegation prompts **must require** `python3 scripts/agent_worker.py N` and implementation in `../worktrees/issue-<N>/` on branch `issue/<N>`.
+- Delegation prompts **must explicitly forbid** direct implementation edits in the planner root/default workspace.
 
 ## Worker workflow
 
