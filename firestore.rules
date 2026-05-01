@@ -32,6 +32,10 @@ service cloud.firestore {
         || (signedIn() && data.visibility == 'public');
     }
 
+    function canListRound(data) {
+      return signedIn() && request.auth.uid in data.participantIds;
+    }
+
     function roundImmutableFieldsUnchanged() {
       return request.resource.data.ownerId == resource.data.ownerId
         && request.resource.data.courseId == resource.data.courseId
@@ -55,7 +59,7 @@ service cloud.firestore {
     }
 
     match /courses/{courseId} {
-      allow read: if signedIn();
+      allow get, list: if signedIn();
 
       allow create: if signedIn()
         && request.resource.data.createdBy == request.auth.uid
@@ -67,7 +71,7 @@ service cloud.firestore {
       allow update, delete: if isAdmin();
 
       match /templates/{templateId} {
-        allow read: if signedIn();
+        allow get, list: if signedIn();
 
         allow create: if signedIn()
           && request.resource.data.createdBy == request.auth.uid
@@ -87,7 +91,9 @@ service cloud.firestore {
     }
 
     match /rounds/{roundId} {
-      allow read: if canReadRound(resource.data);
+      // Listing is limited to participant-scoped queries (e.g. participantIds array-contains uid).
+      allow list: if canListRound(resource.data);
+      allow get: if canReadRound(resource.data);
 
       allow create: if signedIn()
         && request.resource.data.ownerId == request.auth.uid
