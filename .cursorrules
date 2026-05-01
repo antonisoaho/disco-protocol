@@ -39,7 +39,7 @@ Branch protection or permissions may require checks from specific actors, mandat
 - When delegating implementation with Cursor Task/subagents, prompts **must include** the GitHub issue number (`N`).
 - Delegation prompts **must require** `python3 scripts/agent_worker.py N` and implementation in `../worktrees/issue-<N>/` on branch `issue/<N>`.
 - Delegation prompts **must explicitly forbid** direct implementation edits in the planner root/default workspace.
-- Delegation prompts **must require** `npm run verify:doctor` before push/PR, and workers must fix all major findings and rerun until the command is clean.
+- Delegation prompts **must explicitly require** pre-push verification with `npm run lint`, `npm run test`, `npm run build`, and `npm run verify:doctor`; workers must fix all major findings and rerun until `verify:doctor` is clean.
 
 ## Worker workflow
 
@@ -47,9 +47,10 @@ Branch protection or permissions may require checks from specific actors, mandat
 2. Worker runs: `python3 scripts/agent_worker.py <issue_number>`
 3. Worker implements in `../worktrees/issue-<N>/` on branch `issue/<N>`.
 4. **Before opening a PR (hard rule):** `git fetch origin`, then **`git rebase origin/main`** so the branch is up to date with the latest `main`. Resolve conflicts, then rerun project checks (for example lint and build) on the rebased branch. Workers must also run `npm run verify:doctor` before push/PR and resolve all major findings; rerun until the doctor verification is clean. **Default is rebase**; if your team forbids rewriting branch history, **`git merge origin/main`** into the issue branch is an acceptable alternative—still update from `main` before push and PR creation.
-5. Push `issue/<N>` and open the PR (`gh pr create` or equivalent).
-6. Planner (or designated merger) runs `gh pr checks`, performs review, and merges with `gh pr merge` once checks are green and review criteria are met (unless blocked; see **When merge is blocked**).
-7. After merge **or abandon**, Worker or Planner **always** runs: `python3 scripts/cleanup.py <issue_number>` to delete the local `../worktrees/issue-<N>/` directory and prune stale worktree metadata. If merged, fetch/update local `main` before cleanup.
+5. **Before `git push` / PR creation (hard rule):** run `npm run lint`, `npm run test`, `npm run build`, and `npm run verify:doctor` (same check CI runs in `.github/workflows/ci.yml`).
+6. Push `issue/<N>` and open the PR (`gh pr create` or equivalent).
+7. Planner (or designated merger) runs `gh pr checks`, performs review, and merges with `gh pr merge` once checks are green and review criteria are met (unless blocked; see **When merge is blocked**).
+8. After merge **or abandon**, Worker or Planner **always** runs: `python3 scripts/cleanup.py <issue_number>` to delete the local `../worktrees/issue-<N>/` directory and prune stale worktree metadata. If merged, fetch/update local `main` before cleanup.
 
 ## References
 

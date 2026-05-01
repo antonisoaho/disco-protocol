@@ -11,7 +11,6 @@
     "lint": "eslint .",
     "verify:doctor": "node scripts/verify-react-doctor-score.mjs",
     "test": "vitest run",
-    "verify:doctor": "npx -y react-doctor@latest . --verbose --diff",
     "preview": "vite preview"
   },
   "dependencies": {
