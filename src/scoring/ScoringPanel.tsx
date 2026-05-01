@@ -1,6 +1,7 @@
 import { type User } from 'firebase/auth'
 import type { Timestamp } from 'firebase/firestore'
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import type { CourseRoundSelection } from '../courses/courseData'
 import { strokesParDeltaToSemantic } from '../lib/scoreSemantic'
 import type { RoundDoc, RoundVisibility } from '../firebase/roundTypes'
 import {
@@ -18,6 +19,7 @@ import {
 
 type Props = {
   user: User
+  selectedCourseTemplate: CourseRoundSelection | null
 }
 
 const DEFAULT_ROUND_HOLE_COUNT = 18
@@ -51,13 +53,13 @@ function formatDelta(delta: number): string {
   return delta > 0 ? `+${delta}` : `${delta}`
 }
 
-export function ScoringPanel({ user }: Props) {
+export function ScoringPanel({ user, selectedCourseTemplate }: Props) {
   const uid = user.uid
   const [items, setItems] = useState<{ id: string; data: RoundDoc }[]>([])
   const [selectedId, setSelectedId] = useState<string | null>(null)
-  const [courseId, setCourseId] = useState('demo-course')
-  const [templateId, setTemplateId] = useState('demo-template')
-  const [roundHoleCount, setRoundHoleCount] = useState(DEFAULT_ROUND_HOLE_COUNT)
+  const [fallbackCourseId, setFallbackCourseId] = useState('')
+  const [fallbackTemplateId, setFallbackTemplateId] = useState('')
+  const [fallbackHoleCount, setFallbackHoleCount] = useState(DEFAULT_ROUND_HOLE_COUNT)
   const [visibility, setVisibility] = useState<RoundVisibility>('private')
   const [holeNumber, setHoleNumber] = useState(1)
   const [strokes, setStrokes] = useState(3)
@@ -104,14 +106,22 @@ export function ScoringPanel({ user }: Props) {
   }, [selected])
 
   const onCreateRound = useCallback(async () => {
+    const courseId = selectedCourseTemplate?.courseId ?? fallbackCourseId.trim()
+    const templateId = selectedCourseTemplate?.templateId ?? fallbackTemplateId.trim()
+    if (!courseId || !templateId) {
+      setError('Pick a course and template before starting a round.')
+      return
+    }
+
     setBusy(true)
     setError(null)
     try {
-      const safeHoleCount = Math.min(36, Math.max(1, roundHoleCount))
+      const configuredHoleCount = selectedCourseTemplate?.holeCount ?? fallbackHoleCount
+      const safeHoleCount = Math.min(36, Math.max(1, configuredHoleCount))
       const id = await createRound({
         ownerId: uid,
-        courseId: courseId.trim() || 'demo-course',
-        templateId: templateId.trim() || 'demo-template',
+        courseId,
+        templateId,
         holeCount: safeHoleCount,
         visibility,
         participantIds: [uid],
@@ -122,7 +132,14 @@ export function ScoringPanel({ user }: Props) {
     } finally {
       setBusy(false)
     }
-  }, [courseId, roundHoleCount, templateId, uid, visibility])
+  }, [
+    fallbackCourseId,
+    fallbackHoleCount,
+    fallbackTemplateId,
+    selectedCourseTemplate,
+    uid,
+    visibility,
+  ])
 
   const onSaveHole = useCallback(async () => {
     if (!selectedId) return
@@ -186,32 +203,46 @@ export function ScoringPanel({ user }: Props) {
       ) : null}
 
       <div className="scoring-panel__section">
-        <span className="scoring-panel__label">Start a round (course/template ids stub until Course epic)</span>
+        <span className="scoring-panel__label">Start a round</span>
+        {selectedCourseTemplate ? (
+          <p className="scoring-panel__selection">
+            Using <strong>{selectedCourseTemplate.courseName}</strong> /{' '}
+            <strong>{selectedCourseTemplate.templateLabel}</strong> ({selectedCourseTemplate.holeCount} holes)
+          </p>
+        ) : (
+          <p className="scoring-panel__muted">
+            Pick a course + template above. Manual ids are available as fallback if needed.
+          </p>
+        )}
         <div className="scoring-panel__row">
-          <div className="scoring-panel__field">
-            <label className="scoring-panel__label" htmlFor="course-id">
-              courseId
-            </label>
-            <input
-              id="course-id"
-              className="scoring-panel__input"
-              value={courseId}
-              onChange={(e) => setCourseId(e.target.value)}
-              autoComplete="off"
-            />
-          </div>
-          <div className="scoring-panel__field">
-            <label className="scoring-panel__label" htmlFor="template-id">
-              templateId
-            </label>
-            <input
-              id="template-id"
-              className="scoring-panel__input"
-              value={templateId}
-              onChange={(e) => setTemplateId(e.target.value)}
-              autoComplete="off"
-            />
-          </div>
+          {!selectedCourseTemplate ? (
+            <>
+              <div className="scoring-panel__field">
+                <label className="scoring-panel__label" htmlFor="course-id">
+                  courseId (fallback)
+                </label>
+                <input
+                  id="course-id"
+                  className="scoring-panel__input"
+                  value={fallbackCourseId}
+                  onChange={(e) => setFallbackCourseId(e.target.value)}
+                  autoComplete="off"
+                />
+              </div>
+              <div className="scoring-panel__field">
+                <label className="scoring-panel__label" htmlFor="template-id">
+                  templateId (fallback)
+                </label>
+                <input
+                  id="template-id"
+                  className="scoring-panel__input"
+                  value={fallbackTemplateId}
+                  onChange={(e) => setFallbackTemplateId(e.target.value)}
+                  autoComplete="off"
+                />
+              </div>
+            </>
+          ) : null}
           <div className="scoring-panel__field">
             <label className="scoring-panel__label" htmlFor="visibility">
               visibility
@@ -227,28 +258,42 @@ export function ScoringPanel({ user }: Props) {
               <option value="public">public</option>
             </select>
           </div>
-          <div className="scoring-panel__field">
-            <label className="scoring-panel__label" htmlFor="hole-count">
-              holes
-            </label>
-            <input
-              id="hole-count"
-              className="scoring-panel__input"
-              type="number"
-              min={1}
-              max={36}
-              value={roundHoleCount}
-              onChange={(e) => {
-                const next = Number(e.target.value)
-                setRoundHoleCount(Number.isInteger(next) ? next : DEFAULT_ROUND_HOLE_COUNT)
-              }}
-            />
-          </div>
+          {selectedCourseTemplate ? (
+            <div className="scoring-panel__field">
+              <label className="scoring-panel__label" htmlFor="hole-count-selected">
+                holes
+              </label>
+              <input
+                id="hole-count-selected"
+                className="scoring-panel__input"
+                value={selectedCourseTemplate.holeCount}
+                readOnly
+              />
+            </div>
+          ) : (
+            <div className="scoring-panel__field">
+              <label className="scoring-panel__label" htmlFor="hole-count">
+                holes (fallback)
+              </label>
+              <input
+                id="hole-count"
+                className="scoring-panel__input"
+                type="number"
+                min={1}
+                max={36}
+                value={fallbackHoleCount}
+                onChange={(e) => {
+                  const next = Number(e.target.value)
+                  setFallbackHoleCount(Number.isInteger(next) ? next : DEFAULT_ROUND_HOLE_COUNT)
+                }}
+              />
+            </div>
+          )}
           <button
             type="button"
             className="scoring-panel__button scoring-panel__button--primary"
             onClick={() => void onCreateRound()}
-            disabled={busy}
+            disabled={busy || (!selectedCourseTemplate && (!fallbackCourseId.trim() || !fallbackTemplateId.trim()))}
           >
             New round
           </button>

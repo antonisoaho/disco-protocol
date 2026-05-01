@@ -215,6 +215,10 @@
     outline: 2px solid map.get($score-color, birdie);
     outline-offset: 2px;
   }
+
+  &--compact {
+    flex: 0 0 7.5rem;
+  }
 }
 
 .course-picker__submit {
@@ -242,5 +246,11 @@
 .course-picker__empty {
   margin: 0;
   font-size: 0.9375rem;
+  color: $color-text-muted;
+}
+
+.course-picker__hint {
+  margin: 0;
+  font-size: 0.8125rem;
   color: $color-text-muted;
 }
