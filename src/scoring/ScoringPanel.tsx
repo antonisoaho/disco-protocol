@@ -2,12 +2,16 @@ import { type User } from 'firebase/auth'
 import type { Timestamp } from 'firebase/firestore'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import type { CourseRoundSelection } from '../courses/courseData'
+import {
+  FreshRoundDraftValidationError,
+  normalizeFreshCourseDraft,
+} from '../firebase/freshRoundCourse'
 import { strokesParDeltaToSemantic } from '../lib/scoreSemantic'
 import type { RoundDoc, RoundVisibility } from '../firebase/roundTypes'
 import {
   addParticipantToRound,
+  completeRoundAndPromote,
   createRound,
-  markRoundCompleted,
   recordHoleScoreTransaction,
   subscribeMyRounds,
 } from '../firebase/rounds'
@@ -23,6 +27,28 @@ type Props = {
 }
 
 const DEFAULT_ROUND_HOLE_COUNT = 18
+const DEFAULT_FRESH_HOLE_COUNT = 9
+
+type FreshHoleRow = {
+  par: string
+  lengthMeters: string
+}
+
+function createFreshHoleRows(count: number): FreshHoleRow[] {
+  return Array.from({ length: count }, () => ({
+    par: '3',
+    lengthMeters: '',
+  }))
+}
+
+function resizeFreshHoleRows(current: FreshHoleRow[], count: number): FreshHoleRow[] {
+  const safeCount = Math.min(36, Math.max(1, Math.floor(count)))
+  const next = current.slice(0, safeCount)
+  while (next.length < safeCount) {
+    next.push({ par: '3', lengthMeters: '' })
+  }
+  return next
+}
 
 function formatStartedAt(ts: Timestamp): string {
   try {
@@ -46,7 +72,8 @@ function inferRoundHoleCount(data: RoundDoc): number {
     .filter((value) => Number.isInteger(value) && value >= 1)
     .reduce((max, value) => Math.max(max, value), 0)
 
-  return Math.max(DEFAULT_ROUND_HOLE_COUNT, fromScores)
+  const fromDraftHoles = data.courseDraft?.holes?.length ?? 0
+  return Math.max(DEFAULT_ROUND_HOLE_COUNT, fromScores, fromDraftHoles)
 }
 
 function formatDelta(delta: number): string {
@@ -57,9 +84,11 @@ export function ScoringPanel({ user, selectedCourseTemplate }: Props) {
   const uid = user.uid
   const [items, setItems] = useState<{ id: string; data: RoundDoc }[]>([])
   const [selectedId, setSelectedId] = useState<string | null>(null)
-  const [fallbackCourseId, setFallbackCourseId] = useState('')
-  const [fallbackTemplateId, setFallbackTemplateId] = useState('')
-  const [fallbackHoleCount, setFallbackHoleCount] = useState(DEFAULT_ROUND_HOLE_COUNT)
+  const [startMode, setStartMode] = useState<'saved' | 'fresh'>('saved')
+  const [freshCourseName, setFreshCourseName] = useState('')
+  const [freshHoleRows, setFreshHoleRows] = useState<FreshHoleRow[]>(() =>
+    createFreshHoleRows(DEFAULT_FRESH_HOLE_COUNT),
+  )
   const [visibility, setVisibility] = useState<RoundVisibility>('private')
   const [holeNumber, setHoleNumber] = useState(1)
   const [strokes, setStrokes] = useState(3)
@@ -67,6 +96,7 @@ export function ScoringPanel({ user, selectedCourseTemplate }: Props) {
   const [inviteUid, setInviteUid] = useState('')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [notice, setNotice] = useState<string | null>(null)
 
   useEffect(() => {
     const unsub = subscribeMyRounds(
@@ -84,6 +114,8 @@ export function ScoringPanel({ user, selectedCourseTemplate }: Props) {
     () => items.find((r) => r.id === selectedId) ?? null,
     [items, selectedId],
   )
+
+  const freshHoleCount = freshHoleRows.length
 
   const selectedHoleCount = useMemo(
     () => (selected ? inferRoundHoleCount(selected.data) : null),
@@ -106,37 +138,59 @@ export function ScoringPanel({ user, selectedCourseTemplate }: Props) {
   }, [selected])
 
   const onCreateRound = useCallback(async () => {
-    const courseId = selectedCourseTemplate?.courseId ?? fallbackCourseId.trim()
-    const templateId = selectedCourseTemplate?.templateId ?? fallbackTemplateId.trim()
-    if (!courseId || !templateId) {
-      setError('Pick a course and template before starting a round.')
-      return
-    }
-
     setBusy(true)
     setError(null)
+    setNotice(null)
     try {
-      const configuredHoleCount = selectedCourseTemplate?.holeCount ?? fallbackHoleCount
-      const safeHoleCount = Math.min(36, Math.max(1, configuredHoleCount))
-      const id = await createRound({
-        ownerId: uid,
-        courseId,
-        templateId,
-        holeCount: safeHoleCount,
-        visibility,
-        participantIds: [uid],
-      })
+      let id = ''
+      if (startMode === 'saved') {
+        if (!selectedCourseTemplate) {
+          setError('Select a saved course template or switch to fresh setup.')
+          return
+        }
+        const safeHoleCount = Math.min(36, Math.max(1, selectedCourseTemplate.holeCount))
+        id = await createRound({
+          ownerId: uid,
+          courseSource: 'saved',
+          courseId: selectedCourseTemplate.courseId,
+          templateId: selectedCourseTemplate.templateId,
+          holeCount: safeHoleCount,
+          visibility,
+          participantIds: [uid],
+        })
+      } else {
+        const courseDraft = normalizeFreshCourseDraft({
+          name: freshCourseName,
+          holes: freshHoleRows.map((row) => ({
+            par: row.par,
+            lengthMeters: row.lengthMeters,
+          })),
+        })
+        id = await createRound({
+          ownerId: uid,
+          courseSource: 'fresh',
+          courseDraft,
+          holeCount: courseDraft.holes.length,
+          visibility,
+          participantIds: [uid],
+        })
+      }
       setSelectedId(id)
+      setHoleNumber(1)
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Failed to create round')
+      if (e instanceof FreshRoundDraftValidationError) {
+        setError(e.issues[0]?.message ?? 'Fresh course details are invalid.')
+      } else {
+        setError(e instanceof Error ? e.message : 'Failed to create round')
+      }
     } finally {
       setBusy(false)
     }
   }, [
-    fallbackCourseId,
-    fallbackHoleCount,
-    fallbackTemplateId,
+    freshCourseName,
+    freshHoleRows,
     selectedCourseTemplate,
+    startMode,
     uid,
     visibility,
   ])
@@ -168,6 +222,7 @@ export function ScoringPanel({ user, selectedCourseTemplate }: Props) {
     if (!selectedId || !inviteUid.trim()) return
     setBusy(true)
     setError(null)
+    setNotice(null)
     try {
       await addParticipantToRound(selectedId, inviteUid.trim())
       setInviteUid('')
@@ -182,14 +237,41 @@ export function ScoringPanel({ user, selectedCourseTemplate }: Props) {
     if (!selectedId) return
     setBusy(true)
     setError(null)
+    setNotice(null)
     try {
-      await markRoundCompleted(selectedId)
+      const result = await completeRoundAndPromote(selectedId, uid)
+      if (result.promotionStatus === 'created' || result.promotionStatus === 'already_created') {
+        setNotice('Round completed. Fresh course was promoted to saved course catalog.')
+      } else if (result.promotionStatus === 'pending') {
+        setNotice('Round completed. Promotion is pending and will need a retry once online.')
+      } else if (result.promotionStatus === 'failed') {
+        setError('Round completed, but promotion failed because draft data is incomplete.')
+      }
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to complete round')
     } finally {
       setBusy(false)
     }
-  }, [selectedId])
+  }, [selectedId, uid])
+
+  const onRetryPromotion = useCallback(async () => {
+    if (!selectedId) return
+    setBusy(true)
+    setError(null)
+    setNotice(null)
+    try {
+      const result = await completeRoundAndPromote(selectedId, uid)
+      if (result.promotionStatus === 'created' || result.promotionStatus === 'already_created') {
+        setNotice('Promotion succeeded. Fresh course is now available in saved courses.')
+      } else if (result.promotionStatus === 'pending') {
+        setNotice('Still pending. Retry again when network connectivity returns.')
+      }
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Failed to retry promotion')
+    } finally {
+      setBusy(false)
+    }
+  }, [selectedId, uid])
 
   return (
     <section className="scoring-panel" aria-labelledby="scoring-panel-title">
@@ -201,48 +283,122 @@ export function ScoringPanel({ user, selectedCourseTemplate }: Props) {
           {error}
         </p>
       ) : null}
+      {notice ? <p className="scoring-panel__notice">{notice}</p> : null}
 
       <div className="scoring-panel__section">
         <span className="scoring-panel__label">Start a round</span>
-        {selectedCourseTemplate ? (
-          <p className="scoring-panel__selection">
-            Using <strong>{selectedCourseTemplate.courseName}</strong> /{' '}
-            <strong>{selectedCourseTemplate.templateLabel}</strong> ({selectedCourseTemplate.holeCount} holes)
-          </p>
+        <div className="scoring-panel__mode-switch">
+          <button
+            type="button"
+            className={`scoring-panel__button${startMode === 'saved' ? ' scoring-panel__button--active' : ''}`}
+            onClick={() => setStartMode('saved')}
+            disabled={busy}
+          >
+            Saved course
+          </button>
+          <button
+            type="button"
+            className={`scoring-panel__button${startMode === 'fresh' ? ' scoring-panel__button--active' : ''}`}
+            onClick={() => setStartMode('fresh')}
+            disabled={busy}
+          >
+            Fresh instance
+          </button>
+        </div>
+        {startMode === 'saved' ? (
+          selectedCourseTemplate ? (
+            <p className="scoring-panel__selection">
+              Using <strong>{selectedCourseTemplate.courseName}</strong> /{' '}
+              <strong>{selectedCourseTemplate.templateLabel}</strong> ({selectedCourseTemplate.holeCount} holes)
+            </p>
+          ) : (
+            <p className="scoring-panel__muted">Pick a saved course + template above before starting.</p>
+          )
         ) : (
-          <p className="scoring-panel__muted">
-            Pick a course + template above. Manual ids are available as fallback if needed.
-          </p>
+          <>
+            <p className="scoring-panel__muted">
+              Fresh setup is saved on the round now and promoted into canonical courses when you complete the round.
+            </p>
+            <div className="scoring-panel__row">
+              <div className="scoring-panel__field scoring-panel__field--grow">
+                <label className="scoring-panel__label" htmlFor="fresh-course-name">
+                  Course name
+                </label>
+                <input
+                  id="fresh-course-name"
+                  className="scoring-panel__input"
+                  value={freshCourseName}
+                  onChange={(e) => setFreshCourseName(e.target.value)}
+                  placeholder="Enter course name"
+                  autoComplete="off"
+                />
+              </div>
+              <div className="scoring-panel__field">
+                <label className="scoring-panel__label" htmlFor="fresh-hole-count">
+                  Holes
+                </label>
+                <input
+                  id="fresh-hole-count"
+                  className="scoring-panel__input"
+                  type="number"
+                  min={1}
+                  max={36}
+                  value={freshHoleCount}
+                  onChange={(e) => {
+                    const next = Number(e.target.value)
+                    const safe = Number.isInteger(next) ? next : DEFAULT_FRESH_HOLE_COUNT
+                    setFreshHoleRows((current) => resizeFreshHoleRows(current, safe))
+                  }}
+                />
+              </div>
+            </div>
+            <ol className="scoring-panel__fresh-list">
+              {freshHoleRows.map((hole, index) => (
+                <li key={`fresh-hole-${index + 1}`} className="scoring-panel__fresh-item">
+                  <span className="scoring-panel__fresh-hole">Hole {index + 1}</span>
+                  <label className="scoring-panel__label" htmlFor={`fresh-hole-par-${index + 1}`}>
+                    Par
+                  </label>
+                  <input
+                    id={`fresh-hole-par-${index + 1}`}
+                    className="scoring-panel__input"
+                    type="number"
+                    min={2}
+                    max={9}
+                    value={hole.par}
+                    onChange={(e) =>
+                      setFreshHoleRows((current) =>
+                        current.map((row, rowIndex) =>
+                          rowIndex === index ? { ...row, par: e.target.value } : row,
+                        ),
+                      )
+                    }
+                  />
+                  <label className="scoring-panel__label" htmlFor={`fresh-hole-length-${index + 1}`}>
+                    Length (m)
+                  </label>
+                  <input
+                    id={`fresh-hole-length-${index + 1}`}
+                    className="scoring-panel__input"
+                    type="number"
+                    min={1}
+                    max={5000}
+                    value={hole.lengthMeters}
+                    onChange={(e) =>
+                      setFreshHoleRows((current) =>
+                        current.map((row, rowIndex) =>
+                          rowIndex === index ? { ...row, lengthMeters: e.target.value } : row,
+                        ),
+                      )
+                    }
+                    placeholder="optional"
+                  />
+                </li>
+              ))}
+            </ol>
+          </>
         )}
         <div className="scoring-panel__row">
-          {!selectedCourseTemplate ? (
-            <>
-              <div className="scoring-panel__field">
-                <label className="scoring-panel__label" htmlFor="course-id">
-                  courseId (fallback)
-                </label>
-                <input
-                  id="course-id"
-                  className="scoring-panel__input"
-                  value={fallbackCourseId}
-                  onChange={(e) => setFallbackCourseId(e.target.value)}
-                  autoComplete="off"
-                />
-              </div>
-              <div className="scoring-panel__field">
-                <label className="scoring-panel__label" htmlFor="template-id">
-                  templateId (fallback)
-                </label>
-                <input
-                  id="template-id"
-                  className="scoring-panel__input"
-                  value={fallbackTemplateId}
-                  onChange={(e) => setFallbackTemplateId(e.target.value)}
-                  autoComplete="off"
-                />
-              </div>
-            </>
-          ) : null}
           <div className="scoring-panel__field">
             <label className="scoring-panel__label" htmlFor="visibility">
               visibility
@@ -266,26 +422,20 @@ export function ScoringPanel({ user, selectedCourseTemplate }: Props) {
               <input
                 id="hole-count-selected"
                 className="scoring-panel__input"
-                value={selectedCourseTemplate.holeCount}
+                value={startMode === 'saved' ? selectedCourseTemplate.holeCount : freshHoleCount}
                 readOnly
               />
             </div>
           ) : (
             <div className="scoring-panel__field">
-              <label className="scoring-panel__label" htmlFor="hole-count">
-                holes (fallback)
+              <label className="scoring-panel__label" htmlFor="hole-count-fresh">
+                holes
               </label>
               <input
-                id="hole-count"
+                id="hole-count-fresh"
                 className="scoring-panel__input"
-                type="number"
-                min={1}
-                max={36}
-                value={fallbackHoleCount}
-                onChange={(e) => {
-                  const next = Number(e.target.value)
-                  setFallbackHoleCount(Number.isInteger(next) ? next : DEFAULT_ROUND_HOLE_COUNT)
-                }}
+                value={startMode === 'fresh' ? freshHoleCount : '—'}
+                readOnly
               />
             </div>
           )}
@@ -293,7 +443,7 @@ export function ScoringPanel({ user, selectedCourseTemplate }: Props) {
             type="button"
             className="scoring-panel__button scoring-panel__button--primary"
             onClick={() => void onCreateRound()}
-            disabled={busy || (!selectedCourseTemplate && (!fallbackCourseId.trim() || !fallbackTemplateId.trim()))}
+            disabled={busy || (startMode === 'saved' && !selectedCourseTemplate)}
           >
             New round
           </button>
@@ -332,6 +482,17 @@ export function ScoringPanel({ user, selectedCourseTemplate }: Props) {
                       {data.visibility} · {formatStartedAt(data.startedAt)}
                       {data.completedAt ? ' · completed' : ''}
                     </p>
+                    <p className="scoring-panel__muted">
+                      {data.courseSource === 'fresh'
+                        ? `fresh draft · ${data.courseDraft?.name ?? 'unnamed'}`
+                        : `saved course ${data.courseId} / ${data.templateId}`}
+                    </p>
+                    {data.courseSource === 'fresh' ? (
+                      <p className="scoring-panel__muted">
+                        Promotion: {data.coursePromotion?.status ?? 'none'}
+                        {data.coursePromotion?.errorCode ? ` (${data.coursePromotion.errorCode})` : ''}
+                      </p>
+                    ) : null}
                     {summary ? (
                       <p className="scoring-panel__muted">
                         {summary.totalStrokes}/{summary.totalPar} ({formatDelta(summary.totalDelta)}) ·{' '}
@@ -350,7 +511,16 @@ export function ScoringPanel({ user, selectedCourseTemplate }: Props) {
                     <button
                       type="button"
                       className="scoring-panel__button scoring-panel__button--inline"
-                      onClick={() => setSelectedId(id)}
+                      onClick={() => {
+                        setSelectedId(id)
+                        if (data.courseSource === 'fresh') {
+                          setHoleNumber(1)
+                          const firstHole = data.courseDraft?.holes[0]
+                          if (firstHole) {
+                            setPar(firstHole.par)
+                          }
+                        }
+                      }}
                       disabled={busy}
                     >
                       {selectedId === id ? 'Selected' : 'Select'}
@@ -373,6 +543,12 @@ export function ScoringPanel({ user, selectedCourseTemplate }: Props) {
               scored
             </p>
           ) : null}
+          {selected.data.courseSource === 'fresh' ? (
+            <p className="scoring-panel__muted">
+              Fresh round draft: <strong>{selected.data.courseDraft?.name ?? 'Unnamed course'}</strong> · promotion{' '}
+              {selected.data.coursePromotion?.status ?? 'none'}
+            </p>
+          ) : null}
           <div className="scoring-panel__row">
             <div className="scoring-panel__field">
               <label className="scoring-panel__label" htmlFor="hole-n">
@@ -385,7 +561,16 @@ export function ScoringPanel({ user, selectedCourseTemplate }: Props) {
                 min={1}
                 max={selectedHoleCount ?? 36}
                 value={holeNumber}
-                onChange={(e) => setHoleNumber(Number(e.target.value))}
+                onChange={(e) => {
+                  const nextHole = Number(e.target.value)
+                  setHoleNumber(nextHole)
+                  if (selected.data.courseSource === 'fresh') {
+                    const draftHole = selected.data.courseDraft?.holes.find((entry) => entry.number === nextHole)
+                    if (draftHole) {
+                      setPar(draftHole.par)
+                    }
+                  }
+                }}
               />
             </div>
             <div className="scoring-panel__field">
@@ -427,6 +612,18 @@ export function ScoringPanel({ user, selectedCourseTemplate }: Props) {
             <button type="button" className="scoring-panel__button" onClick={() => void onComplete()} disabled={busy}>
               Mark complete
             </button>
+            {selected.data.courseSource === 'fresh' &&
+            (selected.data.coursePromotion?.status === 'pending' ||
+              selected.data.coursePromotion?.status === 'failed') ? (
+              <button
+                type="button"
+                className="scoring-panel__button"
+                onClick={() => void onRetryPromotion()}
+                disabled={busy}
+              >
+                Retry promotion
+              </button>
+            ) : null}
           </div>
           {selected.data.ownerId === uid ? (
             <div className="scoring-panel__row">
