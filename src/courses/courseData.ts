@@ -1,19 +1,29 @@
 import {
   addDoc,
   collection,
+  doc,
   onSnapshot,
   orderBy,
   query,
   serverTimestamp,
+  updateDoc,
   type Unsubscribe,
 } from 'firebase/firestore'
 import { db } from '../firebase/firestore'
-import type { CourseDoc, CourseHoleTemplate, CourseTemplateDoc } from '../firebase/models/course'
+import type { CourseDoc, CourseTemplateDoc } from '../firebase/models/course'
 import { COLLECTIONS } from '../firebase/paths'
 import { slugify } from './slug'
+import { createTemplateDraft, normalizeCourseName } from './templateDraft'
 
 export type CourseWithId = CourseDoc & { id: string }
 export type CourseTemplateWithId = CourseTemplateDoc & { id: string }
+export type CourseRoundSelection = {
+  courseId: string
+  courseName: string
+  templateId: string
+  templateLabel: string
+  holeCount: number
+}
 
 export function subscribeCourses(
   onNext: (rows: CourseWithId[]) => void,
@@ -47,18 +57,6 @@ export function subscribeTemplates(
   )
 }
 
-const DEFAULT_HOLE_COUNT = 9
-const DEFAULT_PAR = 3
-
-function defaultHoles(count: number): CourseHoleTemplate[] {
-  return Array.from({ length: count }, (_, i) => ({
-    number: i + 1,
-    par: DEFAULT_PAR,
-    lengthMeters: null,
-    notes: null,
-  }))
-}
-
 /** Creates a course and a starter “Main” template so the picker always has a layout row. */
 export async function createCourseWithDefaultTemplate(params: {
   name: string
@@ -66,11 +64,11 @@ export async function createCourseWithDefaultTemplate(params: {
   organization?: string | null
   holeCount?: number
 }): Promise<{ courseId: string; templateId: string }> {
-  const holeCount = params.holeCount ?? DEFAULT_HOLE_COUNT
-  const slug = `${slugify(params.name)}-${params.uid.slice(0, 8)}`
+  const normalizedName = normalizeCourseName(params.name)
+  const slug = `${slugify(normalizedName)}-${params.uid.slice(0, 8)}`
 
   const courseRef = await addDoc(collection(db, COLLECTIONS.courses), {
-    name: params.name.trim(),
+    name: normalizedName,
     slug,
     organization: params.organization ?? null,
     geo: null,
@@ -78,11 +76,16 @@ export async function createCourseWithDefaultTemplate(params: {
     createdAt: serverTimestamp(),
   })
 
+  const draft = createTemplateDraft({
+    label: 'Main',
+    holeCount: params.holeCount ?? 9,
+  })
+
   const templateRef = await addDoc(
     collection(db, COLLECTIONS.courses, courseRef.id, COLLECTIONS.templates),
     {
-      label: 'Main',
-      holes: defaultHoles(holeCount),
+      label: draft.label,
+      holes: draft.holes,
       source: 'crowd',
       createdBy: params.uid,
       createdAt: serverTimestamp(),
@@ -91,4 +94,49 @@ export async function createCourseWithDefaultTemplate(params: {
   )
 
   return { courseId: courseRef.id, templateId: templateRef.id }
+}
+
+export async function createTemplate(params: {
+  courseId: string
+  uid: string
+  label: string
+  holeCount: number
+  isDefault?: boolean
+}): Promise<string> {
+  const draft = createTemplateDraft({
+    label: params.label,
+    holeCount: params.holeCount,
+  })
+  const templateRef = await addDoc(collection(db, COLLECTIONS.courses, params.courseId, COLLECTIONS.templates), {
+    label: draft.label,
+    holes: draft.holes,
+    source: 'crowd',
+    createdBy: params.uid,
+    createdAt: serverTimestamp(),
+    isDefault: params.isDefault === true,
+  })
+  return templateRef.id
+}
+
+export async function updateTemplate(params: {
+  courseId: string
+  templateId: string
+  label: string
+  holeCount: number
+}): Promise<void> {
+  const draft = createTemplateDraft({
+    label: params.label,
+    holeCount: params.holeCount,
+  })
+  await updateDoc(doc(db, COLLECTIONS.courses, params.courseId, COLLECTIONS.templates, params.templateId), {
+    label: draft.label,
+    holes: draft.holes,
+  })
+}
+
+/** Canonical course rename (admin-gated by Firestore rules). */
+export async function renameCourse(params: { courseId: string; name: string }): Promise<void> {
+  await updateDoc(doc(db, COLLECTIONS.courses, params.courseId), {
+    name: normalizeCourseName(params.name),
+  })
 }

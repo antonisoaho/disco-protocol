@@ -90,6 +90,20 @@
   font-size: 0.9rem;
 }
 
+.scoring-panel__selection {
+  margin: 0 0 calc(#{$space-unit} * 2);
+  padding: calc(#{$space-unit} * 2) calc(#{$space-unit} * 3);
+  border: 1px solid $color-border;
+  border-radius: $radius-sm;
+  background: $color-bg;
+  color: $color-text-muted;
+  font-size: 0.875rem;
+}
+
+.scoring-panel__selection strong {
+  color: $color-text;
+}
+
 .scoring-panel__list {
   list-style: none;
   margin: 0;

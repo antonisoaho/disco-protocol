@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { CoursePicker } from '../courses/CoursePicker'
+import type { CourseRoundSelection } from '../courses/courseData'
 import { AuthPanel } from './AuthPanel'
 import { useAuth } from './useAuth'
 import { ScoringPanel } from '../scoring/ScoringPanel'
@@ -11,6 +12,7 @@ import { ScoringPanel } from '../scoring/ScoringPanel'
 export function ProtectedApp() {
   const { user, loading, signOut } = useAuth()
   const [signOutError, setSignOutError] = useState<string | null>(null)
+  const [selectedCourseTemplate, setSelectedCourseTemplate] = useState<CourseRoundSelection | null>(null)
 
   if (loading) {
     return (
@@ -68,8 +70,8 @@ export function ProtectedApp() {
           Signed in. Your profile is at <code className="app-shell__code">users/{user.uid}</code>. Pick a course for
           the next round, then use shared rounds and offline scoring below.
         </p>
-        <CoursePicker />
-        <ScoringPanel user={user} />
+        <CoursePicker selection={selectedCourseTemplate} onSelectionChange={setSelectedCourseTemplate} />
+        <ScoringPanel user={user} selectedCourseTemplate={selectedCourseTemplate} />
       </main>
     </div>
   )
