@@ -16,6 +16,8 @@ on:
       - "index.html"
       - "package.json"
       - "package-lock.json"
+      - "scripts/**"
+      - ".cursorrules"
       - "tsconfig.json"
       - "tsconfig.*.json"
       - "eslint.config.js"
@@ -29,6 +31,8 @@ on:
       - "index.html"
       - "package.json"
       - "package-lock.json"
+      - "scripts/**"
+      - ".cursorrules"
       - "tsconfig.json"
       - "tsconfig.*.json"
       - "eslint.config.js"
@@ -56,6 +60,9 @@ jobs:
 
       - name: Install dependencies
         run: npm ci
+
+      - name: Verify React Doctor
+        run: npm run verify:doctor
 
       - name: Lint
         run: npm run lint
