@@ -1,6 +1,6 @@
 import { type User } from 'firebase/auth'
 import type { Timestamp } from 'firebase/firestore'
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { type ReactNode, useCallback, useEffect, useMemo, useState } from 'react'
 import type { CourseRoundSelection } from '../courses/courseData'
 import {
   FreshRoundDraftValidationError,
@@ -8,7 +8,11 @@ import {
   normalizeFreshCourseDraftForPromotion,
   type FreshRoundDraftIssue,
 } from '../firebase/freshRoundCourse'
-import { strokesParDeltaToSemantic } from '../lib/scoreSemantic'
+import {
+  scoreTierToNotationClassName,
+  strokesParDeltaToNotation,
+  type ScoreDecorationShape,
+} from '../lib/scoreSemantic'
 import type { RoundDoc, RoundVisibility } from '../firebase/roundTypes'
 import {
   addParticipantToRound,
@@ -94,6 +98,24 @@ function inferRoundHoleCount(data: RoundDoc): number {
 
 function formatDelta(delta: number): string {
   return delta > 0 ? `+${delta}` : `${delta}`
+}
+
+type ScoreNotationValueProps = {
+  strokes: number
+  decorationShape: ScoreDecorationShape
+  decorationLayers: number
+}
+
+function ScoreNotationValue({ strokes, decorationShape, decorationLayers }: ScoreNotationValueProps) {
+  let content: ReactNode = <span className="scoring-panel__notation-value">{strokes}</span>
+  for (let layer = 0; layer < decorationLayers; layer += 1) {
+    content = (
+      <span className={`scoring-panel__notation-frame scoring-panel__notation-frame--${decorationShape}`}>
+        {content}
+      </span>
+    )
+  }
+  return content
 }
 
 export function ScoringPanel({ user, selectedCourseTemplate }: Props) {
@@ -504,7 +526,7 @@ export function ScoringPanel({ user, selectedCourseTemplate }: Props) {
               const keys = Object.keys(data.holeScores ?? {}).sort((a, b) => Number(a) - Number(b))
               const lastKey = keys.length ? keys[keys.length - 1] : null
               const last = lastKey ? data.holeScores[lastKey] : null
-              const semantic = last ? strokesParDeltaToSemantic(last.strokes, last.par) : 'par'
+              const notation = last ? strokesParDeltaToNotation(last.strokes, last.par) : null
               const summary = (() => {
                 try {
                   return aggregateScoreProtocol(
@@ -545,9 +567,20 @@ export function ScoringPanel({ user, selectedCourseTemplate }: Props) {
                     ) : null}
                   </div>
                   <div>
-                    {last ? (
-                      <span className={`scoring-panel__badge scoring-panel__badge--${semantic}`}>
-                        {last.strokes}/{last.par}
+                    {last && notation ? (
+                      <span className="scoring-panel__score-notation">
+                        <span
+                          className={`scoring-panel__notation ${scoreTierToNotationClassName(notation.tier)}`}
+                          aria-label={`${notation.label}: ${last.strokes} strokes on par ${last.par}`}
+                          title={`${notation.label} (${formatDelta(notation.delta)} vs par)`}
+                        >
+                          <ScoreNotationValue
+                            strokes={last.strokes}
+                            decorationShape={notation.decorationShape}
+                            decorationLayers={notation.decorationLayers}
+                          />
+                        </span>
+                        <span className="scoring-panel__notation-par">/{last.par}</span>
                       </span>
                     ) : (
                       <span className="scoring-panel__muted">no scores</span>
