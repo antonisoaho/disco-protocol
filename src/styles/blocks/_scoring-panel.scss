@@ -143,22 +143,73 @@
   background: $color-bg;
 }
 
-.scoring-panel__badge {
+.scoring-panel__score-notation {
+  display: inline-flex;
+  align-items: center;
+  gap: calc(#{$space-unit} * 1.5);
+}
+
+.scoring-panel__notation {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-width: 2.25rem;
-  padding: calc(#{$space-unit} * 1) calc(#{$space-unit} * 2);
-  border-radius: $radius-sm;
+  min-width: 2.1rem;
+  min-height: 2.1rem;
+  font-size: 0.9rem;
+  font-weight: 700;
+  line-height: 1;
+  color: map.get($score-color, par);
+
+  &--albatross-plus,
+  &--eagle {
+    color: map.get($score-color, eagle);
+  }
+
+  &--birdie {
+    color: map.get($score-color, birdie);
+  }
+
+  &--par {
+    color: map.get($score-color, par);
+  }
+
+  &--bogey {
+    color: map.get($score-color, bogey);
+  }
+
+  &--double-bogey,
+  &--triple-bogey-plus {
+    color: map.get($score-color, double-bogey-plus);
+  }
+}
+
+.scoring-panel__notation-frame {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: calc(#{$space-unit} * 0.75);
+  border: 2px solid currentcolor;
+
+  &--circle {
+    border-radius: 999px;
+  }
+
+  &--square {
+    border-radius: 0;
+  }
+}
+
+.scoring-panel__notation-value {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: calc(#{$space-unit} * 4.5);
+}
+
+.scoring-panel__notation-par {
   font-size: 0.8rem;
   font-weight: 600;
-  color: #fff;
-
-  @each $name, $value in $score-color {
-    &--#{$name} {
-      background: $value;
-    }
-  }
+  color: $color-text-muted;
 }
 
 .scoring-panel__muted {
