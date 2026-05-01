@@ -1,6 +1,6 @@
 import { type User } from 'firebase/auth'
 import type { Timestamp } from 'firebase/firestore'
-import { type ReactNode, useCallback, useEffect, useMemo, useState } from 'react'
+import { type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { CourseRoundSelection } from '../courses/courseData'
 import { subscribeUserDirectory, type UserDirectoryEntry } from '../firebase/userDirectory'
 import {
@@ -41,6 +41,7 @@ type Props = {
 
 const DEFAULT_ROUND_HOLE_COUNT = 18
 const DEFAULT_FRESH_HOLE_COUNT = 9
+const SCORECARD_SCROLL_EDGE_THRESHOLD = 8
 
 function normalizeFreshHoleCount(value: number): number {
   if (!Number.isFinite(value)) return DEFAULT_FRESH_HOLE_COUNT
@@ -185,9 +186,15 @@ export function ScoringPanel({ user, selectedCourseTemplate }: Props) {
   const [directoryEntries, setDirectoryEntries] = useState<UserDirectoryEntry[]>([])
   const [directoryQuery, setDirectoryQuery] = useState('')
   const [scorecardEdits, setScorecardEdits] = useState<Record<string, string>>({})
+  const [scorecardScrollState, setScorecardScrollState] = useState({
+    isScrollable: false,
+    canScrollLeft: false,
+    canScrollRight: false,
+  })
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [notice, setNotice] = useState<string | null>(null)
+  const scorecardWrapRef = useRef<HTMLDivElement | null>(null)
 
   useEffect(() => {
     const unsub = subscribeMyRounds(
@@ -383,6 +390,97 @@ export function ScoringPanel({ user, selectedCourseTemplate }: Props) {
     () => collectScorecardEditedHoleNumbers(scorecardEdits),
     [scorecardEdits],
   )
+  const hasPendingScorecardChanges = scorecardEditedHoles.length > 0
+
+  const syncScorecardScrollState = useCallback(() => {
+    const element = scorecardWrapRef.current
+    if (!element) {
+      setScorecardScrollState({
+        isScrollable: false,
+        canScrollLeft: false,
+        canScrollRight: false,
+      })
+      return
+    }
+
+    const maxScrollLeft = Math.max(0, element.scrollWidth - element.clientWidth)
+    const isScrollable = maxScrollLeft > SCORECARD_SCROLL_EDGE_THRESHOLD
+    const canScrollLeft = isScrollable && element.scrollLeft > SCORECARD_SCROLL_EDGE_THRESHOLD
+    const canScrollRight =
+      isScrollable && element.scrollLeft < maxScrollLeft - SCORECARD_SCROLL_EDGE_THRESHOLD
+
+    setScorecardScrollState((current) => {
+      if (
+        current.isScrollable === isScrollable &&
+        current.canScrollLeft === canScrollLeft &&
+        current.canScrollRight === canScrollRight
+      ) {
+        return current
+      }
+      return { isScrollable, canScrollLeft, canScrollRight }
+    })
+  }, [])
+
+  const handleScorecardWrapRef = useCallback(
+    (node: HTMLDivElement | null) => {
+      scorecardWrapRef.current = node
+      if (!node) {
+        setScorecardScrollState({
+          isScrollable: false,
+          canScrollLeft: false,
+          canScrollRight: false,
+        })
+        return
+      }
+      window.requestAnimationFrame(() => {
+        if (scorecardWrapRef.current === node) {
+          syncScorecardScrollState()
+        }
+      })
+    },
+    [syncScorecardScrollState],
+  )
+
+  useEffect(() => {
+    const element = scorecardWrapRef.current
+    if (!element) return
+
+    const handleScrollOrResize = () => {
+      syncScorecardScrollState()
+    }
+
+    element.addEventListener('scroll', handleScrollOrResize, { passive: true })
+    window.addEventListener('resize', handleScrollOrResize)
+
+    const resizeObserver =
+      typeof ResizeObserver === 'undefined'
+        ? null
+        : new ResizeObserver(() => {
+            syncScorecardScrollState()
+          })
+    resizeObserver?.observe(element)
+    const tableElement = element.querySelector('table')
+    if (tableElement) {
+      resizeObserver?.observe(tableElement)
+    }
+
+    syncScorecardScrollState()
+
+    return () => {
+      element.removeEventListener('scroll', handleScrollOrResize)
+      window.removeEventListener('resize', handleScrollOrResize)
+      resizeObserver?.disconnect()
+    }
+  }, [selectedId, selectedHoleCount, selectedParticipantColumns.length, syncScorecardScrollState])
+
+  const scorecardWrapClassName = [
+    'scoring-panel__scorecard-wrap',
+    scorecardScrollState.isScrollable ? 'scoring-panel__scorecard-wrap--scrollable' : '',
+    scorecardScrollState.canScrollLeft ? 'scoring-panel__scorecard-wrap--can-scroll-left' : '',
+    scorecardScrollState.canScrollRight ? 'scoring-panel__scorecard-wrap--can-scroll-right' : '',
+  ]
+    .filter(Boolean)
+    .join(' ')
 
   const inviteCandidateEntries = useMemo(() => {
     if (!selected) return []
@@ -974,7 +1072,7 @@ export function ScoringPanel({ user, selectedCourseTemplate }: Props) {
               </div>
               <button
                 type="button"
-                className="scoring-panel__button"
+                className="scoring-panel__button scoring-panel__button--primary scoring-panel__button--participant-submit"
                 onClick={() => void onAddParticipant()}
                 disabled={busy || inviteSelections.length === 0}
               >
@@ -982,18 +1080,28 @@ export function ScoringPanel({ user, selectedCourseTemplate }: Props) {
               </button>
             </div>
           ) : null}
-          <div className="scoring-panel__scorecard-wrap">
+          <div className={scorecardWrapClassName} ref={handleScorecardWrapRef}>
             <table
               className="scoring-panel__scorecard"
               aria-label={`${selected.data.courseSource === 'fresh' ? 'Fresh' : 'Saved'} round scorecard table`}
             >
               <thead>
                 <tr>
-                  {selectedParticipantColumns.map((column) => (
-                    <th key={column.key} scope="col">
-                      {column.label}
-                    </th>
-                  ))}
+                  {selectedParticipantColumns.map((column) => {
+                    const stickyClass =
+                      column.kind === 'hole'
+                        ? ' scoring-panel__scorecard-col--hole'
+                        : column.kind === 'par'
+                          ? ' scoring-panel__scorecard-col--par'
+                          : column.kind === 'length'
+                            ? ' scoring-panel__scorecard-col--length'
+                            : ''
+                    return (
+                      <th key={column.key} scope="col" className={`scoring-panel__scorecard-col${stickyClass}`}>
+                        {column.label}
+                      </th>
+                    )
+                  })}
                 </tr>
               </thead>
               <tbody>
@@ -1015,10 +1123,13 @@ export function ScoringPanel({ user, selectedCourseTemplate }: Props) {
                     (typeof draftHole?.lengthMeters === 'number' ? String(draftHole.lengthMeters) : '')
                   return (
                     <tr key={rowHoleNumber}>
-                      <th scope="row" className="scoring-panel__scorecard-hole">
+                      <th
+                        scope="row"
+                        className="scoring-panel__scorecard-col scoring-panel__scorecard-col--hole scoring-panel__scorecard-hole"
+                      >
                         {rowHoleNumber}
                       </th>
-                      <td>
+                      <td className="scoring-panel__scorecard-col scoring-panel__scorecard-col--par">
                         <input
                           className="scoring-panel__scorecard-input"
                           type="number"
@@ -1031,11 +1142,10 @@ export function ScoringPanel({ user, selectedCourseTemplate }: Props) {
                               [`par:${rowHoleNumber}`]: e.target.value,
                             }))
                           }
-                          placeholder="Par"
                           aria-label={`Hole ${rowHoleNumber} par`}
                         />
                       </td>
-                      <td>
+                      <td className="scoring-panel__scorecard-col scoring-panel__scorecard-col--length">
                         {selected.data.courseSource === 'fresh' ? (
                           <input
                             className="scoring-panel__scorecard-input"
@@ -1049,7 +1159,6 @@ export function ScoringPanel({ user, selectedCourseTemplate }: Props) {
                                 [`length:${rowHoleNumber}`]: e.target.value,
                               }))
                             }
-                            placeholder="Length"
                             aria-label={`Hole ${rowHoleNumber} length`}
                           />
                         ) : (
@@ -1100,7 +1209,6 @@ export function ScoringPanel({ user, selectedCourseTemplate }: Props) {
                                   [scoreKey]: e.target.value,
                                 }))
                               }
-                              placeholder="Strokes"
                               aria-label={`Hole ${rowHoleNumber} strokes for ${column.label}`}
                             />
                             {notation && parsedScore !== null ? (
@@ -1129,9 +1237,11 @@ export function ScoringPanel({ user, selectedCourseTemplate }: Props) {
               </tbody>
               <tfoot>
                 <tr>
-                  <th scope="row">Per-player total</th>
-                  <td>—</td>
-                  <td>—</td>
+                  <th scope="row" className="scoring-panel__scorecard-col scoring-panel__scorecard-col--hole">
+                    Per-player total
+                  </th>
+                  <td className="scoring-panel__scorecard-col scoring-panel__scorecard-col--par">—</td>
+                  <td className="scoring-panel__scorecard-col scoring-panel__scorecard-col--length">—</td>
                   {selectedParticipantOnlyColumns.map((column) => {
                     const participantUid = 'participantId' in column ? column.participantId : ''
                     const totals = selectedParticipantTotals[participantUid] ?? {
@@ -1170,20 +1280,27 @@ export function ScoringPanel({ user, selectedCourseTemplate }: Props) {
               </tfoot>
             </table>
           </div>
-          <div className="scoring-panel__row scoring-panel__scorecard-actions">
-            <p className="scoring-panel__muted">
-              {scorecardEditedHoles.length > 0
-                ? `${scorecardEditedHoles.length} hole${scorecardEditedHoles.length > 1 ? 's' : ''} pending save`
-                : 'All scorecard edits are saved.'}
+          {scorecardScrollState.isScrollable ? (
+            <p className="scoring-panel__muted scoring-panel__scorecard-scroll-hint">
+              Swipe sideways to reveal all score columns.
             </p>
-            <button
-              type="button"
-              className="scoring-panel__button scoring-panel__button--primary"
-              onClick={() => void onSaveScorecard()}
-              disabled={busy || scorecardEditedHoles.length === 0}
-            >
-              Save scorecard changes
-            </button>
+          ) : null}
+          <div className="scoring-panel__row scoring-panel__scorecard-actions">
+            <p className="scoring-panel__muted scoring-panel__save-status" role="status" aria-live="polite">
+              {hasPendingScorecardChanges
+                ? `${scorecardEditedHoles.length} hole${scorecardEditedHoles.length > 1 ? 's' : ''} pending save`
+                : 'Saved'}
+            </p>
+            {hasPendingScorecardChanges ? (
+              <button
+                type="button"
+                className="scoring-panel__button scoring-panel__button--primary"
+                onClick={() => void onSaveScorecard()}
+                disabled={busy}
+              >
+                Save scorecard changes
+              </button>
+            ) : null}
           </div>
           <div className="scoring-panel__row">
             <button
@@ -1208,7 +1325,7 @@ export function ScoringPanel({ user, selectedCourseTemplate }: Props) {
             ) : null}
           </div>
           {selected.data.ownerId === uid && selected.data.courseSource === 'saved' ? (
-            <div className="scoring-panel__row">
+            <div className="scoring-panel__row scoring-panel__scorecard-participants">
               <div className="scoring-panel__field scoring-panel__field--grow">
                 <label className="scoring-panel__label" htmlFor="invite-search">
                   Add participants
@@ -1249,7 +1366,7 @@ export function ScoringPanel({ user, selectedCourseTemplate }: Props) {
               </div>
               <button
                 type="button"
-                className="scoring-panel__button"
+                className="scoring-panel__button scoring-panel__button--primary scoring-panel__button--participant-submit"
                 onClick={() => void onAddParticipant()}
                 disabled={busy || inviteSelections.length === 0}
               >
