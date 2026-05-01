@@ -11,6 +11,9 @@ export type HoleScoreEntry = {
   updatedBy: string
 }
 
+/** Per-participant scored holes keyed by participant uid then hole number string. */
+export type ParticipantHoleScores = Record<string, Record<string, HoleScoreEntry>>
+
 export type RoundCourseSource = 'saved' | 'fresh'
 
 export type RoundCourseDraftHole = {
@@ -51,6 +54,8 @@ export type RoundDoc = {
   completedAt: Timestamp | null
   /** Keys are hole numbers as strings (`"1"` …). */
   holeScores: Record<string, HoleScoreEntry>
+  /** Optional v2 shape for multi-participant scorecard cells. */
+  participantHoleScores?: ParticipantHoleScores
   createdAt: Timestamp
   updatedAt: Timestamp
 }
