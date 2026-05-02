@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   createTemplateDraft,
+  normalizeCourseCity,
   normalizeCourseName,
   normalizeHoleCount,
   normalizeTemplateLabel,
@@ -10,6 +11,11 @@ import {
 describe('templateDraft helpers', () => {
   it('normalizes course name spacing', () => {
     expect(normalizeCourseName('  Blue   Ribbon   Pines  ')).toBe('Blue Ribbon Pines')
+  })
+
+  it('normalizes city and returns null for blank city', () => {
+    expect(normalizeCourseCity('  East   Bethel  ')).toBe('East Bethel')
+    expect(normalizeCourseCity('   ')).toBeNull()
   })
 
   it('validates blank course names', () => {

@@ -1,14 +1,12 @@
 import { useState } from 'react'
+import { Link, NavLink, Navigate, Route, Routes } from 'react-router-dom'
 import { CoursePicker } from '../courses/CoursePicker'
 import type { CourseRoundSelection } from '../courses/courseData'
 import { AuthPanel } from './AuthPanel'
 import { useAuth } from './useAuth'
 import { ScoringPanel } from '../scoring/ScoringPanel'
 
-/**
- * Placeholder “protected shell”: everything inside assumes a signed-in user.
- * Replace with router-based guards when navigation lands.
- */
+/** Protected shell: signed-in users can navigate between home and course discovery. */
 export function ProtectedApp() {
   const { user, loading, signOut } = useAuth()
   const [signOutError, setSignOutError] = useState<string | null>(null)
@@ -41,11 +39,22 @@ export function ProtectedApp() {
   return (
     <div className="app-shell">
       <header className="app-shell__header app-shell__header--row container">
-        <div>
+        <div className="app-shell__header-main">
           <h1 className="app-shell__title">Disc Golf Social</h1>
           <p className="app-shell__tagline app-shell__tagline--compact">
             {user.displayName || user.email}
           </p>
+          <nav className="app-shell__nav" aria-label="Primary">
+            <NavLink to="/" end className={({ isActive }) => `app-shell__nav-link${isActive ? ' app-shell__nav-link--active' : ''}`}>
+              Home
+            </NavLink>
+            <NavLink
+              to="/courses"
+              className={({ isActive }) => `app-shell__nav-link${isActive ? ' app-shell__nav-link--active' : ''}`}
+            >
+              Courses
+            </NavLink>
+          </nav>
         </div>
         <button
           type="button"
@@ -67,14 +76,51 @@ export function ProtectedApp() {
         </p>
       ) : null}
       <main className="app-shell__main container">
-        <section className="app-shell__intro card">
-          <p className="app-shell__placeholder">
-            Signed in. Your profile is at <code className="app-shell__code">users/{user.uid}</code>. Pick a course
-            for the next round, then use shared rounds and offline scoring below.
-          </p>
-        </section>
-        <CoursePicker selection={selectedCourseTemplate} onSelectionChange={setSelectedCourseTemplate} />
-        <ScoringPanel user={user} selectedCourseTemplate={selectedCourseTemplate} />
+        <Routes>
+          <Route
+            path="/"
+            element={
+              <>
+                <section className="app-shell__intro card">
+                  <p className="app-shell__placeholder">
+                    Start a round quickly, then visit Courses when you need to find or edit layouts.
+                  </p>
+                  <p className="app-shell__placeholder">
+                    Selected course:{' '}
+                    {selectedCourseTemplate ? (
+                      <strong>
+                        {selectedCourseTemplate.courseName} — {selectedCourseTemplate.templateLabel}
+                      </strong>
+                    ) : (
+                      'None yet'
+                    )}
+                  </p>
+                  <Link className="app-shell__link" to="/courses">
+                    Browse courses
+                  </Link>
+                </section>
+                <ScoringPanel user={user} selectedCourseTemplate={selectedCourseTemplate} />
+              </>
+            }
+          />
+          <Route
+            path="/courses"
+            element={
+              <>
+                <section className="app-shell__intro card">
+                  <p className="app-shell__placeholder">
+                    Search by course name or city, then use near-me sorting when location data is available.
+                  </p>
+                  <Link className="app-shell__link" to="/">
+                    Back to round setup
+                  </Link>
+                </section>
+                <CoursePicker selection={selectedCourseTemplate} onSelectionChange={setSelectedCourseTemplate} />
+              </>
+            }
+          />
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
       </main>
     </div>
   )

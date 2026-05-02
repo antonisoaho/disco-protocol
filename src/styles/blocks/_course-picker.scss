@@ -28,6 +28,36 @@
   color: $color-text;
 }
 
+.course-picker__filters {
+  display: grid;
+  gap: calc(#{$space-unit} * 3);
+  padding: calc(#{$space-unit} * 3);
+  border: 1px solid $color-border;
+  border-radius: $radius-md;
+  background: $color-surface;
+}
+
+.course-picker__filter-group {
+  display: flex;
+  flex-direction: column;
+  gap: calc(#{$space-unit} * 2);
+}
+
+.course-picker__filter-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: calc(#{$space-unit} * 2);
+  align-items: center;
+}
+
+.course-picker__checkbox {
+  display: inline-flex;
+  align-items: center;
+  gap: calc(#{$space-unit} * 1.5);
+  font-size: 0.875rem;
+  color: $color-text-muted;
+}
+
 .course-picker__error {
   margin: 0;
   padding: calc(#{$space-unit} * 3);
