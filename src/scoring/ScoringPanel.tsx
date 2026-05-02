@@ -1165,27 +1165,28 @@ export function ScoringPanel({ user, selectedCourseTemplate, favoriteCourseIds }
                 })}
               </div>
             </div>
-            <div className="scoring-panel__row">
-              <div className="scoring-panel__field scoring-panel__field--grow">
+            <div className="scoring-panel__row scoring-panel__row--compact">
+              <div className="scoring-panel__field scoring-panel__field--grow scoring-panel__field--compact">
                 <label className="scoring-panel__label" htmlFor="new-round-anonymous-name">
-                  {t('scoring.labels.addAnonymous')}
+                  {t('scoring.labels.playerNameOptional')}
                 </label>
                 <input
                   id="new-round-anonymous-name"
                   className="scoring-panel__input"
                   value={newRoundAnonymousName}
                   onChange={(event) => setNewRoundAnonymousName(event.target.value)}
-                  placeholder={t('scoring.placeholders.anonymousName')}
+                  placeholder={t('scoring.placeholders.playerName')}
                   autoComplete="off"
                 />
+                <p className="scoring-panel__muted">{t('scoring.messages.addPlayerHelper')}</p>
               </div>
               <button
                 type="button"
-                className="scoring-panel__button"
+                className="scoring-panel__button scoring-panel__button--primary"
                 onClick={onAddNewRoundAnonymousParticipant}
                 disabled={busy}
               >
-                {t('scoring.buttons.addAnonymous')}
+                {t('scoring.buttons.addPlayer')}
               </button>
             </div>
             {newRoundAnonymousParticipants.length > 0 ? (
@@ -1500,7 +1501,7 @@ export function ScoringPanel({ user, selectedCourseTemplate, favoriteCourseIds }
                 })}
               </p>
               {selected.data.ownerId === uid ? (
-                <div className="scoring-panel__row scoring-panel__scorecard-participants">
+                <div className="scoring-panel__scorecard-participants">
                   <div className="scoring-panel__field scoring-panel__field--grow">
                     <label className="scoring-panel__label" htmlFor="invite-search">
                       {t('scoring.participants.addParticipants')}
@@ -1541,19 +1542,20 @@ export function ScoringPanel({ user, selectedCourseTemplate, favoriteCourseIds }
                         )
                       })}
                     </div>
-                    <div className="scoring-panel__row">
-                      <div className="scoring-panel__field scoring-panel__field--grow">
+                    <div className="scoring-panel__row scoring-panel__row--compact">
+                      <div className="scoring-panel__field scoring-panel__field--grow scoring-panel__field--compact">
                         <label className="scoring-panel__label" htmlFor="invite-anonymous-name">
-                          {t('scoring.labels.addAnonymous')}
+                          {t('scoring.labels.playerNameOptional')}
                         </label>
                         <input
                           id="invite-anonymous-name"
                           className="scoring-panel__input"
                           value={inviteAnonymousName}
                           onChange={(event) => setInviteAnonymousName(event.target.value)}
-                          placeholder={t('scoring.placeholders.anonymousName')}
+                          placeholder={t('scoring.placeholders.playerName')}
                           autoComplete="off"
                         />
+                        <p className="scoring-panel__muted">{t('scoring.messages.addPlayerHelper')}</p>
                       </div>
                     </div>
                   </div>
@@ -1567,7 +1569,7 @@ export function ScoringPanel({ user, selectedCourseTemplate, favoriteCourseIds }
                         normalizeAnonymousParticipantName(inviteAnonymousName).length === 0)
                     }
                   >
-                    {t('scoring.participants.addSelectedParticipants')}
+                    {t('scoring.buttons.addPlayer')}
                   </button>
                 </div>
               ) : null}

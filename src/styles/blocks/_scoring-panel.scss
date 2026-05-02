@@ -63,6 +63,11 @@
   gap: $space-3;
   align-items: flex-end;
   margin: 0;
+
+  &--compact {
+    gap: $space-2;
+    align-items: flex-start;
+  }
 }
 
 .scoring-panel__field {
@@ -117,6 +122,8 @@
 
   &--participant-submit {
     min-width: 11.5rem;
+    width: 100%;
+    align-self: flex-start;
   }
 }
 
@@ -469,6 +476,9 @@
   border: 1px solid $color-border;
   border-radius: $radius-sm;
   background: color-mix(in srgb, $color-bg 70%, $color-surface);
+  display: flex;
+  flex-direction: column;
+  gap: $layout-stack-gap;
 }
 
 @media (min-width: 768px) {
@@ -483,5 +493,9 @@
 
   .scoring-panel__tabs {
     grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  .scoring-panel__button--participant-submit {
+    width: auto;
   }
 }
