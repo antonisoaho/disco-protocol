@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Link, NavLink, Navigate, Route, Routes } from 'react-router-dom'
 import { CoursePicker } from '../courses/CoursePicker'
 import type { CourseRoundSelection } from '../courses/courseData'
@@ -8,6 +9,7 @@ import { ScoringPanel } from '../scoring/ScoringPanel'
 
 /** Protected shell: signed-in users can navigate between home and course discovery. */
 export function ProtectedApp() {
+  const { t } = useTranslation('common')
   const { user, loading, signOut } = useAuth()
   const [signOutError, setSignOutError] = useState<string | null>(null)
   const [selectedCourseTemplate, setSelectedCourseTemplate] = useState<CourseRoundSelection | null>(null)
@@ -17,7 +19,7 @@ export function ProtectedApp() {
       <div className="app-shell">
         <main className="app-shell__main">
           <div className="app-shell__container app-shell__main--centered">
-            <p className="app-shell__placeholder">Loading session…</p>
+            <p className="app-shell__placeholder">{t('shell.loadingSession')}</p>
           </div>
         </main>
       </div>
@@ -29,8 +31,8 @@ export function ProtectedApp() {
       <div className="app-shell">
         <header className="app-shell__header">
           <div className="app-shell__container app-shell__header-inner">
-            <h1 className="app-shell__title">Disc Golf Social</h1>
-            <p className="app-shell__tagline">Sign in to continue.</p>
+            <h1 className="app-shell__title">{t('shell.appTitle')}</h1>
+            <p className="app-shell__tagline">{t('shell.signInPrompt')}</p>
           </div>
         </header>
         <main className="app-shell__main">
@@ -47,19 +49,19 @@ export function ProtectedApp() {
       <header className="app-shell__header">
         <div className="app-shell__container app-shell__header-inner app-shell__header--row">
           <div className="app-shell__header-main">
-            <h1 className="app-shell__title">Disc Golf Social</h1>
+            <h1 className="app-shell__title">{t('shell.appTitle')}</h1>
             <p className="app-shell__tagline app-shell__tagline--compact">
               {user.displayName || user.email}
             </p>
             <nav className="app-shell__nav" aria-label="Primary">
               <NavLink to="/" end className={({ isActive }) => `app-shell__nav-link${isActive ? ' app-shell__nav-link--active' : ''}`}>
-                Home
+                {t('shell.nav.home')}
               </NavLink>
               <NavLink
                 to="/courses"
                 className={({ isActive }) => `app-shell__nav-link${isActive ? ' app-shell__nav-link--active' : ''}`}
               >
-                Courses
+                {t('shell.nav.courses')}
               </NavLink>
             </nav>
           </div>
@@ -70,11 +72,11 @@ export function ProtectedApp() {
             onClick={() => {
               setSignOutError(null)
               void signOut().catch(() => {
-                setSignOutError('Could not sign out. Try again.')
+                setSignOutError(t('shell.signOutError'))
               })
             }}
           >
-            Sign out
+            {t('shell.signOut')}
           </button>
         </div>
       </header>
@@ -94,20 +96,20 @@ export function ProtectedApp() {
                 <>
                   <section className="app-shell__intro card">
                     <p className="app-shell__placeholder">
-                      Start a round quickly, then visit Courses when you need to find or edit layouts.
+                      {t('shell.homeIntro')}
                     </p>
                     <p className="app-shell__placeholder">
-                      Selected course:{' '}
+                      {t('shell.selectedCourse')}{' '}
                       {selectedCourseTemplate ? (
                         <strong>
                           {selectedCourseTemplate.courseName} — {selectedCourseTemplate.templateLabel}
                         </strong>
                       ) : (
-                        'None yet'
+                        t('shell.noneYet')
                       )}
                     </p>
                     <Link className="app-shell__link" to="/courses">
-                      Browse courses
+                      {t('shell.browseCourses')}
                     </Link>
                   </section>
                   <ScoringPanel user={user} selectedCourseTemplate={selectedCourseTemplate} />
@@ -120,10 +122,10 @@ export function ProtectedApp() {
                 <>
                   <section className="app-shell__intro card">
                     <p className="app-shell__placeholder">
-                      Search by course name or city, then use near-me sorting when location data is available.
+                      {t('shell.coursesIntro')}
                     </p>
                     <Link className="app-shell__link" to="/">
-                      Back to round setup
+                      {t('shell.backToRoundSetup')}
                     </Link>
                   </section>
                   <CoursePicker selection={selectedCourseTemplate} onSelectionChange={setSelectedCourseTemplate} />

@@ -16,8 +16,10 @@
   "dependencies": {
     "@knadh/oat": "^0.6.1",
     "firebase": "^12.12.1",
+    "i18next": "^26.0.8",
     "react": "^19.2.5",
     "react-dom": "^19.2.5",
+    "react-i18next": "^17.0.6",
     "react-router-dom": "^7.14.2"
   },
   "devDependencies": {
