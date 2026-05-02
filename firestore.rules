@@ -90,6 +90,17 @@ service cloud.firestore {
         || isRoundOwner(resource.data);
     }
 
+    function validFollowEdge(data) {
+      return data.keys().hasOnly(['followerUid', 'followeeUid', 'createdAt'])
+        && data.followerUid is string
+        && data.followeeUid is string
+        && data.followerUid != data.followeeUid;
+    }
+
+    function isFollowOwner(data) {
+      return signedIn() && data.followerUid == request.auth.uid;
+    }
+
     match /users/{userId} {
       allow read, write: if signedIn() && request.auth.uid == userId;
     }
@@ -177,6 +188,18 @@ service cloud.firestore {
         && freshDraftPresentWhenNeeded(request.resource.data);
 
       allow delete: if false;
+    }
+
+    match /follows/{edgeId} {
+      allow get, list: if signedIn();
+
+      allow create: if signedIn()
+        && validFollowEdge(request.resource.data)
+        && request.resource.data.followerUid == request.auth.uid;
+
+      allow update: if false;
+
+      allow delete: if isFollowOwner(resource.data);
     }
   }
 }

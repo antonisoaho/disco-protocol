@@ -1,0 +1,61 @@
+@use 'sass:map';
+@use '../variables' as *;
+
+.follow-panel {
+  margin-top: calc(#{$space-unit} * 4);
+}
+
+.follow-panel__title {
+  margin: 0 0 calc(#{$space-unit} * 2);
+  font-size: 1rem;
+}
+
+.follow-panel__meta {
+  margin: 0 0 calc(#{$space-unit} * 2);
+  font-size: 0.875rem;
+  color: $color-text-muted;
+}
+
+.follow-panel__error {
+  margin: 0 0 calc(#{$space-unit} * 2);
+  color: map.get($score-color, double-bogey-plus);
+}
+
+.follow-panel__label {
+  display: block;
+  margin-bottom: calc(#{$space-unit} * 1.5);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: $color-text-muted;
+}
+
+.follow-panel__search {
+  width: 100%;
+  margin-bottom: calc(#{$space-unit} * 2);
+}
+
+.follow-panel__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: calc(#{$space-unit} * 2);
+}
+
+.follow-panel__item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: calc(#{$space-unit} * 2);
+  padding: calc(#{$space-unit} * 2.5) calc(#{$space-unit} * 3);
+  border: 1px solid $color-border;
+  border-radius: $radius-sm;
+  background: $color-surface;
+}
+
+.follow-panel__uid {
+  margin: calc(#{$space-unit} * 0.5) 0 0;
+  font-size: 0.75rem;
+  color: $color-text-muted;
+}
