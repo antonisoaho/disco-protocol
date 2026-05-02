@@ -1,4 +1,3 @@
-@use 'sass:map';
 @use '../variables' as *;
 
 // BEM block: app shell (mobile-first). Workers: extend with new __elements / --modifiers only.
@@ -74,20 +73,7 @@
 .app-shell__sign-out {
   flex-shrink: 0;
   align-self: center;
-  padding: calc(#{$space-unit} * 2) calc(#{$space-unit} * 4);
-  font-size: 0.9375rem;
-  font-weight: 600;
-  color: $color-text;
-  background: $color-bg;
-  border: 1px solid $color-border;
-  border-radius: $radius-md;
-  cursor: pointer;
   min-height: 44px;
-
-  &:focus-visible {
-    outline: 2px solid map.get($score-color, birdie);
-    outline-offset: 2px;
-  }
 }
 
 .app-shell__code {

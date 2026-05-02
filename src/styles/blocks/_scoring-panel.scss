@@ -50,16 +50,6 @@
   }
 }
 
-.scoring-panel__input,
-.scoring-panel__select {
-  padding: calc(#{$space-unit} * 2) calc(#{$space-unit} * 3);
-  border-radius: $radius-sm;
-  border: 1px solid $color-border;
-  font: inherit;
-  background: $color-bg;
-  color: $color-text;
-}
-
 .scoring-panel__input:focus-visible,
 .scoring-panel__select:focus-visible,
 .scoring-panel__button:focus-visible,
@@ -70,14 +60,6 @@
 }
 
 .scoring-panel__button {
-  padding: calc(#{$space-unit} * 2) calc(#{$space-unit} * 4);
-  border-radius: $radius-sm;
-  border: 1px solid $color-border;
-  background: $color-bg;
-  color: $color-text;
-  font: inherit;
-  cursor: pointer;
-
   &:disabled {
     opacity: 0.55;
     cursor: not-allowed;
@@ -317,29 +299,18 @@
 .scoring-panel__scorecard {
   width: max-content;
   min-width: max(100%, 44rem);
-  border-collapse: collapse;
   font-size: 0.8125rem;
 
   th,
   td {
-    border: 1px solid $color-border;
-    padding: calc(#{$space-unit} * 2);
     white-space: nowrap;
-    text-align: left;
     vertical-align: middle;
-    background: $color-bg;
   }
 
   thead th {
     position: sticky;
     top: 0;
     z-index: 2;
-    background: $color-surface;
-  }
-
-  tfoot th,
-  tfoot td {
-    background: color-mix(in srgb, $color-surface 75%, $color-bg);
   }
 }
 
@@ -399,12 +370,6 @@
 .scoring-panel__scorecard-input {
   width: 4.75rem;
   min-height: calc(#{$space-unit} * 8);
-  padding: calc(#{$space-unit} * 1) calc(#{$space-unit} * 1.5);
-  border: 1px solid $color-border;
-  border-radius: $radius-sm;
-  background: $color-bg;
-  color: $color-text;
-  font: inherit;
   text-align: center;
 }
 
@@ -477,12 +442,6 @@
 
   .scoring-panel__scorecard {
     min-width: max(100%, 35rem);
-
-    th,
-    td {
-      padding: calc(#{$space-unit} * 1.5);
-      font-size: 0.75rem;
-    }
   }
 
   .scoring-panel__scorecard-cell {
