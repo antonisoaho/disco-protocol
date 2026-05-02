@@ -6,6 +6,8 @@ export type UserProfileDoc = {
   displayName: string
   photoUrl: string | null
   bio?: string
+  /** Set by trusted backend tooling; never client-assigned. */
+  admin?: boolean
   createdAt: Timestamp
 }
 

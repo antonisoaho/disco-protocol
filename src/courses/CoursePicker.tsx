@@ -1,8 +1,10 @@
 import { useEffect, useMemo, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useAuth } from '../auth/useAuth'
 import {
   createTemplate,
   createCourseWithDefaultTemplate,
+  deleteCourseWithTemplates,
   updateCourseDetails,
   subscribeCourses,
   subscribeTemplates,
@@ -25,6 +27,7 @@ type Props = {
 }
 
 export function CoursePicker({ selection, onSelectionChange }: Props) {
+  const { t } = useTranslation('common')
   const { user, isAdmin } = useAuth()
   const [courses, setCourses] = useState<CourseWithId[]>([])
   const [listError, setListError] = useState<string | null>(null)
@@ -71,6 +74,8 @@ export function CoursePicker({ selection, onSelectionChange }: Props) {
   })
   const [editTemplateError, setEditTemplateError] = useState<string | null>(null)
   const [savingTemplate, setSavingTemplate] = useState(false)
+  const [deletingCourse, setDeletingCourse] = useState(false)
+  const [deleteCourseError, setDeleteCourseError] = useState<string | null>(null)
 
   useEffect(() => {
     const unsub = subscribeCourses(
@@ -279,6 +284,27 @@ export function CoursePicker({ selection, onSelectionChange }: Props) {
     }
   }
 
+  async function handleDeleteCourse() {
+    if (!activeCourse || !isAdmin) return
+    if (!window.confirm(t('courses.deleteCourseConfirm', { courseName: activeCourse.name }))) {
+      return
+    }
+
+    const deletingCourseId = activeCourse.id
+    setDeletingCourse(true)
+    setDeleteCourseError(null)
+    try {
+      await deleteCourseWithTemplates(deletingCourseId)
+      setPickedTemplateId(null)
+      setActiveCourseId((prev) => (prev === deletingCourseId ? null : prev))
+      onSelectionChange(null)
+    } catch (err) {
+      setDeleteCourseError(err instanceof Error ? err.message : t('courses.deleteCourseError'))
+    } finally {
+      setDeletingCourse(false)
+    }
+  }
+
   function handleUseMyLocation() {
     if (!geolocationSupported) {
       setLocationState('unavailable')
@@ -484,6 +510,26 @@ export function CoursePicker({ selection, onSelectionChange }: Props) {
               </p>
             ) : null}
           </form>
+          {isAdmin ? (
+            <form className="course-picker__add" onSubmit={(e) => e.preventDefault()}>
+              <label className="course-picker__add-label">{t('courses.deleteCourseLabel')}</label>
+              <div className="course-picker__add-row">
+                <button
+                  type="button"
+                  data-variant="error"
+                  onClick={() => void handleDeleteCourse()}
+                  disabled={deletingCourse}
+                >
+                  {deletingCourse ? t('courses.deletingCourse') : t('courses.deleteCourse')}
+                </button>
+              </div>
+              {deleteCourseError ? (
+                <p className="course-picker__error" role="alert" data-variant="error">
+                  {deleteCourseError}
+                </p>
+              ) : null}
+            </form>
+          ) : null}
 
           {templatesError ? (
             <p className="course-picker__error" role="alert" data-variant="error">
