@@ -1,8 +1,7 @@
 import { type User } from 'firebase/auth'
 import type { Timestamp } from 'firebase/firestore'
-import { type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { CourseRoundSelection } from '../courses/courseData'
-import { subscribeUserDirectory, type UserDirectoryEntry } from '../firebase/userDirectory'
 import { computeHeadToHeadSummary, computeParticipantParSummary } from '../analytics/roundAnalytics'
 import {
   FreshRoundDraftValidationError,
@@ -11,12 +10,6 @@ import {
   type FreshRoundDraftIssue,
 } from '../firebase/freshRoundCourse'
 import {
-  scoreTierToNotationClassName,
-  strokesParDeltaToNotation,
-  type ScoreDecorationShape,
-} from '../lib/scoreSemantic'
-import type { RoundDoc, RoundVisibility } from '../firebase/roundTypes'
-import {
   addParticipantToRound,
   completeRoundAndPromote,
   createRound,
@@ -24,16 +17,20 @@ import {
   subscribeMyRounds,
   updateFreshRoundHoleMetadata,
 } from '../firebase/rounds'
+import type { RoundDoc, RoundVisibility } from '../firebase/roundTypes'
+import { subscribeUserDirectory, type UserDirectoryEntry } from '../firebase/userDirectory'
 import {
-  aggregateScoreProtocol,
-  normalizeScoreProtocol,
-} from './protocol'
-import {
-  buildScorecardColumns,
-  collectScorecardEditedHoleNumbers,
-  computeGrandTotals,
-  computeParticipantTotals,
-} from './scorecardTable'
+  scoreTierToNotationClassName,
+  strokesParDeltaToNotation,
+  type ScoreDecorationShape,
+} from '../lib/scoreSemantic'
+import { FollowPanel } from '../social/FollowPanel'
+import { HoleForm } from './HoleForm'
+import { HoleStepper } from './HoleStepper'
+import { mergeAutosavePayload, type HoleDraftInputs, clampHoleNumber, stepHoleNumber } from './holeAutosave'
+import { PlayerScoreRows } from './PlayerScoreRows'
+import { aggregateScoreProtocol, normalizeScoreProtocol } from './protocol'
+import { computeGrandTotals, computeParticipantTotals } from './scorecardTable'
 
 type Props = {
   user: User
@@ -42,7 +39,10 @@ type Props = {
 
 const DEFAULT_ROUND_HOLE_COUNT = 18
 const DEFAULT_FRESH_HOLE_COUNT = 9
-const SCORECARD_SCROLL_EDGE_THRESHOLD = 8
+const AUTOSAVE_DEBOUNCE_MS = 550
+
+type AppTabId = 'scorecard' | 'participants' | 'analytics' | 'follow'
+type SaveState = 'saved' | 'dirty' | 'saving' | 'error'
 
 function normalizeFreshHoleCount(value: number): number {
   if (!Number.isFinite(value)) return DEFAULT_FRESH_HOLE_COUNT
@@ -111,24 +111,6 @@ function formatDelta(delta: number): string {
   return delta > 0 ? `+${delta}` : `${delta}`
 }
 
-type ScoreNotationValueProps = {
-  strokes: number
-  decorationShape: ScoreDecorationShape
-  decorationLayers: number
-}
-
-function ScoreNotationValue({ strokes, decorationShape, decorationLayers }: ScoreNotationValueProps) {
-  let content: ReactNode = <span className="scoring-panel__notation-value">{strokes}</span>
-  for (let layer = 0; layer < decorationLayers; layer += 1) {
-    content = (
-      <span className={`scoring-panel__notation-frame scoring-panel__notation-frame--${decorationShape}`}>
-        {content}
-      </span>
-    )
-  }
-  return content
-}
-
 function parseIntegerInput(value: string): number | null {
   if (!/^\d+$/.test(value.trim())) return null
   return Number(value)
@@ -136,6 +118,15 @@ function parseIntegerInput(value: string): number | null {
 
 function participantDisplayName(entry: UserDirectoryEntry): string {
   return entry.displayName.trim().length > 0 ? entry.displayName : entry.uid
+}
+
+function filterEntries(entries: UserDirectoryEntry[], query: string): UserDirectoryEntry[] {
+  const normalizedQuery = query.trim().toLowerCase()
+  if (!normalizedQuery) return entries
+  return entries.filter((entry) => {
+    const display = participantDisplayName(entry).toLowerCase()
+    return display.includes(normalizedQuery) || entry.uid.toLowerCase().includes(normalizedQuery)
+  })
 }
 
 function readParticipantHoleScores(data: RoundDoc, fallbackUid: string) {
@@ -174,8 +165,27 @@ function readParticipantHoleScores(data: RoundDoc, fallbackUid: string) {
   return next
 }
 
+type ScoreNotationValueProps = {
+  strokes: number
+  decorationShape: ScoreDecorationShape
+  decorationLayers: number
+}
+
+function ScoreNotationValue({ strokes, decorationShape, decorationLayers }: ScoreNotationValueProps) {
+  let content = <span className="scoring-panel__notation-value">{strokes}</span>
+  for (let layer = 0; layer < decorationLayers; layer += 1) {
+    content = (
+      <span className={`scoring-panel__notation-frame scoring-panel__notation-frame--${decorationShape}`}>
+        {content}
+      </span>
+    )
+  }
+  return content
+}
+
 export function ScoringPanel({ user, selectedCourseTemplate }: Props) {
   const uid = user.uid
+  const [activeTab, setActiveTab] = useState<AppTabId>('scorecard')
   const [items, setItems] = useState<{ id: string; data: RoundDoc }[]>([])
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [startMode, setStartMode] = useState<'saved' | 'fresh'>('saved')
@@ -183,20 +193,19 @@ export function ScoringPanel({ user, selectedCourseTemplate }: Props) {
   const [freshHoleCount, setFreshHoleCount] = useState(DEFAULT_FRESH_HOLE_COUNT)
   const [visibility, setVisibility] = useState<RoundVisibility>('private')
   const [newRoundParticipants, setNewRoundParticipants] = useState<string[]>([uid])
+  const [newRoundParticipantQuery, setNewRoundParticipantQuery] = useState('')
+  const [inviteParticipantQuery, setInviteParticipantQuery] = useState('')
   const [inviteSelections, setInviteSelections] = useState<string[]>([])
   const [analyticsOpponentUid, setAnalyticsOpponentUid] = useState('')
   const [directoryEntries, setDirectoryEntries] = useState<UserDirectoryEntry[]>([])
-  const [directoryQuery, setDirectoryQuery] = useState('')
-  const [scorecardEdits, setScorecardEdits] = useState<Record<string, string>>({})
-  const [scorecardScrollState, setScorecardScrollState] = useState({
-    isScrollable: false,
-    canScrollLeft: false,
-    canScrollRight: false,
-  })
+  const [holeNumber, setHoleNumber] = useState(1)
+  const [holeDraft, setHoleDraft] = useState<HoleDraftInputs | null>(null)
+  const [expandedPlayers, setExpandedPlayers] = useState<Record<string, boolean>>({})
+  const [saveState, setSaveState] = useState<SaveState>('saved')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [notice, setNotice] = useState<string | null>(null)
-  const scorecardWrapRef = useRef<HTMLDivElement | null>(null)
+  const autosaveTimerRef = useRef<number | null>(null)
 
   useEffect(() => {
     const unsub = subscribeMyRounds(
@@ -205,33 +214,35 @@ export function ScoringPanel({ user, selectedCourseTemplate }: Props) {
         setError(null)
         setItems(next)
       },
-      (e) => setError(e.message),
+      (nextError) => setError(nextError.message),
     )
     return () => unsub()
   }, [uid])
 
   useEffect(() => {
     const unsub = subscribeUserDirectory(
-      (entries) => {
-        setDirectoryEntries(entries)
-      },
+      (entries) => setDirectoryEntries(entries),
       () => {
-        // The rules can hide user directory listing. Keep owner-self fallback usable.
+        // Directory listing can be hidden by rules; owner-only fallback still works.
       },
     )
     return () => unsub()
   }, [])
 
-  const selected = useMemo(
-    () => items.find((r) => r.id === selectedId) ?? null,
-    [items, selectedId],
-  )
-  const roundDocs = useMemo(() => items.map((item) => item.data), [items])
-
+  const selected = useMemo(() => items.find((round) => round.id === selectedId) ?? null, [items, selectedId])
   const selectedHoleCount = useMemo(
     () => (selected ? inferRoundHoleCount(selected.data) : null),
     [selected],
   )
+  const activeHoleNumber = selectedHoleCount ? clampHoleNumber(holeNumber, selectedHoleCount) : 1
+
+  useEffect(() => {
+    return () => {
+      if (autosaveTimerRef.current !== null) {
+        window.clearTimeout(autosaveTimerRef.current)
+      }
+    }
+  }, [])
 
   const directoryByUid = useMemo(() => {
     const map: Record<string, UserDirectoryEntry> = {}
@@ -258,14 +269,18 @@ export function ScoringPanel({ user, selectedCourseTemplate }: Props) {
     [directoryByUid],
   )
 
-  const filteredDirectoryEntries = useMemo(() => {
-    const q = directoryQuery.trim().toLowerCase()
-    if (!q) return allDirectoryEntries
-    return allDirectoryEntries.filter((entry) => {
-      const display = participantDisplayName(entry).toLowerCase()
-      return display.includes(q) || entry.uid.toLowerCase().includes(q)
-    })
-  }, [allDirectoryEntries, directoryQuery])
+  const availableNewRoundParticipants = useMemo(
+    () => filterEntries(allDirectoryEntries, newRoundParticipantQuery),
+    [allDirectoryEntries, newRoundParticipantQuery],
+  )
+
+  const inviteCandidateEntries = useMemo(() => {
+    if (!selected) return []
+    const filtered = filterEntries(allDirectoryEntries, inviteParticipantQuery)
+    return filtered.filter((entry) => !selected.data.participantIds.includes(entry.uid))
+  }, [allDirectoryEntries, inviteParticipantQuery, selected])
+
+  const roundDocs = useMemo(() => items.map((item) => item.data), [items])
 
   const participantParSummary = useMemo(
     () => computeParticipantParSummary(roundDocs, uid),
@@ -324,15 +339,28 @@ export function ScoringPanel({ user, selectedCourseTemplate }: Props) {
     [selected, uid],
   )
 
-  const currentUserHoleScores = useMemo(() => {
+  const selectedParticipantNames = useMemo(() => {
     if (!selected) return {}
-    if (!selectedParticipantScores) return selected.data.holeScores ?? {}
+    const names: Record<string, string> = {}
+    for (const participantId of selected.data.participantIds) {
+      names[participantId] = participantDisplayName(
+        directoryByUid[participantId] ?? {
+          uid: participantId,
+          displayName: participantId,
+          subtitle: participantId,
+        },
+      )
+    }
+    return names
+  }, [directoryByUid, selected])
+
+  const currentUserHoleScores = useMemo(() => {
+    if (!selected || !selectedParticipantScores) return {}
     return selectedParticipantScores[uid] ?? {}
   }, [selected, selectedParticipantScores, uid])
 
   const selectedSummary = useMemo(() => {
     if (!selected) return null
-
     try {
       const protocol = normalizeScoreProtocol({
         version: selected.data.scoreProtocolVersion,
@@ -345,24 +373,14 @@ export function ScoringPanel({ user, selectedCourseTemplate }: Props) {
     }
   }, [currentUserHoleScores, selected])
 
-  const selectedParticipantColumns = useMemo(() => {
-    if (!selected) return []
-    const names: Record<string, string> = {}
-    for (const participantId of selected.data.participantIds) {
-      names[participantId] = participantDisplayName(
-        directoryByUid[participantId] ?? {
-          uid: participantId,
-          displayName: participantId,
-          subtitle: participantId,
-        },
-      )
-    }
-    return buildScorecardColumns(selected.data.participantIds, names)
-  }, [directoryByUid, selected])
+  const selectedParticipantTotals = useMemo(() => {
+    if (!selected || !selectedParticipantScores) return {}
+    return computeParticipantTotals(selected.data.participantIds, selectedParticipantScores)
+  }, [selected, selectedParticipantScores])
 
-  const selectedParticipantOnlyColumns = useMemo(
-    () => selectedParticipantColumns.filter((column) => column.kind === 'participant'),
-    [selectedParticipantColumns],
+  const selectedGrandTotals = useMemo(
+    () => computeGrandTotals(selectedParticipantTotals),
+    [selectedParticipantTotals],
   )
 
   const selectedFreshHoleByNumber = useMemo(() => {
@@ -393,154 +411,171 @@ export function ScoringPanel({ user, selectedCourseTemplate }: Props) {
     return map
   }, [selected, selectedParticipantScores])
 
-  const selectedScorecardScores = useMemo(() => {
+  const persistedHoleState = useMemo(() => {
     if (!selected || !selectedParticipantScores) return null
-    const next: Record<string, Record<string, { strokes: number; par: number }>> = {}
-    for (const [participantId, holeMap] of Object.entries(selectedParticipantScores)) {
-      next[participantId] = { ...holeMap }
-    }
-
+    const holeKey = String(activeHoleNumber)
+    const roundCourseSource = selected.data.courseSource ?? 'saved'
+    const firstScorePar = selected.data.participantIds
+      .map((participantId) => selectedParticipantScores[participantId]?.[holeKey]?.par)
+      .find((value) => typeof value === 'number')
+    const freshHole = selectedFreshHoleByNumber[activeHoleNumber]
+    const parValue =
+      roundCourseSource === 'fresh'
+        ? (typeof freshHole?.par === 'number' ? freshHole.par : (firstScorePar ?? null))
+        : (selectedSavedParByHole[activeHoleNumber] ?? (firstScorePar ?? null))
+    const lengthMeters =
+      roundCourseSource === 'fresh' && typeof freshHole?.lengthMeters === 'number'
+        ? freshHole.lengthMeters
+        : null
+    const participantScores: Record<string, { strokes: number; par: number } | undefined> = {}
     for (const participantId of selected.data.participantIds) {
-      next[participantId] = next[participantId] ?? {}
-      for (let hole = 1; hole <= inferRoundHoleCount(selected.data); hole += 1) {
-        const holeKey = String(hole)
-        const value = scorecardEdits[`score:${participantId}:${hole}`]
-        if (value === undefined) continue
-        const strokesValue = parseIntegerInput(value)
-        if (strokesValue === null) {
-          delete next[participantId][holeKey]
-          continue
-        }
-        const parInput = scorecardEdits[`par:${hole}`]
-        const parsedPar = parInput !== undefined ? parseIntegerInput(parInput) : null
-        const fallbackPar =
-          selected.data.courseSource === 'fresh'
-            ? selectedFreshHoleByNumber[hole]?.par ??
-              next[participantId][holeKey]?.par ??
-              null
-            : selectedSavedParByHole[hole] ??
-              next[participantId][holeKey]?.par ??
-              null
-        if (parsedPar === null && typeof fallbackPar !== 'number') continue
-        next[participantId][holeKey] = {
-          strokes: strokesValue,
-          par: parsedPar ?? (fallbackPar as number),
-        }
-      }
+      participantScores[participantId] = selectedParticipantScores[participantId]?.[holeKey]
     }
-    return next
-  }, [scorecardEdits, selected, selectedFreshHoleByNumber, selectedParticipantScores, selectedSavedParByHole])
-
-  const selectedParticipantTotals = useMemo(() => {
-    if (!selected || !selectedScorecardScores) return {}
-    return computeParticipantTotals(selected.data.participantIds, selectedScorecardScores)
-  }, [selected, selectedScorecardScores])
-
-  const selectedGrandTotals = useMemo(
-    () => computeGrandTotals(selectedParticipantTotals),
-    [selectedParticipantTotals],
-  )
-
-  const scorecardEditedHoles = useMemo(
-    () => collectScorecardEditedHoleNumbers(scorecardEdits),
-    [scorecardEdits],
-  )
-  const hasPendingScorecardChanges = scorecardEditedHoles.length > 0
-
-  const syncScorecardScrollState = useCallback(() => {
-    const element = scorecardWrapRef.current
-    if (!element) {
-      setScorecardScrollState({
-        isScrollable: false,
-        canScrollLeft: false,
-        canScrollRight: false,
-      })
-      return
+    return {
+      par: parValue,
+      lengthMeters,
+      participantScores,
     }
+  }, [
+    activeHoleNumber,
+    selected,
+    selectedFreshHoleByNumber,
+    selectedParticipantScores,
+    selectedSavedParByHole,
+  ])
 
-    const maxScrollLeft = Math.max(0, element.scrollWidth - element.clientWidth)
-    const isScrollable = maxScrollLeft > SCORECARD_SCROLL_EDGE_THRESHOLD
-    const canScrollLeft = isScrollable && element.scrollLeft > SCORECARD_SCROLL_EDGE_THRESHOLD
-    const canScrollRight =
-      isScrollable && element.scrollLeft < maxScrollLeft - SCORECARD_SCROLL_EDGE_THRESHOLD
+  const defaultHoleDraft = useMemo(() => {
+    if (!selected || !persistedHoleState) return null
+    const nextScoreInputs: Record<string, string> = {}
+    for (const participantId of selected.data.participantIds) {
+      const score = persistedHoleState.participantScores[participantId]
+      nextScoreInputs[participantId] = score ? String(score.strokes) : ''
+    }
+    return {
+      parInput: typeof persistedHoleState.par === 'number' ? String(persistedHoleState.par) : '',
+      lengthInput:
+        typeof persistedHoleState.lengthMeters === 'number'
+          ? String(persistedHoleState.lengthMeters)
+          : '',
+      scoreInputs: nextScoreInputs,
+    }
+  }, [persistedHoleState, selected])
+  const effectiveHoleDraft = holeDraft ?? defaultHoleDraft
 
-    setScorecardScrollState((current) => {
-      if (
-        current.isScrollable === isScrollable &&
-        current.canScrollLeft === canScrollLeft &&
-        current.canScrollRight === canScrollRight
-      ) {
-        return current
-      }
-      return { isScrollable, canScrollLeft, canScrollRight }
-    })
-  }, [])
+  const saveStateLabel = useMemo(() => {
+    switch (saveState) {
+      case 'dirty':
+        return 'Unsaved changes'
+      case 'saving':
+        return 'Saving...'
+      case 'error':
+        return 'Save failed'
+      default:
+        return 'Saved'
+    }
+  }, [saveState])
 
-  const handleScorecardWrapRef = useCallback(
-    (node: HTMLDivElement | null) => {
-      scorecardWrapRef.current = node
-      if (!node) {
-        setScorecardScrollState({
-          isScrollable: false,
-          canScrollLeft: false,
-          canScrollRight: false,
-        })
-        return
-      }
-      window.requestAnimationFrame(() => {
-        if (scorecardWrapRef.current === node) {
-          syncScorecardScrollState()
-        }
+  const updateHoleDraft = useCallback(
+    (updater: (current: HoleDraftInputs) => HoleDraftInputs) => {
+      setHoleDraft((current) => {
+        const base = current ?? effectiveHoleDraft
+        if (!base) return current
+        return updater(base)
       })
+      setSaveState('dirty')
+      setNotice(null)
     },
-    [syncScorecardScrollState],
+    [effectiveHoleDraft],
   )
+
+  const saveCurrentHole = useCallback(async (): Promise<boolean> => {
+    if (!selected || !selectedId || !effectiveHoleDraft || !persistedHoleState) return true
+    const roundCourseSource = selected.data.courseSource ?? 'saved'
+    const payload = mergeAutosavePayload({
+      courseSource: roundCourseSource,
+      participantIds: selected.data.participantIds,
+      draft: effectiveHoleDraft,
+      persisted: persistedHoleState,
+    })
+
+    if (payload.validationError) {
+      setError(payload.validationError)
+      setSaveState('error')
+      return false
+    }
+
+    if (!payload.hasMeaningfulChange) {
+      setSaveState('saved')
+      return true
+    }
+
+    setSaveState('saving')
+    setError(null)
+    try {
+      if (roundCourseSource === 'fresh' && payload.metadata) {
+        await updateFreshRoundHoleMetadata({
+          roundId: selectedId,
+          actorUid: uid,
+          holeNumber: activeHoleNumber,
+          metadata: payload.metadata,
+        })
+      }
+      await Promise.all(
+        payload.participantScoreUpdates.map((update) =>
+          recordParticipantHoleScoreTransaction(
+            selectedId,
+            uid,
+            update.participantUid,
+            activeHoleNumber,
+            update.strokes,
+            update.par,
+          ),
+        ),
+      )
+      setSaveState('saved')
+      return true
+    } catch (nextError) {
+      if (nextError instanceof FreshRoundDraftValidationError) {
+        setError(formatDraftIssues(nextError.issues))
+      } else {
+        setError(nextError instanceof Error ? nextError.message : 'Failed to autosave hole')
+      }
+      setSaveState('error')
+      return false
+    }
+  }, [activeHoleNumber, effectiveHoleDraft, persistedHoleState, selected, selectedId, uid])
 
   useEffect(() => {
-    const element = scorecardWrapRef.current
-    if (!element) return
-
-    const handleScrollOrResize = () => {
-      syncScorecardScrollState()
+    if (saveState !== 'dirty' || !selected || !effectiveHoleDraft || !persistedHoleState) return
+    if (autosaveTimerRef.current !== null) {
+      window.clearTimeout(autosaveTimerRef.current)
     }
-
-    element.addEventListener('scroll', handleScrollOrResize, { passive: true })
-    window.addEventListener('resize', handleScrollOrResize)
-
-    const resizeObserver =
-      typeof ResizeObserver === 'undefined'
-        ? null
-        : new ResizeObserver(() => {
-            syncScorecardScrollState()
-          })
-    resizeObserver?.observe(element)
-    const tableElement = element.querySelector('table')
-    if (tableElement) {
-      resizeObserver?.observe(tableElement)
-    }
-
-    syncScorecardScrollState()
-
+    autosaveTimerRef.current = window.setTimeout(() => {
+      void saveCurrentHole()
+    }, AUTOSAVE_DEBOUNCE_MS)
     return () => {
-      element.removeEventListener('scroll', handleScrollOrResize)
-      window.removeEventListener('resize', handleScrollOrResize)
-      resizeObserver?.disconnect()
+      if (autosaveTimerRef.current !== null) {
+        window.clearTimeout(autosaveTimerRef.current)
+        autosaveTimerRef.current = null
+      }
     }
-  }, [selectedId, selectedHoleCount, selectedParticipantColumns.length, syncScorecardScrollState])
+  }, [effectiveHoleDraft, persistedHoleState, saveCurrentHole, saveState, selected])
 
-  const scorecardWrapClassName = [
-    'scoring-panel__scorecard-wrap',
-    scorecardScrollState.isScrollable ? 'scoring-panel__scorecard-wrap--scrollable' : '',
-    scorecardScrollState.canScrollLeft ? 'scoring-panel__scorecard-wrap--can-scroll-left' : '',
-    scorecardScrollState.canScrollRight ? 'scoring-panel__scorecard-wrap--can-scroll-right' : '',
-  ]
-    .filter(Boolean)
-    .join(' ')
-
-  const inviteCandidateEntries = useMemo(() => {
-    if (!selected) return []
-    return filteredDirectoryEntries.filter((entry) => !selected.data.participantIds.includes(entry.uid))
-  }, [filteredDirectoryEntries, selected])
+  const navigateToHole = useCallback(
+    async (targetHoleNumber: number) => {
+      if (!selectedHoleCount) return
+      const nextHoleNumber = clampHoleNumber(targetHoleNumber, selectedHoleCount)
+      if (nextHoleNumber === activeHoleNumber) return
+      if (saveState === 'dirty' || saveState === 'error') {
+        const saved = await saveCurrentHole()
+        if (!saved) return
+      }
+      setHoleNumber(nextHoleNumber)
+      setHoleDraft(null)
+      setSaveState('saved')
+    },
+    [activeHoleNumber, saveCurrentHole, saveState, selectedHoleCount],
+  )
 
   const onCreateRound = useCallback(async () => {
     setBusy(true)
@@ -584,12 +619,17 @@ export function ScoringPanel({ user, selectedCourseTemplate }: Props) {
         })
       }
       setSelectedId(id)
-      setScorecardEdits({})
-    } catch (e) {
-      if (e instanceof FreshRoundDraftValidationError) {
-        setError(formatDraftIssues(e.issues))
+      setHoleNumber(1)
+      setHoleDraft(null)
+      setSaveState('saved')
+      setExpandedPlayers({})
+      setActiveTab('scorecard')
+      setNotice('Round created. Start scoring hole-by-hole.')
+    } catch (nextError) {
+      if (nextError instanceof FreshRoundDraftValidationError) {
+        setError(formatDraftIssues(nextError.issues))
       } else {
-        setError(e instanceof Error ? e.message : 'Failed to create round')
+        setError(nextError instanceof Error ? nextError.message : 'Failed to create round')
       }
     } finally {
       setBusy(false)
@@ -604,131 +644,6 @@ export function ScoringPanel({ user, selectedCourseTemplate }: Props) {
     visibility,
   ])
 
-  const onSaveScorecard = useCallback(async () => {
-    if (!selectedId || !selected) return
-    if (scorecardEditedHoles.length === 0) {
-      setNotice('No unsaved scorecard changes.')
-      return
-    }
-
-    const rowsToSave: Array<{
-      holeNumber: number
-      parInput: string
-      lengthInput: string
-      parSnapshot: number | null
-      participantScoresToSave: Array<{ participantUid: string; strokes: number }>
-    }> = []
-
-    for (const rowHoleNumber of scorecardEditedHoles) {
-      const draftHole = selectedFreshHoleByNumber[rowHoleNumber] ?? null
-      const savedHolePar = selectedSavedParByHole[rowHoleNumber]
-      const parInput = scorecardEdits[`par:${rowHoleNumber}`]
-      const lengthInput = scorecardEdits[`length:${rowHoleNumber}`]
-      const resolvedParInput =
-        parInput ??
-        (selected.data.courseSource === 'fresh'
-          ? typeof draftHole?.par === 'number'
-            ? String(draftHole.par)
-            : ''
-          : typeof savedHolePar === 'number'
-            ? String(savedHolePar)
-            : '')
-      const resolvedLengthInput =
-        selected.data.courseSource === 'fresh'
-          ? lengthInput ?? (typeof draftHole?.lengthMeters === 'number' ? String(draftHole.lengthMeters) : '')
-          : ''
-
-      const participantScoresToSave: Array<{ participantUid: string; strokes: number }> = []
-      for (const participantUid of selected.data.participantIds) {
-        const scoreRaw = scorecardEdits[`score:${participantUid}:${rowHoleNumber}`]
-        if (scoreRaw === undefined || scoreRaw.trim() === '') continue
-        const parsedStrokes = parseIntegerInput(scoreRaw)
-        if (parsedStrokes === null) {
-          setError(`Hole ${rowHoleNumber}: score must be an integer for each participant.`)
-          return
-        }
-        participantScoresToSave.push({ participantUid, strokes: parsedStrokes })
-      }
-
-      const parSnapshot = parseIntegerInput(resolvedParInput)
-      if (participantScoresToSave.length > 0 && parSnapshot === null) {
-        setError(`Hole ${rowHoleNumber}: set par before saving participant scores.`)
-        return
-      }
-
-      rowsToSave.push({
-        holeNumber: rowHoleNumber,
-        parInput: resolvedParInput,
-        lengthInput: resolvedLengthInput,
-        parSnapshot,
-        participantScoresToSave,
-      })
-    }
-
-    setBusy(true)
-    setError(null)
-    setNotice(null)
-    try {
-      for (const row of rowsToSave) {
-        if (selected.data.courseSource === 'fresh') {
-          await updateFreshRoundHoleMetadata({
-            roundId: selectedId,
-            actorUid: uid,
-            holeNumber: row.holeNumber,
-            metadata: {
-              par: row.parInput,
-              lengthMeters: row.lengthInput,
-            },
-          })
-        }
-
-        await Promise.all(
-          row.participantScoresToSave.map((participant) =>
-            recordParticipantHoleScoreTransaction(
-              selectedId,
-              uid,
-              participant.participantUid,
-              row.holeNumber,
-              participant.strokes,
-              row.parSnapshot as number,
-            ),
-          ),
-        )
-      }
-
-      setScorecardEdits((current) => {
-        const next = { ...current }
-        for (const row of rowsToSave) {
-          delete next[`par:${row.holeNumber}`]
-          if (selected.data.courseSource === 'fresh') {
-            delete next[`length:${row.holeNumber}`]
-          }
-          for (const participantUid of selected.data.participantIds) {
-            delete next[`score:${participantUid}:${row.holeNumber}`]
-          }
-        }
-        return next
-      })
-      setNotice(`Saved ${rowsToSave.length} scorecard hole${rowsToSave.length > 1 ? 's' : ''}.`)
-    } catch (e) {
-      if (e instanceof FreshRoundDraftValidationError) {
-        setError(formatDraftIssues(e.issues))
-      } else {
-        setError(e instanceof Error ? e.message : 'Failed to save scorecard')
-      }
-    } finally {
-      setBusy(false)
-    }
-  }, [
-    scorecardEditedHoles,
-    scorecardEdits,
-    selected,
-    selectedFreshHoleByNumber,
-    selectedSavedParByHole,
-    selectedId,
-    uid,
-  ])
-
   const onAddParticipant = useCallback(async () => {
     if (!selectedId || inviteSelections.length === 0) return
     setBusy(true)
@@ -738,8 +653,8 @@ export function ScoringPanel({ user, selectedCourseTemplate }: Props) {
       await Promise.all(inviteSelections.map((participantUid) => addParticipantToRound(selectedId, participantUid)))
       setInviteSelections([])
       setNotice(`Added ${inviteSelections.length} participant${inviteSelections.length > 1 ? 's' : ''}.`)
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'Failed to add participant')
+    } catch (nextError) {
+      setError(nextError instanceof Error ? nextError.message : 'Failed to add participant')
     } finally {
       setBusy(false)
     }
@@ -750,14 +665,14 @@ export function ScoringPanel({ user, selectedCourseTemplate }: Props) {
     if (selected.data.courseSource === 'fresh') {
       try {
         normalizeFreshCourseDraftForPromotion(selected.data.courseDraft)
-      } catch (e) {
-        if (e instanceof FreshRoundDraftValidationError) {
+      } catch (nextError) {
+        if (nextError instanceof FreshRoundDraftValidationError) {
           setError(
-            `Round cannot be completed yet. Fill missing hole metadata first. ${formatDraftIssues(e.issues)}`,
+            `Round cannot be completed yet. Fill missing hole metadata first. ${formatDraftIssues(nextError.issues)}`,
           )
           return
         }
-        throw e
+        throw nextError
       }
     }
     setBusy(true)
@@ -774,8 +689,8 @@ export function ScoringPanel({ user, selectedCourseTemplate }: Props) {
           `Round cannot be completed yet. Fill missing hole metadata first. ${formatDraftIssues(result.validationIssues ?? [])}`,
         )
       }
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'Failed to complete round')
+    } catch (nextError) {
+      setError(nextError instanceof Error ? nextError.message : 'Failed to complete round')
     } finally {
       setBusy(false)
     }
@@ -797,8 +712,8 @@ export function ScoringPanel({ user, selectedCourseTemplate }: Props) {
           `Promotion is still blocked by missing hole metadata. ${formatDraftIssues(result.validationIssues ?? [])}`,
         )
       }
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'Failed to retry promotion')
+    } catch (nextError) {
+      setError(nextError instanceof Error ? nextError.message : 'Failed to retry promotion')
     } finally {
       setBusy(false)
     }
@@ -816,694 +731,538 @@ export function ScoringPanel({ user, selectedCourseTemplate }: Props) {
       ) : null}
       {notice ? <p className="scoring-panel__notice">{notice}</p> : null}
 
-      <div className="scoring-panel__section">
-        <span className="scoring-panel__label">Start a round</span>
-        <div className="scoring-panel__mode-switch">
-          <button
-            type="button"
-            className={`scoring-panel__button${startMode === 'saved' ? ' scoring-panel__button--active' : ''}`}
-            onClick={() => setStartMode('saved')}
-            disabled={busy}
-          >
-            Saved course
-          </button>
-          <button
-            type="button"
-            className={`scoring-panel__button${startMode === 'fresh' ? ' scoring-panel__button--active' : ''}`}
-            onClick={() => setStartMode('fresh')}
-            disabled={busy}
-          >
-            Fresh instance
-          </button>
-        </div>
-        {startMode === 'saved' ? (
-          selectedCourseTemplate ? (
-            <p className="scoring-panel__selection">
-              Using <strong>{selectedCourseTemplate.courseName}</strong> /{' '}
-              <strong>{selectedCourseTemplate.templateLabel}</strong> ({selectedCourseTemplate.holeCount} holes)
-            </p>
-          ) : (
-            <p className="scoring-panel__muted">Pick a saved course + template above before starting.</p>
-          )
-        ) : (
-          <>
-            <p className="scoring-panel__muted">
-              Start quickly with name and hole count, then add par/length per hole while you play.
-            </p>
-            <div className="scoring-panel__row">
-              <div className="scoring-panel__field scoring-panel__field--grow">
-                <label className="scoring-panel__label" htmlFor="fresh-course-name">
-                  Course name
-                </label>
-                <input
-                  id="fresh-course-name"
-                  className="scoring-panel__input"
-                  value={freshCourseName}
-                  onChange={(e) => setFreshCourseName(e.target.value)}
-                  placeholder="Enter course name"
-                  autoComplete="off"
-                />
-              </div>
-              <div className="scoring-panel__field">
-                <label className="scoring-panel__label" htmlFor="fresh-hole-count">
-                  Holes
-                </label>
-                <input
-                  id="fresh-hole-count"
-                  className="scoring-panel__input"
-                  type="number"
-                  min={1}
-                  max={36}
-                  value={freshHoleCount}
-                  onChange={(e) => {
-                    setFreshHoleCount(normalizeFreshHoleCount(Number(e.target.value)))
-                  }}
-                />
-              </div>
-            </div>
-          </>
-        )}
-        <div className="scoring-panel__field scoring-panel__field--grow">
-          <label className="scoring-panel__label" htmlFor="participant-search">
-            Participants
-          </label>
-          <input
-            id="participant-search"
-            className="scoring-panel__input"
-            value={directoryQuery}
-            onChange={(e) => setDirectoryQuery(e.target.value)}
-            placeholder="Search players by name or uid"
-            autoComplete="off"
-          />
-          <div className="scoring-panel__participant-list" role="group" aria-label="Select round participants">
-            {filteredDirectoryEntries.map((entry) => {
-              const checked = newRoundParticipants.includes(entry.uid)
-              return (
-                <label key={entry.uid} className="scoring-panel__participant-option">
-                  <input
-                    type="checkbox"
-                    checked={checked}
-                    disabled={entry.uid === uid || busy}
-                    onChange={() => {
-                      setNewRoundParticipants((current) => {
-                        if (entry.uid === uid) return current
-                        if (current.includes(entry.uid)) {
-                          return current.filter((participantId) => participantId !== entry.uid)
-                        }
-                        return [...current, entry.uid]
-                      })
-                    }}
-                  />
-                  <span>
-                    {participantDisplayName(entry)}
-                    <small className="scoring-panel__participant-subtitle">{entry.subtitle}</small>
-                  </span>
-                </label>
-              )
-            })}
-          </div>
-        </div>
-        <div className="scoring-panel__row">
-          <div className="scoring-panel__field">
-            <label className="scoring-panel__label" htmlFor="visibility">
-              visibility
-            </label>
-            <select
-              id="visibility"
-              className="scoring-panel__select"
-              value={visibility}
-              onChange={(e) => setVisibility(e.target.value as RoundVisibility)}
-            >
-              <option value="private">private</option>
-              <option value="unlisted">unlisted</option>
-              <option value="public">public</option>
-            </select>
-          </div>
-          {selectedCourseTemplate ? (
-            <div className="scoring-panel__field">
-              <label className="scoring-panel__label" htmlFor="hole-count-selected">
-                holes
-              </label>
-              <input
-                id="hole-count-selected"
-                className="scoring-panel__input"
-                value={startMode === 'saved' ? selectedCourseTemplate.holeCount : freshHoleCount}
-                readOnly
-              />
-            </div>
-          ) : (
-            <div className="scoring-panel__field">
-              <label className="scoring-panel__label" htmlFor="hole-count-fresh">
-                holes
-              </label>
-              <input
-                id="hole-count-fresh"
-                className="scoring-panel__input"
-                value={startMode === 'fresh' ? freshHoleCount : '—'}
-                readOnly
-              />
-            </div>
-          )}
-          <button
-            type="button"
-            className="scoring-panel__button scoring-panel__button--primary"
-            onClick={() => void onCreateRound()}
-            disabled={busy || (startMode === 'saved' && !selectedCourseTemplate)}
-          >
-            New round
-          </button>
-        </div>
+      <div className="scoring-panel__tabs" role="tablist" aria-label="Scoring workspace tabs">
+        <button
+          type="button"
+          role="tab"
+          aria-selected={activeTab === 'scorecard'}
+          className={`scoring-panel__tab${activeTab === 'scorecard' ? ' scoring-panel__tab--active' : ''}`}
+          onClick={() => setActiveTab('scorecard')}
+        >
+          Scorecard
+        </button>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={activeTab === 'participants'}
+          className={`scoring-panel__tab${activeTab === 'participants' ? ' scoring-panel__tab--active' : ''}`}
+          onClick={() => setActiveTab('participants')}
+        >
+          Participants
+        </button>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={activeTab === 'analytics'}
+          className={`scoring-panel__tab${activeTab === 'analytics' ? ' scoring-panel__tab--active' : ''}`}
+          onClick={() => setActiveTab('analytics')}
+        >
+          Analytics
+        </button>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={activeTab === 'follow'}
+          className={`scoring-panel__tab${activeTab === 'follow' ? ' scoring-panel__tab--active' : ''}`}
+          onClick={() => setActiveTab('follow')}
+        >
+          Follow
+        </button>
       </div>
 
-      <div className="scoring-panel__section">
-        <span className="scoring-panel__label">Your rounds (participantIds contains you)</span>
-        {items.length === 0 ? (
-          <p className="scoring-panel__muted">No rounds yet.</p>
-        ) : (
-          <ul className="scoring-panel__list">
-            {items.map(({ id, data }) => {
-              const participantScores = readParticipantHoleScores(data, uid)
-              const currentParticipantScores = participantScores[uid] ?? {}
-              const keys = Object.keys(currentParticipantScores).sort((a, b) => Number(a) - Number(b))
-              const lastKey = keys.length ? keys[keys.length - 1] : null
-              const last = lastKey ? currentParticipantScores[lastKey] : null
-              const notation = last ? strokesParDeltaToNotation(last.strokes, last.par) : null
-              const summary = (() => {
-                try {
-                  return aggregateScoreProtocol(
-                    normalizeScoreProtocol({
-                      version: data.scoreProtocolVersion,
-                      holeCount: inferRoundHoleCount(data),
-                      holeScores: currentParticipantScores,
-                    }),
-                  )
-                } catch {
-                  return null
-                }
-              })()
-              return (
-                <li key={id} className="scoring-panel__list-item">
-                  <div>
-                    <strong>{id}</strong>
-                    <p className="scoring-panel__muted">
-                      {data.visibility} · {formatStartedAt(data.startedAt)}
-                      {data.completedAt ? ' · completed' : ''}
-                    </p>
-                    <p className="scoring-panel__muted">
-                      {data.courseSource === 'fresh'
-                        ? `fresh draft · ${data.courseDraft?.name ?? 'unnamed'}`
-                        : `saved course ${data.courseId} / ${data.templateId}`}
-                    </p>
-                    {data.courseSource === 'fresh' ? (
-                      <p className="scoring-panel__muted">
-                        Promotion: {data.coursePromotion?.status ?? 'none'}
-                        {data.coursePromotion?.errorCode ? ` (${data.coursePromotion.errorCode})` : ''}
-                      </p>
-                    ) : null}
-                    {summary ? (
-                      <p className="scoring-panel__muted">
-                        {summary.totalStrokes}/{summary.totalPar} ({formatDelta(summary.totalDelta)}) ·{' '}
-                        {summary.scoredHoles}/{inferRoundHoleCount(data)} holes
-                      </p>
-                    ) : null}
-                  </div>
-                  <div>
-                    {last && notation ? (
-                      <span className="scoring-panel__score-notation">
-                        <span
-                          className={`scoring-panel__notation ${scoreTierToNotationClassName(notation.tier)}`}
-                          aria-label={`${notation.label}: ${last.strokes} strokes on par ${last.par}`}
-                          title={`${notation.label} (${formatDelta(notation.delta)} vs par)`}
-                        >
-                          <ScoreNotationValue
-                            strokes={last.strokes}
-                            decorationShape={notation.decorationShape}
-                            decorationLayers={notation.decorationLayers}
-                          />
-                        </span>
-                        <span className="scoring-panel__notation-par">/{last.par}</span>
-                      </span>
-                    ) : (
-                      <span className="scoring-panel__muted">no scores</span>
-                    )}
-                    <button
-                      type="button"
-                      className="scoring-panel__button scoring-panel__button--inline"
-                      onClick={() => {
-                        setSelectedId(id)
-                        setScorecardEdits({})
-                      }}
-                      disabled={busy}
-                    >
-                      {selectedId === id ? 'Selected' : 'Select'}
-                    </button>
-                  </div>
-                </li>
-              )
-            })}
-          </ul>
-        )}
-      </div>
-
-      <div className="scoring-panel__section">
-        <span className="scoring-panel__label">Analytics MVP (client-side)</span>
-        {participantParSummary.scoredRounds === 0 ? (
-          <p className="scoring-panel__muted">Finish and score at least one round to unlock ±par analytics.</p>
-        ) : (
-          <>
-            <p className="scoring-panel__analytics-summary">
-              Completed rounds: {participantParSummary.completedRounds} · scored rounds:{' '}
-              {participantParSummary.scoredRounds} · scored holes: {participantParSummary.scoredHoles}
-            </p>
-            <p className="scoring-panel__analytics-delta">
-              <strong>± par:</strong>
-              <span
-                className={`scoring-panel__notation scoring-panel__analytics-delta-value ${
-                  participantParNotation ? scoreTierToNotationClassName(participantParNotation.tier) : ''
-                }`}
-                aria-label={`Total round delta ${formatDelta(participantParSummary.totalDelta)}`}
-              >
-                {formatDelta(participantParSummary.totalDelta)}
-              </span>
-              <span className="scoring-panel__muted">
-                from {participantParSummary.totalStrokes} strokes / {participantParSummary.totalPar} par
-              </span>
-            </p>
-          </>
-        )}
-
-        {analyticsOpponentOptions.length > 0 ? (
-          <>
-            <div className="scoring-panel__row">
-              <div className="scoring-panel__field">
-                <label className="scoring-panel__label" htmlFor="analytics-opponent">
-                  Head-to-head opponent
-                </label>
-                <select
-                  id="analytics-opponent"
-                  className="scoring-panel__select"
-                  value={selectedAnalyticsOpponentUid}
-                  onChange={(event) => setAnalyticsOpponentUid(event.target.value)}
-                >
-                  {analyticsOpponentOptions.map((opponentUid) => {
-                    const entry = directoryByUid[opponentUid]
-                    return (
-                      <option key={opponentUid} value={opponentUid}>
-                        {entry ? participantDisplayName(entry) : opponentUid}
-                      </option>
-                    )
-                  })}
-                </select>
-              </div>
-            </div>
-            {headToHeadSummary ? (
-              <p className="scoring-panel__analytics-summary">
-                Head-to-head:{' '}
-                <strong>
-                  {headToHeadSummary.wins}-{headToHeadSummary.losses}-{headToHeadSummary.ties}
-                </strong>{' '}
-                across {headToHeadSummary.comparedRounds} comparable rounds
-                {headToHeadSummary.skippedRounds > 0
-                  ? ` (${headToHeadSummary.skippedRounds} skipped for incomplete/mismatched scorecards).`
-                  : '.'}
-              </p>
-            ) : null}
-          </>
-        ) : (
-          <p className="scoring-panel__muted">
-            Add and complete rounds with other participants to unlock head-to-head analytics.
-          </p>
-        )}
-      </div>
-
-      {selected ? (
-        <div className="scoring-panel__section">
-          <span className="scoring-panel__label">
-            {selected.data.courseSource === 'fresh'
-              ? 'Fresh scorecard (single save)'
-              : 'Saved scorecard (single save)'}
-          </span>
-          {selectedSummary ? (
-            <p className="scoring-panel__muted">
-              Round total {selectedSummary.totalStrokes}/{selectedSummary.totalPar} (
-              {formatDelta(selectedSummary.totalDelta)}) · {selectedSummary.scoredHoles}/{selectedHoleCount} holes
-              scored
-            </p>
-          ) : null}
-          {selected.data.courseSource === 'fresh' ? (
-            <p className="scoring-panel__muted">
-              Fresh round draft: <strong>{selected.data.courseDraft?.name ?? 'Unnamed course'}</strong> · promotion{' '}
-              {selected.data.coursePromotion?.status ?? 'none'}
-            </p>
-          ) : null}
-          {selected.data.courseSource === 'fresh' && selected.data.ownerId === uid ? (
-            <div className="scoring-panel__row scoring-panel__scorecard-participants">
-              <div className="scoring-panel__field scoring-panel__field--grow">
-                <label className="scoring-panel__label" htmlFor="invite-search-fresh">
-                  Participants (display names)
-                </label>
-                <input
-                  id="invite-search-fresh"
-                  className="scoring-panel__input"
-                  value={directoryQuery}
-                  onChange={(e) => setDirectoryQuery(e.target.value)}
-                  placeholder="Search users by name or uid"
-                  autoComplete="off"
-                />
-                <div className="scoring-panel__participant-list" role="group" aria-label="Invite participants">
-                  {inviteCandidateEntries.map((entry) => {
-                    const checked = inviteSelections.includes(entry.uid)
-                    return (
-                      <label key={entry.uid} className="scoring-panel__participant-option">
-                        <input
-                          type="checkbox"
-                          checked={checked}
-                          disabled={busy}
-                          onChange={() =>
-                            setInviteSelections((current) =>
-                              current.includes(entry.uid)
-                                ? current.filter((value) => value !== entry.uid)
-                                : [...current, entry.uid],
-                            )
-                          }
-                        />
-                        <span>
-                          {participantDisplayName(entry)}
-                          <small className="scoring-panel__participant-subtitle">{entry.subtitle}</small>
-                        </span>
-                      </label>
-                    )
-                  })}
-                </div>
-              </div>
+      {activeTab === 'scorecard' ? (
+        <>
+          <div className="scoring-panel__section">
+            <span className="scoring-panel__label">Start a round</span>
+            <div className="scoring-panel__mode-switch">
               <button
                 type="button"
-                className="scoring-panel__button scoring-panel__button--primary scoring-panel__button--participant-submit"
-                onClick={() => void onAddParticipant()}
-                disabled={busy || inviteSelections.length === 0}
+                className={`scoring-panel__button${startMode === 'saved' ? ' scoring-panel__button--active' : ''}`}
+                onClick={() => setStartMode('saved')}
+                disabled={busy}
               >
-                Add selected participants
+                Saved course
+              </button>
+              <button
+                type="button"
+                className={`scoring-panel__button${startMode === 'fresh' ? ' scoring-panel__button--active' : ''}`}
+                onClick={() => setStartMode('fresh')}
+                disabled={busy}
+              >
+                Fresh instance
               </button>
             </div>
-          ) : null}
-          <div className={scorecardWrapClassName} ref={handleScorecardWrapRef}>
-            <table
-              className="scoring-panel__scorecard"
-              aria-label={`${selected.data.courseSource === 'fresh' ? 'Fresh' : 'Saved'} round scorecard table`}
-            >
-              <thead>
-                <tr>
-                  {selectedParticipantColumns.map((column) => {
-                    const stickyClass =
-                      column.kind === 'hole'
-                        ? ' scoring-panel__scorecard-col--hole'
-                        : column.kind === 'par'
-                          ? ' scoring-panel__scorecard-col--par'
-                          : column.kind === 'length'
-                            ? ' scoring-panel__scorecard-col--length'
-                            : ''
-                    return (
-                      <th key={column.key} scope="col" className={`scoring-panel__scorecard-col${stickyClass}`}>
-                        {column.label}
-                      </th>
-                    )
-                  })}
-                </tr>
-              </thead>
-              <tbody>
-                {Array.from({ length: selectedHoleCount ?? 0 }, (_, index) => {
-                  const rowHoleNumber = index + 1
-                  const draftHole = selectedFreshHoleByNumber[rowHoleNumber] ?? null
-                  const savedPar = selectedSavedParByHole[rowHoleNumber]
-                  const parValue =
-                    scorecardEdits[`par:${rowHoleNumber}`] ??
-                    (selected.data.courseSource === 'fresh'
-                      ? typeof draftHole?.par === 'number'
-                        ? String(draftHole.par)
-                        : ''
-                      : typeof savedPar === 'number'
-                        ? String(savedPar)
-                        : '')
-                  const lengthValue =
-                    scorecardEdits[`length:${rowHoleNumber}`] ??
-                    (typeof draftHole?.lengthMeters === 'number' ? String(draftHole.lengthMeters) : '')
+            {startMode === 'saved' ? (
+              selectedCourseTemplate ? (
+                <p className="scoring-panel__selection">
+                  Using <strong>{selectedCourseTemplate.courseName}</strong> /{' '}
+                  <strong>{selectedCourseTemplate.templateLabel}</strong> ({selectedCourseTemplate.holeCount} holes)
+                </p>
+              ) : (
+                <p className="scoring-panel__muted">Pick a saved course + template above before starting.</p>
+              )
+            ) : (
+              <>
+                <p className="scoring-panel__muted">
+                  Start quickly with name and hole count, then fill par/length as you play.
+                </p>
+                <div className="scoring-panel__row">
+                  <div className="scoring-panel__field scoring-panel__field--grow">
+                    <label className="scoring-panel__label" htmlFor="fresh-course-name">
+                      Course name
+                    </label>
+                    <input
+                      id="fresh-course-name"
+                      className="scoring-panel__input"
+                      value={freshCourseName}
+                      onChange={(event) => setFreshCourseName(event.target.value)}
+                      placeholder="Enter course name"
+                      autoComplete="off"
+                    />
+                  </div>
+                  <div className="scoring-panel__field">
+                    <label className="scoring-panel__label" htmlFor="fresh-hole-count">
+                      Holes
+                    </label>
+                    <input
+                      id="fresh-hole-count"
+                      className="scoring-panel__input"
+                      type="number"
+                      min={1}
+                      max={36}
+                      value={freshHoleCount}
+                      onChange={(event) => {
+                        setFreshHoleCount(normalizeFreshHoleCount(Number(event.target.value)))
+                      }}
+                    />
+                  </div>
+                </div>
+              </>
+            )}
+            <div className="scoring-panel__field scoring-panel__field--grow">
+              <label className="scoring-panel__label" htmlFor="participant-search">
+                Participants
+              </label>
+              <input
+                id="participant-search"
+                className="scoring-panel__input"
+                value={newRoundParticipantQuery}
+                onChange={(event) => setNewRoundParticipantQuery(event.target.value)}
+                placeholder="Search players by name or uid"
+                autoComplete="off"
+              />
+              <div className="scoring-panel__participant-list" role="group" aria-label="Select round participants">
+                {availableNewRoundParticipants.map((entry) => {
+                  const checked = newRoundParticipants.includes(entry.uid)
                   return (
-                    <tr key={rowHoleNumber}>
-                      <th
-                        scope="row"
-                        className="scoring-panel__scorecard-col scoring-panel__scorecard-col--hole scoring-panel__scorecard-hole"
-                      >
-                        {rowHoleNumber}
-                      </th>
-                      <td className="scoring-panel__scorecard-col scoring-panel__scorecard-col--par">
-                        <input
-                          className="scoring-panel__scorecard-input"
-                          type="number"
-                          min={2}
-                          max={9}
-                          value={parValue}
-                          onChange={(e) =>
-                            setScorecardEdits((current) => ({
-                              ...current,
-                              [`par:${rowHoleNumber}`]: e.target.value,
-                            }))
-                          }
-                          aria-label={`Hole ${rowHoleNumber} par`}
-                        />
-                      </td>
-                      <td className="scoring-panel__scorecard-col scoring-panel__scorecard-col--length">
-                        {selected.data.courseSource === 'fresh' ? (
-                          <input
-                            className="scoring-panel__scorecard-input"
-                            type="number"
-                            min={1}
-                            max={5000}
-                            value={lengthValue}
-                            onChange={(e) =>
-                              setScorecardEdits((current) => ({
-                                ...current,
-                                [`length:${rowHoleNumber}`]: e.target.value,
-                              }))
+                    <label key={entry.uid} className="scoring-panel__participant-option">
+                      <input
+                        type="checkbox"
+                        checked={checked}
+                        disabled={entry.uid === uid || busy}
+                        onChange={() => {
+                          setNewRoundParticipants((current) => {
+                            if (entry.uid === uid) return current
+                            if (current.includes(entry.uid)) {
+                              return current.filter((participantId) => participantId !== entry.uid)
                             }
-                            aria-label={`Hole ${rowHoleNumber} length`}
-                          />
-                        ) : (
-                          <span
-                            className="scoring-panel__muted"
-                            aria-label={`Hole ${rowHoleNumber} length is fixed by saved course`}
-                          >
-                            —
-                          </span>
-                        )}
-                      </td>
-                      {selectedParticipantOnlyColumns.map((column) => {
-                        const participantUid = 'participantId' in column ? column.participantId : ''
-                        if (!participantUid) return <td key={`${column.key}:empty`}>—</td>
-                        const scoreKey = `score:${participantUid}:${rowHoleNumber}`
-                        const persistedScore =
-                          selectedScorecardScores?.[participantUid]?.[String(rowHoleNumber)] ?? null
-                        const scoreValue =
-                          scorecardEdits[scoreKey] ?? (persistedScore ? String(persistedScore.strokes) : '')
-                        const parsedPar = parseIntegerInput(parValue)
-                        const scorePar =
-                          parsedPar ??
-                          persistedScore?.par ??
-                          (selected.data.courseSource === 'fresh'
-                            ? typeof draftHole?.par === 'number'
-                              ? draftHole.par
-                              : null
-                            : typeof savedPar === 'number'
-                              ? savedPar
-                              : null)
-                        const parsedScore = parseIntegerInput(scoreValue)
-                        const notation =
-                          parsedScore !== null && typeof scorePar === 'number'
-                            ? strokesParDeltaToNotation(parsedScore, scorePar)
-                            : null
-
-                        return (
-                          <td key={column.key} className="scoring-panel__scorecard-cell">
-                            <input
-                              className="scoring-panel__scorecard-input"
-                              type="number"
-                              min={1}
-                              max={99}
-                              value={scoreValue}
-                              onChange={(e) =>
-                                setScorecardEdits((current) => ({
-                                  ...current,
-                                  [scoreKey]: e.target.value,
-                                }))
-                              }
-                              aria-label={`Hole ${rowHoleNumber} strokes for ${column.label}`}
-                            />
-                            {notation && parsedScore !== null ? (
-                              <span
-                                className={`scoring-panel__notation scoring-panel__scorecard-notation ${scoreTierToNotationClassName(
-                                  notation.tier,
-                                )}`}
-                                aria-label={`${column.label} hole ${rowHoleNumber}: ${notation.label} (${formatDelta(
-                                  notation.delta,
-                                )})`}
-                                title={`${notation.label} (${formatDelta(notation.delta)} vs par)`}
-                              >
-                                <ScoreNotationValue
-                                  strokes={parsedScore}
-                                  decorationShape={notation.decorationShape}
-                                  decorationLayers={notation.decorationLayers}
-                                />
-                              </span>
-                            ) : null}
-                          </td>
-                        )
-                      })}
-                    </tr>
+                            return [...current, entry.uid]
+                          })
+                        }}
+                      />
+                      <span>
+                        {participantDisplayName(entry)}
+                        <small className="scoring-panel__participant-subtitle">{entry.subtitle}</small>
+                      </span>
+                    </label>
                   )
                 })}
-              </tbody>
-              <tfoot>
-                <tr>
-                  <th scope="row" className="scoring-panel__scorecard-col scoring-panel__scorecard-col--hole">
-                    Per-player total
-                  </th>
-                  <td className="scoring-panel__scorecard-col scoring-panel__scorecard-col--par">—</td>
-                  <td className="scoring-panel__scorecard-col scoring-panel__scorecard-col--length">—</td>
-                  {selectedParticipantOnlyColumns.map((column) => {
-                    const participantUid = 'participantId' in column ? column.participantId : ''
-                    const totals = selectedParticipantTotals[participantUid] ?? {
-                      totalStrokes: 0,
-                      totalPar: 0,
-                      totalDelta: 0,
-                      scoredHoles: 0,
-                    }
-                    return (
-                      <td key={`${column.key}:totals`}>
-                        <strong>
-                          {totals.totalStrokes}/{totals.totalPar}
-                        </strong>
-                        <span className="scoring-panel__scorecard-total-meta">
-                          {totals.scoredHoles > 0 ? `${formatDelta(totals.totalDelta)} · ${totals.scoredHoles}` : 'no scores'}
-                        </span>
-                      </td>
-                    )
-                  })}
-                </tr>
-                <tr>
-                  <th scope="row" colSpan={3}>
-                    Grand total
-                  </th>
-                  <td colSpan={Math.max(1, selectedParticipantOnlyColumns.length)}>
-                    <strong>
-                      {selectedGrandTotals.totalStrokes}/{selectedGrandTotals.totalPar}
-                    </strong>
-                    <span className="scoring-panel__scorecard-total-meta">
-                      {formatDelta(selectedGrandTotals.totalDelta)} · {selectedGrandTotals.scoredHoles} scored
-                      entries across {selectedGrandTotals.participantCount} participant
-                      {selectedGrandTotals.participantCount === 1 ? '' : 's'}
-                    </span>
-                  </td>
-                </tr>
-              </tfoot>
-            </table>
-          </div>
-          {scorecardScrollState.isScrollable ? (
-            <p className="scoring-panel__muted scoring-panel__scorecard-scroll-hint">
-              Swipe sideways to reveal all score columns.
-            </p>
-          ) : null}
-          <div className="scoring-panel__row scoring-panel__scorecard-actions">
-            <p className="scoring-panel__muted scoring-panel__save-status" role="status" aria-live="polite">
-              {hasPendingScorecardChanges
-                ? `${scorecardEditedHoles.length} hole${scorecardEditedHoles.length > 1 ? 's' : ''} pending save`
-                : 'Saved'}
-            </p>
-            {hasPendingScorecardChanges ? (
+              </div>
+            </div>
+            <div className="scoring-panel__row">
+              <div className="scoring-panel__field">
+                <label className="scoring-panel__label" htmlFor="visibility">
+                  Visibility
+                </label>
+                <select
+                  id="visibility"
+                  className="scoring-panel__select"
+                  value={visibility}
+                  onChange={(event) => setVisibility(event.target.value as RoundVisibility)}
+                >
+                  <option value="private">private</option>
+                  <option value="unlisted">unlisted</option>
+                  <option value="public">public</option>
+                </select>
+              </div>
               <button
                 type="button"
                 className="scoring-panel__button scoring-panel__button--primary"
-                onClick={() => void onSaveScorecard()}
-                disabled={busy}
+                onClick={() => void onCreateRound()}
+                disabled={busy || (startMode === 'saved' && !selectedCourseTemplate)}
               >
-                Save scorecard changes
-              </button>
-            ) : null}
-          </div>
-          <div className="scoring-panel__row">
-            <button
-              type="button"
-              className="scoring-panel__button scoring-panel__button--primary"
-              onClick={() => void onComplete()}
-              disabled={busy}
-            >
-              Mark complete
-            </button>
-            {selected.data.courseSource === 'fresh' &&
-            (selected.data.coursePromotion?.status === 'pending' ||
-              selected.data.coursePromotion?.status === 'failed') ? (
-              <button
-                type="button"
-                className="scoring-panel__button"
-                onClick={() => void onRetryPromotion()}
-                disabled={busy}
-              >
-                Retry promotion
-              </button>
-            ) : null}
-          </div>
-          {selected.data.ownerId === uid && selected.data.courseSource === 'saved' ? (
-            <div className="scoring-panel__row scoring-panel__scorecard-participants">
-              <div className="scoring-panel__field scoring-panel__field--grow">
-                <label className="scoring-panel__label" htmlFor="invite-search">
-                  Add participants
-                </label>
-                <input
-                  id="invite-search"
-                  className="scoring-panel__input"
-                  value={directoryQuery}
-                  onChange={(e) => setDirectoryQuery(e.target.value)}
-                  placeholder="Search users by name or uid"
-                  autoComplete="off"
-                />
-                <div className="scoring-panel__participant-list" role="group" aria-label="Invite participants">
-                  {inviteCandidateEntries.map((entry) => {
-                    const checked = inviteSelections.includes(entry.uid)
-                    return (
-                      <label key={entry.uid} className="scoring-panel__participant-option">
-                        <input
-                          type="checkbox"
-                          checked={checked}
-                          disabled={busy}
-                          onChange={() =>
-                            setInviteSelections((current) =>
-                              current.includes(entry.uid)
-                                ? current.filter((value) => value !== entry.uid)
-                                : [...current, entry.uid],
-                            )
-                          }
-                        />
-                        <span>
-                          {participantDisplayName(entry)}
-                          <small className="scoring-panel__participant-subtitle">{entry.subtitle}</small>
-                        </span>
-                      </label>
-                    )
-                  })}
-                </div>
-              </div>
-              <button
-                type="button"
-                className="scoring-panel__button scoring-panel__button--primary scoring-panel__button--participant-submit"
-                onClick={() => void onAddParticipant()}
-                disabled={busy || inviteSelections.length === 0}
-              >
-                Add selected
+                New round
               </button>
             </div>
-          ) : null}
+          </div>
+
+          <div className="scoring-panel__section">
+            <span className="scoring-panel__label">Your rounds</span>
+            {items.length === 0 ? (
+              <p className="scoring-panel__muted">No rounds yet.</p>
+            ) : (
+              <ul className="scoring-panel__list">
+                {items.map(({ id, data }) => {
+                  const participantScores = readParticipantHoleScores(data, uid)
+                  const currentParticipantScores = participantScores[uid] ?? {}
+                  const keys = Object.keys(currentParticipantScores).sort((a, b) => Number(a) - Number(b))
+                  const lastKey = keys.length ? keys[keys.length - 1] : null
+                  const last = lastKey ? currentParticipantScores[lastKey] : null
+                  const notation = last ? strokesParDeltaToNotation(last.strokes, last.par) : null
+                  const summary = (() => {
+                    try {
+                      return aggregateScoreProtocol(
+                        normalizeScoreProtocol({
+                          version: data.scoreProtocolVersion,
+                          holeCount: inferRoundHoleCount(data),
+                          holeScores: currentParticipantScores,
+                        }),
+                      )
+                    } catch {
+                      return null
+                    }
+                  })()
+                  return (
+                    <li key={id} className="scoring-panel__list-item">
+                      <div>
+                        <strong>{id}</strong>
+                        <p className="scoring-panel__muted">
+                          {data.visibility} · {formatStartedAt(data.startedAt)}
+                          {data.completedAt ? ' · completed' : ''}
+                        </p>
+                        <p className="scoring-panel__muted">
+                          {data.courseSource === 'fresh'
+                            ? `fresh draft · ${data.courseDraft?.name ?? 'unnamed'}`
+                            : `saved course ${data.courseId} / ${data.templateId}`}
+                        </p>
+                        {summary ? (
+                          <p className="scoring-panel__muted">
+                            {summary.totalStrokes}/{summary.totalPar} ({formatDelta(summary.totalDelta)}) ·{' '}
+                            {summary.scoredHoles}/{inferRoundHoleCount(data)} holes
+                          </p>
+                        ) : null}
+                      </div>
+                      <div>
+                        {last && notation ? (
+                          <span className="scoring-panel__score-notation">
+                            <span
+                              className={`scoring-panel__notation ${scoreTierToNotationClassName(notation.tier)}`}
+                              aria-label={`${notation.label}: ${last.strokes} strokes on par ${last.par}`}
+                              title={`${notation.label} (${formatDelta(notation.delta)} vs par)`}
+                            >
+                              <ScoreNotationValue
+                                strokes={last.strokes}
+                                decorationShape={notation.decorationShape}
+                                decorationLayers={notation.decorationLayers}
+                              />
+                            </span>
+                            <span className="scoring-panel__notation-par">/{last.par}</span>
+                          </span>
+                        ) : (
+                          <span className="scoring-panel__muted">no scores</span>
+                        )}
+                        <button
+                          type="button"
+                          className="scoring-panel__button scoring-panel__button--inline"
+                          onClick={() => {
+                            setSelectedId(id)
+                            setHoleNumber(1)
+                            setHoleDraft(null)
+                            setSaveState('saved')
+                            setExpandedPlayers({})
+                            setActiveTab('scorecard')
+                          }}
+                          disabled={busy}
+                        >
+                          {selectedId === id ? 'Selected' : 'Select'}
+                        </button>
+                      </div>
+                    </li>
+                  )
+                })}
+              </ul>
+            )}
+          </div>
+
+          {selected ? (
+            <div className="scoring-panel__section">
+              <span className="scoring-panel__label">Hole-by-hole scoring</span>
+              {selectedSummary ? (
+                <p className="scoring-panel__muted">
+                  Round total {selectedSummary.totalStrokes}/{selectedSummary.totalPar} (
+                  {formatDelta(selectedSummary.totalDelta)}) · {selectedSummary.scoredHoles}/{selectedHoleCount} holes
+                  scored
+                </p>
+              ) : null}
+              <HoleStepper
+                holeCount={selectedHoleCount ?? 1}
+                currentHole={activeHoleNumber}
+                onSelectHole={(nextHole) => void navigateToHole(nextHole)}
+                onPrevious={() => {
+                  if (!selectedHoleCount) return
+                  void navigateToHole(stepHoleNumber(activeHoleNumber, -1, selectedHoleCount))
+                }}
+                onNext={() => {
+                  if (!selectedHoleCount) return
+                  void navigateToHole(stepHoleNumber(activeHoleNumber, 1, selectedHoleCount))
+                }}
+                disabled={busy || !effectiveHoleDraft}
+                statusLabel={saveStateLabel}
+              />
+              {effectiveHoleDraft ? (
+                <HoleForm
+                  holeNumber={activeHoleNumber}
+                  parValue={effectiveHoleDraft.parInput}
+                  lengthValue={effectiveHoleDraft.lengthInput}
+                  onParChange={(value) =>
+                    updateHoleDraft((current) => ({
+                      ...current,
+                      parInput: value,
+                    }))
+                  }
+                  onLengthChange={(value) =>
+                    updateHoleDraft((current) => ({
+                      ...current,
+                      lengthInput: value,
+                    }))
+                  }
+                  disableLength={selected.data.courseSource !== 'fresh'}
+                  saveStateLabel={saveStateLabel}
+                >
+                  <PlayerScoreRows
+                    participantIds={selected.data.participantIds}
+                    participantNames={selectedParticipantNames}
+                    scoreInputs={effectiveHoleDraft.scoreInputs}
+                    onScoreChange={(participantUid, value) =>
+                      updateHoleDraft((current) => ({
+                        ...current,
+                        scoreInputs: {
+                          ...current.scoreInputs,
+                          [participantUid]: value,
+                        },
+                      }))
+                    }
+                    expandedByUid={expandedPlayers}
+                    onToggleExpanded={(participantUid) =>
+                      setExpandedPlayers((current) => ({
+                        ...current,
+                        [participantUid]: !(current[participantUid] ?? true),
+                      }))
+                    }
+                    parValue={parseIntegerInput(effectiveHoleDraft.parInput)}
+                  />
+                </HoleForm>
+              ) : (
+                <p className="scoring-panel__muted">Select a round to load hole form.</p>
+              )}
+              <p className="scoring-panel__legend-footnote">
+                Legend: Eagle+ ≤ -2, Birdie -1, Par 0, Bogey +1, Double+ ≥ +2.
+              </p>
+              <div className="scoring-panel__row">
+                <button
+                  type="button"
+                  className="scoring-panel__button scoring-panel__button--primary"
+                  onClick={() => void onComplete()}
+                  disabled={busy}
+                >
+                  Mark complete
+                </button>
+                {selected.data.courseSource === 'fresh' &&
+                (selected.data.coursePromotion?.status === 'pending' ||
+                  selected.data.coursePromotion?.status === 'failed') ? (
+                  <button
+                    type="button"
+                    className="scoring-panel__button"
+                    onClick={() => void onRetryPromotion()}
+                    disabled={busy}
+                  >
+                    Retry promotion
+                  </button>
+                ) : null}
+              </div>
+            </div>
+          ) : (
+            <p className="scoring-panel__muted">Select a round to record hole scores.</p>
+          )}
+        </>
+      ) : null}
+
+      {activeTab === 'participants' ? (
+        <div className="scoring-panel__section">
+          <span className="scoring-panel__label">Round participants</span>
+          {!selected ? (
+            <p className="scoring-panel__muted">Select a round first.</p>
+          ) : (
+            <>
+              <ul className="scoring-panel__list">
+                {selected.data.participantIds.map((participantId) => {
+                  const totals = selectedParticipantTotals[participantId] ?? {
+                    totalStrokes: 0,
+                    totalPar: 0,
+                    totalDelta: 0,
+                    scoredHoles: 0,
+                  }
+                  return (
+                    <li key={participantId} className="scoring-panel__list-item">
+                      <div>
+                        <strong>{selectedParticipantNames[participantId] ?? participantId}</strong>
+                        <p className="scoring-panel__muted">{participantId}</p>
+                      </div>
+                      <p className="scoring-panel__muted">
+                        {totals.totalStrokes}/{totals.totalPar} ({formatDelta(totals.totalDelta)}) ·{' '}
+                        {totals.scoredHoles} holes
+                      </p>
+                    </li>
+                  )
+                })}
+              </ul>
+              <p className="scoring-panel__muted">
+                Grand total: {selectedGrandTotals.totalStrokes}/{selectedGrandTotals.totalPar} (
+                {formatDelta(selectedGrandTotals.totalDelta)}) across {selectedGrandTotals.participantCount}{' '}
+                participant{selectedGrandTotals.participantCount === 1 ? '' : 's'}.
+              </p>
+              {selected.data.ownerId === uid ? (
+                <div className="scoring-panel__row scoring-panel__scorecard-participants">
+                  <div className="scoring-panel__field scoring-panel__field--grow">
+                    <label className="scoring-panel__label" htmlFor="invite-search">
+                      Add participants
+                    </label>
+                    <input
+                      id="invite-search"
+                      className="scoring-panel__input"
+                      value={inviteParticipantQuery}
+                      onChange={(event) => setInviteParticipantQuery(event.target.value)}
+                      placeholder="Search users by name or uid"
+                      autoComplete="off"
+                    />
+                    <div className="scoring-panel__participant-list" role="group" aria-label="Invite participants">
+                      {inviteCandidateEntries.map((entry) => {
+                        const checked = inviteSelections.includes(entry.uid)
+                        return (
+                          <label key={entry.uid} className="scoring-panel__participant-option">
+                            <input
+                              type="checkbox"
+                              checked={checked}
+                              disabled={busy}
+                              onChange={() =>
+                                setInviteSelections((current) =>
+                                  current.includes(entry.uid)
+                                    ? current.filter((value) => value !== entry.uid)
+                                    : [...current, entry.uid],
+                                )
+                              }
+                            />
+                            <span>
+                              {participantDisplayName(entry)}
+                              <small className="scoring-panel__participant-subtitle">{entry.subtitle}</small>
+                            </span>
+                          </label>
+                        )
+                      })}
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    className="scoring-panel__button scoring-panel__button--primary scoring-panel__button--participant-submit"
+                    onClick={() => void onAddParticipant()}
+                    disabled={busy || inviteSelections.length === 0}
+                  >
+                    Add selected participants
+                  </button>
+                </div>
+              ) : null}
+            </>
+          )}
         </div>
-      ) : (
-        <p className="scoring-panel__muted">Select a round to record hole scores.</p>
-      )}
+      ) : null}
+
+      {activeTab === 'analytics' ? (
+        <div className="scoring-panel__section">
+          <span className="scoring-panel__label">Analytics strip</span>
+          {participantParSummary.scoredRounds === 0 ? (
+            <p className="scoring-panel__muted">Finish and score at least one round to unlock ±par analytics.</p>
+          ) : (
+            <>
+              <p className="scoring-panel__analytics-summary">
+                Completed rounds: {participantParSummary.completedRounds} · scored rounds:{' '}
+                {participantParSummary.scoredRounds} · scored holes: {participantParSummary.scoredHoles}
+              </p>
+              <p className="scoring-panel__analytics-delta">
+                <strong>± par:</strong>
+                <span
+                  className={`scoring-panel__notation scoring-panel__analytics-delta-value ${
+                    participantParNotation ? scoreTierToNotationClassName(participantParNotation.tier) : ''
+                  }`}
+                  aria-label={`Total round delta ${formatDelta(participantParSummary.totalDelta)}`}
+                >
+                  {formatDelta(participantParSummary.totalDelta)}
+                </span>
+                <span className="scoring-panel__muted">
+                  from {participantParSummary.totalStrokes} strokes / {participantParSummary.totalPar} par
+                </span>
+              </p>
+            </>
+          )}
+          {analyticsOpponentOptions.length > 0 ? (
+            <>
+              <div className="scoring-panel__row">
+                <div className="scoring-panel__field">
+                  <label className="scoring-panel__label" htmlFor="analytics-opponent">
+                    Head-to-head opponent
+                  </label>
+                  <select
+                    id="analytics-opponent"
+                    className="scoring-panel__select"
+                    value={selectedAnalyticsOpponentUid}
+                    onChange={(event) => setAnalyticsOpponentUid(event.target.value)}
+                  >
+                    {analyticsOpponentOptions.map((opponentUid) => {
+                      const entry = directoryByUid[opponentUid]
+                      return (
+                        <option key={opponentUid} value={opponentUid}>
+                          {entry ? participantDisplayName(entry) : opponentUid}
+                        </option>
+                      )
+                    })}
+                  </select>
+                </div>
+              </div>
+              {headToHeadSummary ? (
+                <p className="scoring-panel__analytics-summary">
+                  Head-to-head:{' '}
+                  <strong>
+                    {headToHeadSummary.wins}-{headToHeadSummary.losses}-{headToHeadSummary.ties}
+                  </strong>{' '}
+                  across {headToHeadSummary.comparedRounds} comparable rounds
+                  {headToHeadSummary.skippedRounds > 0
+                    ? ` (${headToHeadSummary.skippedRounds} skipped for incomplete/mismatched scorecards).`
+                    : '.'}
+                </p>
+              ) : null}
+            </>
+          ) : (
+            <p className="scoring-panel__muted">
+              Add and complete rounds with other participants to unlock head-to-head analytics.
+            </p>
+          )}
+        </div>
+      ) : null}
+
+      {activeTab === 'follow' ? (
+        <div className="scoring-panel__section">
+          <FollowPanel user={user} />
+        </div>
+      ) : null}
     </section>
   )
 }

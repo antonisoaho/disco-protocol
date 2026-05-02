@@ -4,7 +4,6 @@ import type { CourseRoundSelection } from '../courses/courseData'
 import { AuthPanel } from './AuthPanel'
 import { useAuth } from './useAuth'
 import { ScoringPanel } from '../scoring/ScoringPanel'
-import { FollowPanel } from '../social/FollowPanel'
 
 /**
  * Placeholder “protected shell”: everything inside assumes a signed-in user.
@@ -74,7 +73,6 @@ export function ProtectedApp() {
             for the next round, then use shared rounds and offline scoring below.
           </p>
         </section>
-        <FollowPanel user={user} />
         <CoursePicker selection={selectedCourseTemplate} onSelectionChange={setSelectedCourseTemplate} />
         <ScoringPanel user={user} selectedCourseTemplate={selectedCourseTemplate} />
       </main>
