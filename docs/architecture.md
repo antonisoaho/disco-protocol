@@ -66,7 +66,7 @@ Names are indicative; Workers normalize to consistent `camelCase` and collection
 
 **`courses/{courseId}`** — canonical name, slug, geo, `createdBy`, `adminMetadata`. Subcollection **`templates/{templateId}`** — holes array or `holes/{holeNumber}` docs.
 
-**`rounds/{roundId}`** — `ownerId`, `courseId`, `templateId`, `participantIds[]`, `visibility`, `startedAt`, `completedAt`, `holeScores` map or subcollection `holes/{n}`.
+**`rounds/{roundId}`** — `ownerId`, `courseId`, `templateId`, `participantIds[]` (registered UIDs + stable `anon:*` ids), optional `anonymousParticipants[]` (`id`, `displayName`), `visibility`, `startedAt`, `completedAt`, `holeScores` map or subcollection `holes/{n}`.
 
 **`roundEvents/{eventId}`** (optional) — append-only audit for shared sync troubleshooting.
 

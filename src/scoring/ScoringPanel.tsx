@@ -11,6 +11,7 @@ import {
   type FreshRoundDraftIssue,
 } from '../firebase/freshRoundCourse'
 import {
+  addAnonymousParticipantToRound,
   addParticipantToRound,
   completeRoundAndPromote,
   createRound,
@@ -20,6 +21,7 @@ import {
   updateFreshRoundHoleMetadata,
 } from '../firebase/rounds'
 import type { RoundDoc, RoundVisibility } from '../firebase/roundTypes'
+import { subscribeFollowers, subscribeFollowing } from '../firebase/follows'
 import { subscribeUserDirectory, type UserDirectoryEntry } from '../firebase/userDirectory'
 import {
   scoreTierToNotationClassName,
@@ -27,6 +29,16 @@ import {
   type ScoreDecorationShape,
 } from '../lib/scoreSemantic'
 import { FollowPanel } from '../social/FollowPanel'
+import {
+  buildAnonymousParticipantNameMap,
+  createAnonymousParticipantId,
+  deriveFriendUidSet,
+  filterParticipantDirectoryEntries,
+  isAnonymousParticipantId,
+  mergeAnonymousParticipants,
+  normalizeAnonymousParticipantName,
+  type AnonymousParticipant,
+} from './participantRoster'
 import { HoleForm } from './HoleForm'
 import { HoleStepper } from './HoleStepper'
 import { mergeAutosavePayload, type HoleDraftInputs, clampHoleNumber, stepHoleNumber } from './holeAutosave'
@@ -122,15 +134,6 @@ function participantDisplayName(entry: UserDirectoryEntry): string {
   return entry.displayName.trim().length > 0 ? entry.displayName : entry.uid
 }
 
-function filterEntries(entries: UserDirectoryEntry[], query: string): UserDirectoryEntry[] {
-  const normalizedQuery = query.trim().toLowerCase()
-  if (!normalizedQuery) return entries
-  return entries.filter((entry) => {
-    const display = participantDisplayName(entry).toLowerCase()
-    return display.includes(normalizedQuery) || entry.uid.toLowerCase().includes(normalizedQuery)
-  })
-}
-
 function readParticipantHoleScores(data: RoundDoc, fallbackUid: string) {
   const next: Record<string, Record<string, { strokes: number; par: number }>> = {}
   const participantIdSet = new Set(data.participantIds)
@@ -197,10 +200,15 @@ export function ScoringPanel({ user, selectedCourseTemplate }: Props) {
   const [visibility, setVisibility] = useState<RoundVisibility>('private')
   const [newRoundParticipants, setNewRoundParticipants] = useState<string[]>([uid])
   const [newRoundParticipantQuery, setNewRoundParticipantQuery] = useState('')
+  const [newRoundAnonymousName, setNewRoundAnonymousName] = useState('')
+  const [newRoundAnonymousParticipants, setNewRoundAnonymousParticipants] = useState<AnonymousParticipant[]>([])
   const [inviteParticipantQuery, setInviteParticipantQuery] = useState('')
+  const [inviteAnonymousName, setInviteAnonymousName] = useState('')
   const [inviteSelections, setInviteSelections] = useState<string[]>([])
   const [analyticsOpponentUid, setAnalyticsOpponentUid] = useState('')
   const [directoryEntries, setDirectoryEntries] = useState<UserDirectoryEntry[]>([])
+  const [followingIds, setFollowingIds] = useState<string[]>([])
+  const [followerIds, setFollowerIds] = useState<string[]>([])
   const [holeNumber, setHoleNumber] = useState(1)
   const [holeDraft, setHoleDraft] = useState<HoleDraftInputs | null>(null)
   const [expandedPlayers, setExpandedPlayers] = useState<Record<string, boolean>>({})
@@ -231,6 +239,32 @@ export function ScoringPanel({ user, selectedCourseTemplate }: Props) {
     )
     return () => unsub()
   }, [])
+
+  useEffect(() => {
+    const unsub = subscribeFollowing(
+      uid,
+      (edges) => {
+        setFollowingIds(Array.from(new Set(edges.map((edge) => edge.followeeUid))))
+      },
+      () => {
+        // Friends fallback becomes empty if follows read is unavailable.
+      },
+    )
+    return () => unsub()
+  }, [uid])
+
+  useEffect(() => {
+    const unsub = subscribeFollowers(
+      uid,
+      (edges) => {
+        setFollowerIds(Array.from(new Set(edges.map((edge) => edge.followerUid))))
+      },
+      () => {
+        // Friends fallback becomes empty if follows read is unavailable.
+      },
+    )
+    return () => unsub()
+  }, [uid])
 
   const selected = useMemo(() => items.find((round) => round.id === selectedId) ?? null, [items, selectedId])
   const selectedHoleCount = useMemo(
@@ -272,16 +306,32 @@ export function ScoringPanel({ user, selectedCourseTemplate }: Props) {
     [directoryByUid],
   )
 
+  const friendUidSet = useMemo(() => deriveFriendUidSet(followingIds, followerIds), [followerIds, followingIds])
+
+  const searchableDirectoryEntries = useMemo(
+    () => allDirectoryEntries.filter((entry) => entry.uid !== uid),
+    [allDirectoryEntries, uid],
+  )
+
   const availableNewRoundParticipants = useMemo(
-    () => filterEntries(allDirectoryEntries, newRoundParticipantQuery),
-    [allDirectoryEntries, newRoundParticipantQuery],
+    () =>
+      filterParticipantDirectoryEntries({
+        entries: searchableDirectoryEntries,
+        query: newRoundParticipantQuery,
+        friendUidSet,
+      }),
+    [friendUidSet, newRoundParticipantQuery, searchableDirectoryEntries],
   )
 
   const inviteCandidateEntries = useMemo(() => {
     if (!selected) return []
-    const filtered = filterEntries(allDirectoryEntries, inviteParticipantQuery)
+    const filtered = filterParticipantDirectoryEntries({
+      entries: searchableDirectoryEntries,
+      query: inviteParticipantQuery,
+      friendUidSet,
+    })
     return filtered.filter((entry) => !selected.data.participantIds.includes(entry.uid))
-  }, [allDirectoryEntries, inviteParticipantQuery, selected])
+  }, [friendUidSet, inviteParticipantQuery, searchableDirectoryEntries, selected])
 
   const roundDocs = useMemo(() => items.map((item) => item.data), [items])
 
@@ -297,6 +347,19 @@ export function ScoringPanel({ user, selectedCourseTemplate }: Props) {
     return strokesParDeltaToNotation(participantParSummary.totalStrokes, participantParSummary.totalPar)
   }, [participantParSummary])
 
+  const anonymousDisplayNameById = useMemo(() => {
+    const map: Record<string, string> = {}
+    for (const round of roundDocs) {
+      const merged = mergeAnonymousParticipants(round.participantIds, round.anonymousParticipants)
+      for (const anonymous of merged) {
+        if (!map[anonymous.id]) {
+          map[anonymous.id] = anonymous.displayName
+        }
+      }
+    }
+    return map
+  }, [roundDocs])
+
   const analyticsOpponentOptions = useMemo(() => {
     const opponentIds = new Set<string>()
     for (const round of roundDocs) {
@@ -308,23 +371,27 @@ export function ScoringPanel({ user, selectedCourseTemplate }: Props) {
       }
     }
     return Array.from(opponentIds).sort((a, b) => {
-      const aName = participantDisplayName(
-        directoryByUid[a] ?? {
-          uid: a,
-          displayName: a,
-          subtitle: a,
-        },
-      )
-      const bName = participantDisplayName(
-        directoryByUid[b] ?? {
-          uid: b,
-          displayName: b,
-          subtitle: b,
-        },
-      )
+      const aName =
+        anonymousDisplayNameById[a] ??
+        participantDisplayName(
+          directoryByUid[a] ?? {
+            uid: a,
+            displayName: a,
+            subtitle: a,
+          },
+        )
+      const bName =
+        anonymousDisplayNameById[b] ??
+        participantDisplayName(
+          directoryByUid[b] ?? {
+            uid: b,
+            displayName: b,
+            subtitle: b,
+          },
+        )
       return aName.localeCompare(bName, undefined, { sensitivity: 'base' })
     })
-  }, [directoryByUid, roundDocs, uid])
+  }, [anonymousDisplayNameById, directoryByUid, roundDocs, uid])
 
   const selectedAnalyticsOpponentUid = analyticsOpponentOptions.includes(analyticsOpponentUid)
     ? analyticsOpponentUid
@@ -342,10 +409,20 @@ export function ScoringPanel({ user, selectedCourseTemplate }: Props) {
     [selected, uid],
   )
 
+  const selectedAnonymousNameMap = useMemo(
+    () => buildAnonymousParticipantNameMap(selected?.data.anonymousParticipants ?? []),
+    [selected],
+  )
+
   const selectedParticipantNames = useMemo(() => {
     if (!selected) return {}
     const names: Record<string, string> = {}
     for (const participantId of selected.data.participantIds) {
+      const anonymousDisplayName = selectedAnonymousNameMap[participantId]
+      if (anonymousDisplayName) {
+        names[participantId] = anonymousDisplayName
+        continue
+      }
       names[participantId] = participantDisplayName(
         directoryByUid[participantId] ?? {
           uid: participantId,
@@ -355,7 +432,7 @@ export function ScoringPanel({ user, selectedCourseTemplate }: Props) {
       )
     }
     return names
-  }, [directoryByUid, selected])
+  }, [directoryByUid, selected, selectedAnonymousNameMap])
 
   const currentUserHoleScores = useMemo(() => {
     if (!selected || !selectedParticipantScores) return {}
@@ -580,6 +657,26 @@ export function ScoringPanel({ user, selectedCourseTemplate }: Props) {
     [activeHoleNumber, saveCurrentHole, saveState, selectedHoleCount],
   )
 
+  const onAddNewRoundAnonymousParticipant = useCallback(() => {
+    const normalizedName = normalizeAnonymousParticipantName(newRoundAnonymousName)
+    if (normalizedName.length === 0) {
+      setError(t('scoring.messages.anonymousNameRequired'))
+      return
+    }
+    const id = createAnonymousParticipantId()
+    setNewRoundAnonymousParticipants((current) => [...current, { id, displayName: normalizedName }])
+    setNewRoundParticipants((current) => Array.from(new Set([...current, id])))
+    setNewRoundAnonymousName('')
+    setError(null)
+  }, [newRoundAnonymousName, t])
+
+  const onRemoveNewRoundAnonymousParticipant = useCallback((participantId: string) => {
+    setNewRoundAnonymousParticipants((current) =>
+      current.filter((participant) => participant.id !== participantId),
+    )
+    setNewRoundParticipants((current) => current.filter((participant) => participant !== participantId))
+  }, [])
+
   const onCreateRound = useCallback(async () => {
     setBusy(true)
     setError(null)
@@ -588,6 +685,7 @@ export function ScoringPanel({ user, selectedCourseTemplate }: Props) {
       const participantIds = Array.from(new Set([uid, ...newRoundParticipants])).filter(
         (participantId) => participantId.trim().length > 0,
       )
+      const anonymousParticipants = mergeAnonymousParticipants(participantIds, newRoundAnonymousParticipants)
       let id = ''
       if (startMode === 'saved') {
         if (!selectedCourseTemplate) {
@@ -603,6 +701,7 @@ export function ScoringPanel({ user, selectedCourseTemplate }: Props) {
           holeCount: safeHoleCount,
           visibility,
           participantIds,
+          anonymousParticipants,
         })
       } else {
         const courseDraft = normalizeFreshCourseDraft({
@@ -619,6 +718,7 @@ export function ScoringPanel({ user, selectedCourseTemplate }: Props) {
           holeCount: courseDraft.holes.length,
           visibility,
           participantIds,
+          anonymousParticipants,
         })
       }
       setSelectedId(id)
@@ -626,6 +726,10 @@ export function ScoringPanel({ user, selectedCourseTemplate }: Props) {
       setHoleDraft(null)
       setSaveState('saved')
       setExpandedPlayers({})
+      setNewRoundParticipantQuery('')
+      setNewRoundAnonymousName('')
+      setNewRoundAnonymousParticipants([])
+      setNewRoundParticipants([uid])
       setActiveTab('scorecard')
       setNotice('Round created. Start scoring hole-by-hole.')
     } catch (nextError) {
@@ -641,6 +745,7 @@ export function ScoringPanel({ user, selectedCourseTemplate }: Props) {
     freshCourseName,
     freshHoleCount,
     newRoundParticipants,
+    newRoundAnonymousParticipants,
     selectedCourseTemplate,
     startMode,
     uid,
@@ -648,20 +753,46 @@ export function ScoringPanel({ user, selectedCourseTemplate }: Props) {
   ])
 
   const onAddParticipant = useCallback(async () => {
-    if (!selectedId || inviteSelections.length === 0) return
+    if (!selectedId || !selected) return
+    const normalizedAnonymousName = normalizeAnonymousParticipantName(inviteAnonymousName)
+    const shouldAddAnonymous = normalizedAnonymousName.length > 0
+    if (inviteSelections.length === 0 && !shouldAddAnonymous) return
     setBusy(true)
     setError(null)
     setNotice(null)
     try {
-      await Promise.all(inviteSelections.map((participantUid) => addParticipantToRound(selectedId, participantUid)))
+      const anonymousParticipant = shouldAddAnonymous
+        ? {
+            id: createAnonymousParticipantId(),
+            displayName: normalizedAnonymousName,
+          }
+        : null
+      await Promise.all([
+        ...inviteSelections.map((participantUid) => addParticipantToRound(selectedId, participantUid)),
+        ...(anonymousParticipant
+          ? [
+              addAnonymousParticipantToRound({
+                roundId: selectedId,
+                ownerUid: selected.data.ownerId,
+                participant: anonymousParticipant,
+              }),
+            ]
+          : []),
+      ])
       setInviteSelections([])
-      setNotice(`Added ${inviteSelections.length} participant${inviteSelections.length > 1 ? 's' : ''}.`)
+      setInviteAnonymousName('')
+      const totalAdded = inviteSelections.length + (anonymousParticipant ? 1 : 0)
+      setNotice(
+        totalAdded === 1
+          ? t('scoring.messages.participantAdded')
+          : t('scoring.messages.participantsAdded', { count: totalAdded }),
+      )
     } catch (nextError) {
       setError(nextError instanceof Error ? nextError.message : 'Failed to add participant')
     } finally {
       setBusy(false)
     }
-  }, [inviteSelections, selectedId])
+  }, [inviteAnonymousName, inviteSelections, selected, selectedId, t])
 
   const onDeleteRound = useCallback(
     async (roundId: string, ownerId: string) => {
@@ -878,9 +1009,12 @@ export function ScoringPanel({ user, selectedCourseTemplate }: Props) {
                 className="scoring-panel__input"
                 value={newRoundParticipantQuery}
                 onChange={(event) => setNewRoundParticipantQuery(event.target.value)}
-                placeholder="Search players by name or uid"
+                placeholder={t('scoring.placeholders.participantSearch')}
                 autoComplete="off"
               />
+              {newRoundParticipantQuery.trim().length === 0 ? (
+                <p className="scoring-panel__muted">{t('scoring.messages.participantDefaultsToFriends')}</p>
+              ) : null}
               <div className="scoring-panel__participant-list" role="group" aria-label="Select round participants">
                 {availableNewRoundParticipants.map((entry) => {
                   const checked = newRoundParticipants.includes(entry.uid)
@@ -889,10 +1023,9 @@ export function ScoringPanel({ user, selectedCourseTemplate }: Props) {
                       <input
                         type="checkbox"
                         checked={checked}
-                        disabled={entry.uid === uid || busy}
+                        disabled={busy}
                         onChange={() => {
                           setNewRoundParticipants((current) => {
-                            if (entry.uid === uid) return current
                             if (current.includes(entry.uid)) {
                               return current.filter((participantId) => participantId !== entry.uid)
                             }
@@ -909,6 +1042,46 @@ export function ScoringPanel({ user, selectedCourseTemplate }: Props) {
                 })}
               </div>
             </div>
+            <div className="scoring-panel__row">
+              <div className="scoring-panel__field scoring-panel__field--grow">
+                <label className="scoring-panel__label" htmlFor="new-round-anonymous-name">
+                  {t('scoring.labels.addAnonymous')}
+                </label>
+                <input
+                  id="new-round-anonymous-name"
+                  className="scoring-panel__input"
+                  value={newRoundAnonymousName}
+                  onChange={(event) => setNewRoundAnonymousName(event.target.value)}
+                  placeholder={t('scoring.placeholders.anonymousName')}
+                  autoComplete="off"
+                />
+              </div>
+              <button
+                type="button"
+                className="scoring-panel__button"
+                onClick={onAddNewRoundAnonymousParticipant}
+                disabled={busy}
+              >
+                {t('scoring.buttons.addAnonymous')}
+              </button>
+            </div>
+            {newRoundAnonymousParticipants.length > 0 ? (
+              <ul className="scoring-panel__list">
+                {newRoundAnonymousParticipants.map((participant) => (
+                  <li key={participant.id} className="scoring-panel__list-item">
+                    <strong>{participant.displayName}</strong>
+                    <button
+                      type="button"
+                      className="scoring-panel__button scoring-panel__button--inline"
+                      onClick={() => onRemoveNewRoundAnonymousParticipant(participant.id)}
+                      disabled={busy}
+                    >
+                      {t('scoring.buttons.removeAnonymous')}
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            ) : null}
             <div className="scoring-panel__row">
               <div className="scoring-panel__field">
                 <label className="scoring-panel__label" htmlFor="visibility">
@@ -1152,11 +1325,14 @@ export function ScoringPanel({ user, selectedCourseTemplate }: Props) {
                     totalDelta: 0,
                     scoredHoles: 0,
                   }
+                  const isAnonymous = isAnonymousParticipantId(participantId)
                   return (
                     <li key={participantId} className="scoring-panel__list-item">
                       <div>
                         <strong>{selectedParticipantNames[participantId] ?? participantId}</strong>
-                        <p className="scoring-panel__muted">{participantId}</p>
+                        <p className="scoring-panel__muted">
+                          {isAnonymous ? t('scoring.labels.anonymousParticipant') : participantId}
+                        </p>
                       </div>
                       <p className="scoring-panel__muted">
                         {totals.totalStrokes}/{totals.totalPar} ({formatDelta(totals.totalDelta)}) ·{' '}
@@ -1182,9 +1358,12 @@ export function ScoringPanel({ user, selectedCourseTemplate }: Props) {
                       className="scoring-panel__input"
                       value={inviteParticipantQuery}
                       onChange={(event) => setInviteParticipantQuery(event.target.value)}
-                      placeholder="Search users by name or uid"
+                      placeholder={t('scoring.placeholders.inviteSearch')}
                       autoComplete="off"
                     />
+                    {inviteParticipantQuery.trim().length === 0 ? (
+                      <p className="scoring-panel__muted">{t('scoring.messages.participantDefaultsToFriends')}</p>
+                    ) : null}
                     <div className="scoring-panel__participant-list" role="group" aria-label="Invite participants">
                       {inviteCandidateEntries.map((entry) => {
                         const checked = inviteSelections.includes(entry.uid)
@@ -1210,14 +1389,33 @@ export function ScoringPanel({ user, selectedCourseTemplate }: Props) {
                         )
                       })}
                     </div>
+                    <div className="scoring-panel__row">
+                      <div className="scoring-panel__field scoring-panel__field--grow">
+                        <label className="scoring-panel__label" htmlFor="invite-anonymous-name">
+                          {t('scoring.labels.addAnonymous')}
+                        </label>
+                        <input
+                          id="invite-anonymous-name"
+                          className="scoring-panel__input"
+                          value={inviteAnonymousName}
+                          onChange={(event) => setInviteAnonymousName(event.target.value)}
+                          placeholder={t('scoring.placeholders.anonymousName')}
+                          autoComplete="off"
+                        />
+                      </div>
+                    </div>
                   </div>
                   <button
                     type="button"
                     className="scoring-panel__button scoring-panel__button--primary scoring-panel__button--participant-submit"
                     onClick={() => void onAddParticipant()}
-                    disabled={busy || inviteSelections.length === 0}
+                    disabled={
+                      busy ||
+                      (inviteSelections.length === 0 &&
+                        normalizeAnonymousParticipantName(inviteAnonymousName).length === 0)
+                    }
                   >
-                    Add selected participants
+                    {t('scoring.buttons.addParticipants')}
                   </button>
                 </div>
               ) : null}
@@ -1270,7 +1468,8 @@ export function ScoringPanel({ user, selectedCourseTemplate }: Props) {
                       const entry = directoryByUid[opponentUid]
                       return (
                         <option key={opponentUid} value={opponentUid}>
-                          {entry ? participantDisplayName(entry) : opponentUid}
+                          {anonymousDisplayNameById[opponentUid] ??
+                            (entry ? participantDisplayName(entry) : opponentUid)}
                         </option>
                       )
                     })}
