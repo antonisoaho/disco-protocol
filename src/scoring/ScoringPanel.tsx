@@ -832,7 +832,6 @@ export function ScoringPanel({ user, selectedCourseTemplate }: Props) {
       setBusy(false)
     }
   }, [inviteAnonymousName, inviteSelections, selected, selectedId, t])
-  }, [inviteAnonymousName, inviteSelections, selected, selectedId, t])
 
   const onDeleteRound = useCallback(
     async (roundId: string, ownerId: string) => {
