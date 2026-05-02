@@ -31,7 +31,7 @@
 }
 
 .app-shell__header-inner {
-  padding-block: calc(#{$space-unit} * 4) calc(#{$space-unit} * 2);
+  padding-block: $space-5 $space-3;
 }
 
 .app-shell__header--row {
@@ -39,7 +39,7 @@
   flex-wrap: wrap;
   align-items: flex-start;
   justify-content: space-between;
-  gap: calc(#{$space-unit} * 3);
+  gap: $layout-stack-gap;
 }
 
 .app-shell__title {
@@ -51,32 +51,32 @@
 }
 
 .app-shell__tagline {
-  margin: calc(#{$space-unit} * 1) 0 0;
+  margin: $space-1 0 0;
   font-size: 0.875rem;
   color: $color-text-muted;
 
   &--compact {
-    margin-top: calc(#{$space-unit} * 1);
+    margin-top: $space-1;
   }
 }
 
 .app-shell__header-main {
   display: flex;
   flex-direction: column;
-  gap: calc(#{$space-unit} * 2);
+  gap: $space-2;
 }
 
 .app-shell__nav {
   display: flex;
   flex-wrap: wrap;
-  gap: calc(#{$space-unit} * 2);
+  gap: $space-3;
 }
 
 .app-shell__nav-link {
   display: inline-flex;
   align-items: center;
-  min-height: 36px;
-  padding: calc(#{$space-unit} * 1) calc(#{$space-unit} * 2);
+  min-height: $touch-target-min;
+  padding: $space-1 $space-3;
   border: 1px solid $color-border;
   border-radius: $radius-sm;
   text-decoration: none;
@@ -92,7 +92,7 @@
 
 .app-shell__main {
   flex: 1 1 auto;
-  padding-block: calc(#{$space-unit} * 4);
+  padding-block: $layout-section-gap;
 
   &--centered {
     min-height: 100%;
@@ -104,7 +104,7 @@
 }
 
 .app-shell__status {
-  padding-block: calc(#{$space-unit} * 2) 0;
+  padding-block: $space-3 0;
 }
 
 .app-shell__placeholder {
@@ -117,15 +117,28 @@
 .app-shell__sign-out {
   flex-shrink: 0;
   align-self: center;
+  min-height: $touch-target-min;
 }
 
 .app-shell__intro {
-  margin-bottom: calc(#{$space-unit} * 4);
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: $layout-stack-gap;
+}
+
+.app-shell__flow {
+  display: flex;
+  flex-direction: column;
+  gap: $layout-section-gap;
 }
 
 .app-shell__link {
   display: inline-flex;
-  margin-top: calc(#{$space-unit} * 2);
+  align-self: flex-start;
+  align-items: center;
+  min-height: $touch-target-min;
+  margin-top: 0;
 }
 
 .app-shell__code {
@@ -133,4 +146,18 @@
   font-size: 0.8125rem;
   word-break: break-all;
   color: $color-text;
+}
+
+@media (min-width: $breakpoint-md) {
+  .app-shell__container {
+    padding-inline: $space-6;
+  }
+
+  .app-shell__main {
+    padding-block: $layout-section-gap-lg;
+  }
+
+  .app-shell__flow {
+    gap: $layout-section-gap-lg;
+  }
 }
