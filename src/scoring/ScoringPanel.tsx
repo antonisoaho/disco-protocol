@@ -1165,24 +1165,22 @@ export function ScoringPanel({ user, selectedCourseTemplate, favoriteCourseIds }
                 })}
               </div>
             </div>
-            <div className="scoring-panel__row scoring-panel__row--compact">
-              <div className="scoring-panel__field scoring-panel__field--grow scoring-panel__field--compact">
-                <label className="scoring-panel__label" htmlFor="new-round-anonymous-name">
-                  {t('scoring.labels.playerNameOptional')}
-                </label>
-                <input
-                  id="new-round-anonymous-name"
-                  className="scoring-panel__input"
-                  value={newRoundAnonymousName}
-                  onChange={(event) => setNewRoundAnonymousName(event.target.value)}
-                  placeholder={t('scoring.placeholders.playerName')}
-                  autoComplete="off"
-                />
-                <p className="scoring-panel__muted">{t('scoring.messages.addPlayerHelper')}</p>
-              </div>
+            <div className="scoring-panel__field scoring-panel__field--grow scoring-panel__field--compact scoring-panel__field--add-player">
+              <label className="scoring-panel__label" htmlFor="new-round-anonymous-name">
+                {t('scoring.labels.playerNameOptional')}
+              </label>
+              <input
+                id="new-round-anonymous-name"
+                className="scoring-panel__input"
+                value={newRoundAnonymousName}
+                onChange={(event) => setNewRoundAnonymousName(event.target.value)}
+                placeholder={t('scoring.placeholders.playerName')}
+                autoComplete="off"
+              />
+              <p className="scoring-panel__muted">{t('scoring.messages.addPlayerHelper')}</p>
               <button
                 type="button"
-                className="scoring-panel__button scoring-panel__button--primary"
+                className="scoring-panel__button scoring-panel__button--primary scoring-panel__button--field-submit"
                 onClick={onAddNewRoundAnonymousParticipant}
                 disabled={busy}
               >
