@@ -12,7 +12,9 @@ service cloud.firestore {
     }
 
     function isAdmin() {
-      return signedIn() && request.auth.token.admin == true;
+      return signedIn()
+        && exists(/databases/$(database)/documents/users/$(request.auth.uid))
+        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.admin == true;
     }
 
     function validVisibility(v) {
@@ -112,7 +114,18 @@ service cloud.firestore {
     }
 
     match /users/{userId} {
-      allow read, write: if signedIn() && request.auth.uid == userId;
+      allow read: if signedIn() && request.auth.uid == userId;
+
+      // Users may manage their own profile fields but cannot self-assign admin.
+      allow create: if signedIn()
+        && request.auth.uid == userId
+        && request.resource.data.admin != true;
+
+      allow update: if signedIn()
+        && request.auth.uid == userId
+        && request.resource.data.admin == resource.data.admin;
+
+      allow delete: if signedIn() && request.auth.uid == userId;
     }
 
     match /courses/{courseId} {

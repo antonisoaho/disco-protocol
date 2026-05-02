@@ -1,7 +1,9 @@
 import {
   addDoc,
   collection,
+  deleteDoc,
   doc,
+  getDocs,
   onSnapshot,
   orderBy,
   query,
@@ -146,4 +148,16 @@ export async function updateCourseDetails(params: {
     name: normalizeCourseName(params.name),
     city: normalizeCourseCity(params.city ?? ''),
   })
+}
+
+/** Admin-only helper: remove templates first, then the parent course document. */
+export async function deleteCourseWithTemplates(courseId: string): Promise<void> {
+  const templatesRef = collection(db, COLLECTIONS.courses, courseId, COLLECTIONS.templates)
+  const templatesSnapshot = await getDocs(templatesRef)
+
+  for (const templateSnapshot of templatesSnapshot.docs) {
+    await deleteDoc(templateSnapshot.ref)
+  }
+
+  await deleteDoc(doc(db, COLLECTIONS.courses, courseId))
 }
