@@ -1,21 +1,16 @@
 import type { User } from 'firebase/auth'
 import { useEffect, useMemo, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { followUser, subscribeFollowers, subscribeFollowing, unfollowUser } from '../firebase/follows'
 import { subscribeUserDirectory, type UserDirectoryEntry } from '../firebase/userDirectory'
+import { directoryDisplayName, filterDiscoverableUsers } from './followSearch'
 
 type Props = {
   user: User
 }
 
-function displayName(entry: UserDirectoryEntry): string {
-  return entry.displayName.trim().length > 0 ? entry.displayName.trim() : entry.uid
-}
-
-function escapeRegExp(value: string): string {
-  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-}
-
 export function FollowPanel({ user }: Props) {
+  const { t } = useTranslation('common')
   const [directoryEntries, setDirectoryEntries] = useState<UserDirectoryEntry[]>([])
   const [relationshipState, setRelationshipState] = useState<{
     followingIds: string[]
@@ -78,31 +73,15 @@ export function FollowPanel({ user }: Props) {
     if (!map[user.uid]) {
       map[user.uid] = {
         uid: user.uid,
-        displayName: user.displayName?.trim() || user.email?.split('@')[0] || 'You',
+        displayName: user.displayName?.trim() || user.email?.split('@')[0] || t('follow.fallbackSelfLabel'),
         subtitle: user.uid,
       }
     }
     return map
-  }, [directoryEntries, user.displayName, user.email, user.uid])
+  }, [directoryEntries, t, user.displayName, user.email, user.uid])
 
   const visibleEntries = useMemo(() => {
-    const normalizedQuery = query.trim().toLowerCase()
-    const searchRegex = normalizedQuery ? new RegExp(escapeRegExp(normalizedQuery), 'i') : null
-    const next: UserDirectoryEntry[] = []
-    for (const entry of directoryEntries) {
-      if (entry.uid === user.uid) {
-        continue
-      }
-      if (!searchRegex) {
-        next.push(entry)
-        continue
-      }
-      const match = searchRegex.test(displayName(entry)) || searchRegex.test(entry.uid)
-      if (match) {
-        next.push(entry)
-      }
-    }
-    return next
+    return filterDiscoverableUsers(directoryEntries, user.uid, query)
   }, [directoryEntries, query, user.uid])
 
   const followingNames = useMemo(() => {
@@ -110,7 +89,7 @@ export function FollowPanel({ user }: Props) {
       return []
     }
     return relationshipState.followingIds
-      .map((uid) => displayName(directoryByUid[uid] ?? { uid, displayName: uid, subtitle: uid }))
+      .map((uid) => directoryDisplayName(directoryByUid[uid] ?? { uid, displayName: uid, subtitle: uid }))
       .sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }))
   }, [directoryByUid, relationshipState.followingIds])
 
@@ -125,7 +104,8 @@ export function FollowPanel({ user }: Props) {
     } catch (nextError) {
       setActionState((current) => ({
         ...current,
-        error: nextError instanceof Error ? nextError.message : 'Could not update follow relationship.',
+        error:
+          nextError instanceof Error ? nextError.message : t('follow.errors.updateRelationshipFallback'),
       }))
     } finally {
       setActionState((current) => ({ ...current, pendingUid: null }))
@@ -135,22 +115,24 @@ export function FollowPanel({ user }: Props) {
   return (
     <section className="follow-panel card" aria-labelledby="follow-panel-title">
       <h2 id="follow-panel-title" className="follow-panel__title">
-        Social graph MVP
+        {t('follow.title')}
       </h2>
       <p className="follow-panel__meta">
-        Following <strong>{relationshipState.followingIds.length}</strong> · Followers{' '}
-        <strong>{relationshipState.followerIds.length}</strong>
+        {t('follow.relationshipCounts', {
+          followingCount: relationshipState.followingIds.length,
+          followerCount: relationshipState.followerIds.length,
+        })}
       </p>
       <p className="follow-panel__meta">
-        Directory players: <strong>{directoryEntries.length}</strong>
+        {t('follow.directoryCount', { count: directoryEntries.length })}
       </p>
       {followingNames.length > 0 ? (
         <p className="follow-panel__meta">
-          Following list: <span>{followingNames.slice(0, 8).join(', ')}</span>
-          {followingNames.length > 8 ? '…' : ''}
+          {t('follow.followingList', { names: followingNames.slice(0, 8).join(', ') })}
+          {followingNames.length > 8 ? t('follow.moreNamesEllipsis') : ''}
         </p>
       ) : (
-        <p className="follow-panel__meta">You are not following anyone yet.</p>
+        <p className="follow-panel__meta">{t('follow.noFollowingYet')}</p>
       )}
       {actionState.error ? (
         <p className="follow-panel__error" role="alert">
@@ -158,16 +140,17 @@ export function FollowPanel({ user }: Props) {
         </p>
       ) : null}
       <label className="follow-panel__label" htmlFor="follow-search">
-        Search players to follow
+        {t('follow.searchLabel')}
       </label>
       <input
         id="follow-search"
         className="follow-panel__search"
         value={query}
         onChange={(event) => setQuery(event.target.value)}
-        placeholder="Search by display name or uid"
+        placeholder={t('follow.searchPlaceholder')}
         autoComplete="off"
       />
+      {visibleEntries.length === 0 ? <p className="follow-panel__meta">{t('follow.noResults')}</p> : null}
       <ul className="follow-panel__list">
         {visibleEntries.map((entry) => {
           const isFollowing = followingIdSet.has(entry.uid)
@@ -175,7 +158,7 @@ export function FollowPanel({ user }: Props) {
           return (
             <li key={entry.uid} className="follow-panel__item">
               <div>
-                <strong>{displayName(entry)}</strong>
+                <strong>{directoryDisplayName(entry)}</strong>
                 <p className="follow-panel__uid">{entry.uid}</p>
               </div>
               <button
@@ -185,12 +168,17 @@ export function FollowPanel({ user }: Props) {
                 disabled={isPending}
                 onClick={() => void onToggleFollow(entry.uid)}
               >
-                {isPending ? 'Saving…' : isFollowing ? 'Unfollow' : 'Follow'}
+                {isPending
+                  ? t('follow.buttons.saving')
+                  : isFollowing
+                    ? t('follow.buttons.unfollow')
+                    : t('follow.buttons.follow')}
               </button>
             </li>
           )
         })}
       </ul>
+      <p className="follow-panel__meta">{t('follow.missingSearchIndexNotice')}</p>
     </section>
   )
 }

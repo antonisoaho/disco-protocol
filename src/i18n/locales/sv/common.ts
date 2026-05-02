@@ -48,6 +48,28 @@ export const commonSv = {
       participantsAdded: 'Lade till {{count}} deltagare.',
     },
   },
+  follow: {
+    title: 'Upptäck spelare',
+    fallbackSelfLabel: 'Du',
+    relationshipCounts: 'Följer {{followingCount}} · Följare {{followerCount}}',
+    directoryCount: 'Spelare i katalogen: {{count}}',
+    followingList: 'Följer: {{names}}',
+    moreNamesEllipsis: '…',
+    noFollowingYet: 'Du följer ingen ännu.',
+    searchLabel: 'Sök spelare att följa',
+    searchPlaceholder: 'Sök på visningsnamn eller uid',
+    noResults: 'Inga användare matchar sökningen ännu.',
+    missingSearchIndexNotice:
+      'Sökningen filtreras just nu lokalt från katalogsnapshoten för inloggade användare. Om katalogen växer bör en dedikerad sökindexering användas.',
+    errors: {
+      updateRelationshipFallback: 'Kunde inte uppdatera följer-relationen.',
+    },
+    buttons: {
+      saving: 'Sparar…',
+      follow: 'Följ',
+      unfollow: 'Sluta följa',
+    },
+  },
   courses: {
     deleteCourseLabel: 'Ta bort bana',
     deleteCourse: 'Ta bort bana',

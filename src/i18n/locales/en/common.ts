@@ -47,6 +47,28 @@ export const commonEn = {
       participantsAdded: 'Added {{count}} participants.',
     },
   },
+  follow: {
+    title: 'Discover players',
+    fallbackSelfLabel: 'You',
+    relationshipCounts: 'Following {{followingCount}} · Followers {{followerCount}}',
+    directoryCount: 'Directory players: {{count}}',
+    followingList: 'Following list: {{names}}',
+    moreNamesEllipsis: '…',
+    noFollowingYet: 'You are not following anyone yet.',
+    searchLabel: 'Search players to follow',
+    searchPlaceholder: 'Search by display name or uid',
+    noResults: 'No users match this search yet.',
+    missingSearchIndexNotice:
+      'Search is currently client-filtered from the signed-in user directory snapshot. If the directory grows, move to a dedicated search index.',
+    errors: {
+      updateRelationshipFallback: 'Could not update follow relationship.',
+    },
+    buttons: {
+      saving: 'Saving…',
+      follow: 'Follow',
+      unfollow: 'Unfollow',
+    },
+  },
   courses: {
     deleteCourseLabel: 'Delete course',
     deleteCourse: 'Delete course',

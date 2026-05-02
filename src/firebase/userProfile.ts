@@ -5,7 +5,6 @@ import { db } from './firestore'
 export type UserProfileDoc = {
   displayName: string
   photoUrl: string | null
-  bio?: string
   /** Set by trusted backend tooling; never client-assigned. */
   admin?: boolean
   createdAt: Timestamp
@@ -27,7 +26,6 @@ export async function ensureUserProfile(authUser: User): Promise<void> {
   await setDoc(ref, {
     displayName,
     photoUrl: authUser.photoURL ?? null,
-    bio: '',
     createdAt: serverTimestamp(),
   })
 

@@ -113,16 +113,28 @@ service cloud.firestore {
       return signedIn() && data.followerUid == request.auth.uid;
     }
 
-    match /users/{userId} {
-      allow read: if signedIn() && request.auth.uid == userId;
+    function validPublicUserProfile(data) {
+      return data.keys().hasOnly(['displayName', 'photoUrl', 'admin', 'createdAt'])
+        && data.displayName is string
+        && data.displayName.size() > 0
+        && data.displayName.size() <= 80
+        && (data.photoUrl == null || data.photoUrl is string)
+        && (!data.keys().hasAny(['admin']) || data.admin is bool)
+        && data.createdAt is timestamp;
+    }
 
-      // Users may manage their own profile fields but cannot self-assign admin.
+    match /users/{userId} {
+      allow get, list: if signedIn();
+
       allow create: if signedIn()
         && request.auth.uid == userId
+        && validPublicUserProfile(request.resource.data)
         && request.resource.data.admin != true;
 
       allow update: if signedIn()
         && request.auth.uid == userId
+        && validPublicUserProfile(request.resource.data)
+        && request.resource.data.createdAt == resource.data.createdAt
         && request.resource.data.admin == resource.data.admin;
 
       allow delete: if signedIn() && request.auth.uid == userId;
