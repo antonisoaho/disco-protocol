@@ -18,6 +18,23 @@ export const commonSv = {
       'Sök efter banans namn eller stad och använd sortering nära mig när platsdata är tillgänglig.',
     backToRoundSetup: 'Tillbaka till rundinställning',
   },
+  profile: {
+    title: 'Profil',
+    displayName: 'Visningsnamn',
+    currentDisplayName: 'Nuvarande visningsnamn: {{displayName}}',
+    actions: {
+      save: 'Spara',
+      saving: 'Sparar…',
+    },
+    messages: {
+      displayNameSaved: 'Visningsnamnet uppdaterades.',
+    },
+    errors: {
+      displayNameRequired: 'Visningsnamn krävs.',
+      displayNameTooLong: 'Visningsnamn måste vara högst {{max}} tecken.',
+      displayNameUpdateFailed: 'Kunde inte uppdatera visningsnamnet.',
+    },
+  },
   auth: {
     title: {
       signIn: 'Logga in',

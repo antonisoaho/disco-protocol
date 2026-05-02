@@ -127,6 +127,46 @@
   gap: $layout-stack-gap;
 }
 
+.app-shell__profile {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: $space-3;
+}
+
+.app-shell__section-title {
+  margin: 0;
+  font-size: 1rem;
+  color: $color-text;
+}
+
+.app-shell__profile-form {
+  display: flex;
+  flex-direction: column;
+  gap: $space-3;
+}
+
+.app-shell__profile-field {
+  display: flex;
+  flex-direction: column;
+  gap: $space-2;
+}
+
+.app-shell__profile-label {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: $color-text;
+}
+
+.app-shell__profile-input {
+  min-height: $touch-target-min;
+}
+
+.app-shell__profile-actions {
+  display: flex;
+  justify-content: flex-start;
+}
+
 .app-shell__flow {
   display: flex;
   flex-direction: column;

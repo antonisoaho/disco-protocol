@@ -135,7 +135,6 @@ service cloud.firestore {
       allow update: if signedIn()
         && request.auth.uid == userId
         && validPublicUserProfile(request.resource.data)
-        && request.resource.data.displayName == resource.data.displayName
         && request.resource.data.photoUrl == resource.data.photoUrl
         && request.resource.data.createdAt == resource.data.createdAt
         && request.resource.data.admin == resource.data.admin;
