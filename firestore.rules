@@ -114,11 +114,12 @@ service cloud.firestore {
     }
 
     function validPublicUserProfile(data) {
-      return data.keys().hasOnly(['displayName', 'photoUrl', 'admin', 'createdAt'])
+      return data.keys().hasOnly(['displayName', 'photoUrl', 'favoriteCourseIds', 'admin', 'createdAt'])
         && data.displayName is string
         && data.displayName.size() > 0
         && data.displayName.size() <= 80
         && (data.photoUrl == null || data.photoUrl is string)
+        && (!data.keys().hasAny(['favoriteCourseIds']) || data.favoriteCourseIds is list)
         && (!data.keys().hasAny(['admin']) || data.admin is bool)
         && data.createdAt is timestamp;
     }
@@ -134,6 +135,8 @@ service cloud.firestore {
       allow update: if signedIn()
         && request.auth.uid == userId
         && validPublicUserProfile(request.resource.data)
+        && request.resource.data.displayName == resource.data.displayName
+        && request.resource.data.photoUrl == resource.data.photoUrl
         && request.resource.data.createdAt == resource.data.createdAt
         && request.resource.data.admin == resource.data.admin;
 

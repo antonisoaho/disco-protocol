@@ -3,7 +3,13 @@ import type { Timestamp } from 'firebase/firestore'
 import type { TFunction } from 'i18next'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import type { CourseRoundSelection } from '../courses/courseData'
+import {
+  loadRoundSelectionForCourse,
+  subscribeCourses,
+  type CourseRoundSelection,
+  type CourseWithId,
+} from '../courses/courseData'
+import { sortCoursesForRoundStart } from '../courses/roundStartSort'
 import { translateUserError } from '../i18n/translateError'
 import { computeHeadToHeadSummary, computeParticipantParSummary } from '../analytics/roundAnalytics'
 import {
@@ -52,6 +58,7 @@ import { computeGrandTotals, computeParticipantTotals } from './scorecardTable'
 type Props = {
   user: User
   selectedCourseTemplate: CourseRoundSelection | null
+  favoriteCourseIds: string[]
 }
 
 const DEFAULT_ROUND_HOLE_COUNT = 18
@@ -214,13 +221,15 @@ function scoreTierLabel(t: TFunction<'common'>, tier: ScoreTier): string {
   }
 }
 
-export function ScoringPanel({ user, selectedCourseTemplate }: Props) {
+export function ScoringPanel({ user, selectedCourseTemplate, favoriteCourseIds }: Props) {
   const { t } = useTranslation('common')
   const uid = user.uid
   const [activeTab, setActiveTab] = useState<AppTabId>('scorecard')
   const [items, setItems] = useState<{ id: string; data: RoundDoc }[]>([])
   const [selectedId, setSelectedId] = useState<string | null>(null)
-  const [startMode, setStartMode] = useState<'saved' | 'fresh'>('saved')
+  const [startCourseSelection, setStartCourseSelection] = useState('fresh')
+  const [availableCourses, setAvailableCourses] = useState<CourseWithId[]>([])
+  const [courseLoadError, setCourseLoadError] = useState<string | null>(null)
   const [freshCourseName, setFreshCourseName] = useState('')
   const [freshHoleCount, setFreshHoleCount] = useState(DEFAULT_FRESH_HOLE_COUNT)
   const [visibility, setVisibility] = useState<RoundVisibility>('private')
@@ -255,6 +264,17 @@ export function ScoringPanel({ user, selectedCourseTemplate }: Props) {
     )
     return () => unsub()
   }, [t, uid])
+
+  useEffect(() => {
+    const unsub = subscribeCourses(
+      (rows) => {
+        setAvailableCourses(rows)
+        setCourseLoadError(null)
+      },
+      (nextError) => setCourseLoadError(translateUserError(t, nextError.message)),
+    )
+    return () => unsub()
+  }, [t])
 
   useEffect(() => {
     const unsub = subscribeUserDirectory(
@@ -293,6 +313,23 @@ export function ScoringPanel({ user, selectedCourseTemplate }: Props) {
   }, [uid])
 
   const selected = useMemo(() => items.find((round) => round.id === selectedId) ?? null, [items, selectedId])
+  const effectiveStartCourseSelection = useMemo(() => {
+    if (startCourseSelection === 'fresh') {
+      return 'fresh'
+    }
+    return availableCourses.some((course) => course.id === startCourseSelection)
+      ? startCourseSelection
+      : 'fresh'
+  }, [availableCourses, startCourseSelection])
+  const startMode: 'saved' | 'fresh' = effectiveStartCourseSelection === 'fresh' ? 'fresh' : 'saved'
+  const sortedRoundStartCourses = useMemo(
+    () => sortCoursesForRoundStart(availableCourses, favoriteCourseIds),
+    [availableCourses, favoriteCourseIds],
+  )
+  const selectedSavedCourse = useMemo(
+    () => sortedRoundStartCourses.find((course) => course.id === effectiveStartCourseSelection) ?? null,
+    [effectiveStartCourseSelection, sortedRoundStartCourses],
+  )
   const selectedHoleCount = useMemo(
     () => (selected ? inferRoundHoleCount(selected.data) : null),
     [selected],
@@ -718,16 +755,28 @@ export function ScoringPanel({ user, selectedCourseTemplate }: Props) {
       const anonymousParticipants = mergeAnonymousParticipants(participantIds, newRoundAnonymousParticipants)
       let id = ''
       if (startMode === 'saved') {
-        if (!selectedCourseTemplate) {
-          setError(t('scoring.errors.selectTemplateOrFresh'))
+        if (!selectedSavedCourse) {
+          setError(t('scoring.errors.selectCourseOrFresh'))
           return
         }
-        const safeHoleCount = Math.min(36, Math.max(1, selectedCourseTemplate.holeCount))
+        const resolvedSelection = await loadRoundSelectionForCourse({
+          courseId: selectedSavedCourse.id,
+          courseName: selectedSavedCourse.name,
+          preferredTemplateId:
+            selectedCourseTemplate?.courseId === selectedSavedCourse.id
+              ? selectedCourseTemplate.templateId
+              : null,
+        })
+        if (!resolvedSelection) {
+          setError(t('scoring.errors.selectedCourseHasNoTemplates'))
+          return
+        }
+        const safeHoleCount = Math.min(36, Math.max(1, resolvedSelection.holeCount))
         id = await createRound({
           ownerId: uid,
           courseSource: 'saved',
-          courseId: selectedCourseTemplate.courseId,
-          templateId: selectedCourseTemplate.templateId,
+          courseId: resolvedSelection.courseId,
+          templateId: resolvedSelection.templateId,
           holeCount: safeHoleCount,
           visibility,
           participantIds,
@@ -756,6 +805,7 @@ export function ScoringPanel({ user, selectedCourseTemplate }: Props) {
       setHoleDraft(null)
       setSaveState('saved')
       setExpandedPlayers({})
+      setStartCourseSelection('fresh')
       setNewRoundParticipantQuery('')
       setNewRoundAnonymousName('')
       setNewRoundAnonymousParticipants([])
@@ -781,6 +831,7 @@ export function ScoringPanel({ user, selectedCourseTemplate }: Props) {
     newRoundParticipants,
     newRoundAnonymousParticipants,
     selectedCourseTemplate,
+    selectedSavedCourse,
     startMode,
     t,
     uid,
@@ -992,35 +1043,43 @@ export function ScoringPanel({ user, selectedCourseTemplate }: Props) {
         <>
           <div className="scoring-panel__section">
             <span className="scoring-panel__label">{t('scoring.sections.startRound')}</span>
-            <div className="scoring-panel__mode-switch">
-              <button
-                type="button"
-                className={`scoring-panel__button${startMode === 'saved' ? ' scoring-panel__button--active' : ''}`}
-                onClick={() => setStartMode('saved')}
+            <div className="scoring-panel__field scoring-panel__field--grow">
+              <label className="scoring-panel__label" htmlFor="round-course-selection">
+                {t('scoring.start.courseToPlay')}
+              </label>
+              <select
+                id="round-course-selection"
+                className="scoring-panel__select"
+                value={effectiveStartCourseSelection}
+                onChange={(event) => setStartCourseSelection(event.target.value)}
                 disabled={busy}
               >
-                {t('scoring.buttons.savedCourse')}
-              </button>
-              <button
-                type="button"
-                className={`scoring-panel__button${startMode === 'fresh' ? ' scoring-panel__button--active' : ''}`}
-                onClick={() => setStartMode('fresh')}
-                disabled={busy}
-              >
-                {t('scoring.buttons.freshInstance')}
-              </button>
+                <option value="fresh">{t('courses.freshOption')}</option>
+                {sortedRoundStartCourses.map((course) => (
+                  <option key={course.id} value={course.id}>
+                    {course.name}
+                  </option>
+                ))}
+              </select>
+              {courseLoadError ? (
+                <p className="scoring-panel__error" role="alert">
+                  {courseLoadError}
+                </p>
+              ) : null}
             </div>
             {startMode === 'saved' ? (
-              selectedCourseTemplate ? (
+              selectedSavedCourse ? (
                 <p className="scoring-panel__selection">
-                  {t('scoring.start.usingSelection', {
-                    courseName: selectedCourseTemplate.courseName,
-                    templateLabel: selectedCourseTemplate.templateLabel,
-                    holeCount: selectedCourseTemplate.holeCount,
+                  {t('scoring.start.savedSelection', {
+                    courseName: selectedSavedCourse.name,
+                    templateLabel:
+                      selectedCourseTemplate?.courseId === selectedSavedCourse.id
+                        ? selectedCourseTemplate.templateLabel
+                        : t('scoring.start.defaultTemplateLabel'),
                   })}
                 </p>
               ) : (
-                <p className="scoring-panel__muted">{t('scoring.start.savedHint')}</p>
+                <p className="scoring-panel__muted">{t('scoring.start.noSavedCourses')}</p>
               )
             ) : (
               <>
@@ -1166,7 +1225,7 @@ export function ScoringPanel({ user, selectedCourseTemplate }: Props) {
                 type="button"
                 className="scoring-panel__button scoring-panel__button--primary"
                 onClick={() => void onCreateRound()}
-                disabled={busy || (startMode === 'saved' && !selectedCourseTemplate)}
+                disabled={busy || (startMode === 'saved' && !selectedSavedCourse)}
               >
                 {t('scoring.buttons.newRound')}
               </button>

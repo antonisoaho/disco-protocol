@@ -25,9 +25,16 @@ import {
 type Props = {
   selection: CourseRoundSelection | null
   onSelectionChange: (selection: CourseRoundSelection | null) => void
+  favoriteCourseIds: string[]
+  onToggleFavoriteCourse: (courseId: string, isFavorite: boolean) => Promise<void>
 }
 
-export function CoursePicker({ selection, onSelectionChange }: Props) {
+export function CoursePicker({
+  selection,
+  onSelectionChange,
+  favoriteCourseIds,
+  onToggleFavoriteCourse,
+}: Props) {
   const { t } = useTranslation('common')
   const { user, isAdmin } = useAuth()
   const [courses, setCourses] = useState<CourseWithId[]>([])
@@ -146,6 +153,7 @@ export function CoursePicker({ selection, onSelectionChange }: Props) {
       }),
     [cityQuery, courses, nameQuery, nearMeOnly, sortByDistance, userLocation],
   )
+  const favoriteCourseIdSet = useMemo(() => new Set(favoriteCourseIds), [favoriteCourseIds])
   const pickedTemplate = useMemo(
     () => templates.find((template) => template.id === pickedTemplateId) ?? null,
     [pickedTemplateId, templates],
@@ -451,25 +459,49 @@ export function CoursePicker({ selection, onSelectionChange }: Props) {
         <p className="course-picker__empty">{t('courses.empty.noMatches')}</p>
       ) : (
         <ul className="course-picker__list">
-          {filteredCourses.map((c) => (
-            <li key={c.id} className="course-picker__item">
-              <button
-                type="button"
-                className={`course-picker__course-btn${c.id === activeCourseId ? ' course-picker__course-btn--active' : ''}`}
-                onClick={() => setActiveCourseId(c.id)}
-              >
-                <span className="course-picker__course-name">{c.name}</span>
-                <span className="course-picker__course-meta">
-                  {[c.city, c.organization, c.slug].filter(Boolean).join(' · ') || t('courses.courseCard.fallbackMeta')}
-                </span>
-                {typeof c.distanceKm === 'number' ? (
-                  <span className="course-picker__course-meta">
-                    {t('courses.courseCard.distanceKmAway', { distanceKm: c.distanceKm.toFixed(1) })}
-                  </span>
-                ) : null}
-              </button>
-            </li>
-          ))}
+          {filteredCourses.map((c) => {
+            const isFavorite = favoriteCourseIdSet.has(c.id)
+            return (
+              <li key={c.id} className="course-picker__item">
+                <div className="course-picker__course-row">
+                  <button
+                    type="button"
+                    className={`course-picker__course-btn${c.id === activeCourseId ? ' course-picker__course-btn--active' : ''}`}
+                    onClick={() => setActiveCourseId(c.id)}
+                  >
+                    <span className="course-picker__course-name">{c.name}</span>
+                    <span className="course-picker__course-meta">
+                      {[c.city, c.organization, c.slug].filter(Boolean).join(' · ') ||
+                        t('courses.courseCard.fallbackMeta')}
+                    </span>
+                    {typeof c.distanceKm === 'number' ? (
+                      <span className="course-picker__course-meta">
+                        {t('courses.courseCard.distanceKmAway', { distanceKm: c.distanceKm.toFixed(1) })}
+                      </span>
+                    ) : null}
+                  </button>
+                  <button
+                    type="button"
+                    className={`course-picker__favorite-btn${isFavorite ? ' course-picker__favorite-btn--active' : ''}`}
+                    onClick={() => void onToggleFavoriteCourse(c.id, !isFavorite)}
+                    aria-pressed={isFavorite}
+                    aria-label={
+                      isFavorite
+                        ? t('courses.favourites.removeAria', { courseName: c.name })
+                        : t('courses.favourites.addAria', { courseName: c.name })
+                    }
+                    title={
+                      isFavorite
+                        ? t('courses.favourites.removeAria', { courseName: c.name })
+                        : t('courses.favourites.addAria', { courseName: c.name })
+                    }
+                  >
+                    {isFavorite ? '★' : '☆'}
+                  </button>
+                </div>
+              </li>
+            )
+          })}
         </ul>
       )}
 

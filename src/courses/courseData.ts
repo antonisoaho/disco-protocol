@@ -59,6 +59,37 @@ export function subscribeTemplates(
   )
 }
 
+export async function loadRoundSelectionForCourse(params: {
+  courseId: string
+  courseName: string
+  preferredTemplateId?: string | null
+}): Promise<CourseRoundSelection | null> {
+  const templatesSnapshot = await getDocs(
+    query(collection(db, COLLECTIONS.courses, params.courseId, COLLECTIONS.templates), orderBy('label')),
+  )
+  const templates = templatesSnapshot.docs.map((docSnapshot) => ({
+    id: docSnapshot.id,
+    ...(docSnapshot.data() as CourseTemplateDoc),
+  }))
+  if (templates.length === 0) {
+    return null
+  }
+  const preferredTemplate =
+    (params.preferredTemplateId
+      ? templates.find((template) => template.id === params.preferredTemplateId)
+      : null) ??
+    templates.find((template) => template.isDefault) ??
+    templates[0]
+
+  return {
+    courseId: params.courseId,
+    courseName: params.courseName,
+    templateId: preferredTemplate.id,
+    templateLabel: preferredTemplate.label,
+    holeCount: preferredTemplate.holes.length,
+  }
+}
+
 /** Creates a course and a starter “Main” template so the picker always has a layout row. */
 export async function createCourseWithDefaultTemplate(params: {
   name: string
