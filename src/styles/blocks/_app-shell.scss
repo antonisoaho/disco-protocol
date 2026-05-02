@@ -18,17 +18,28 @@
 
 .app-shell__header {
   flex-shrink: 0;
-  padding: calc(#{$space-unit} * 4) calc(#{$space-unit} * 4) calc(#{$space-unit} * 2);
   border-bottom: 1px solid $color-border;
   background: $color-surface;
+  width: 100%;
+}
 
-  &--row {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: flex-start;
-    justify-content: space-between;
-    gap: calc(#{$space-unit} * 3);
-  }
+.app-shell__container {
+  width: 100%;
+  max-width: $app-shell-content-max-width;
+  margin-inline: auto;
+  padding-inline: $app-shell-inline-padding;
+}
+
+.app-shell__header-inner {
+  padding-block: calc(#{$space-unit} * 4) calc(#{$space-unit} * 2);
+}
+
+.app-shell__header--row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: calc(#{$space-unit} * 3);
 }
 
 .app-shell__title {
@@ -81,14 +92,19 @@
 
 .app-shell__main {
   flex: 1 1 auto;
-  padding: calc(#{$space-unit} * 4);
+  padding-block: calc(#{$space-unit} * 4);
 
   &--centered {
+    min-height: 100%;
     display: flex;
     align-items: center;
     justify-content: center;
     text-align: center;
   }
+}
+
+.app-shell__status {
+  padding-block: calc(#{$space-unit} * 2) 0;
 }
 
 .app-shell__placeholder {
