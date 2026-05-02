@@ -3,7 +3,7 @@
 
 .scoring-panel {
   margin-top: calc(#{$space-unit} * 4);
-  padding: calc(#{$space-unit} * 4);
+  padding: calc(#{$space-unit} * 3);
   border: 1px solid $color-border;
   border-radius: $radius-md;
   background: $color-surface;
@@ -25,9 +25,30 @@
 
 .scoring-panel__label {
   display: block;
-  margin-bottom: calc(#{$space-unit} * 2);
+  margin-bottom: calc(#{$space-unit} * 1.5);
   font-size: 0.85rem;
   color: $color-text-muted;
+}
+
+.scoring-panel__tabs {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: calc(#{$space-unit} * 1.5);
+  margin-bottom: calc(#{$space-unit} * 4);
+}
+
+.scoring-panel__tab {
+  border: 1px solid $color-border;
+  border-radius: $radius-sm;
+  background: $color-bg;
+  color: $color-text;
+  padding: calc(#{$space-unit} * 1.75) calc(#{$space-unit} * 2.25);
+  font-weight: 600;
+
+  &--active {
+    border-color: map.get($score-color, eagle);
+    background: color-mix(in srgb, map.get($score-color, eagle) 9%, $color-surface);
+  }
 }
 
 .scoring-panel__row {
@@ -48,12 +69,18 @@
     flex: 1;
     min-width: 12rem;
   }
+
+  &--compact {
+    min-width: 0;
+  }
 }
 
 .scoring-panel__input:focus-visible,
 .scoring-panel__select:focus-visible,
 .scoring-panel__button:focus-visible,
-.scoring-panel__scorecard-input:focus-visible {
+.scoring-panel__tab:focus-visible,
+.scoring-panel__player-row-toggle:focus-visible,
+.scoring-panel__hole-dot:focus-visible {
   outline: 2px solid map.get($score-color, eagle);
   outline-offset: 2px;
   border-color: map.get($score-color, eagle);
@@ -118,27 +145,6 @@
   color: $color-text;
 }
 
-.scoring-panel__analytics-summary {
-  margin: 0 0 calc(#{$space-unit} * 2);
-  font-size: 0.875rem;
-  color: $color-text-muted;
-}
-
-.scoring-panel__analytics-delta {
-  margin: 0 0 calc(#{$space-unit} * 2);
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: calc(#{$space-unit} * 1.5);
-}
-
-.scoring-panel__analytics-delta-value {
-  min-width: auto;
-  min-height: auto;
-  font-size: 1rem;
-  font-weight: 700;
-}
-
 .scoring-panel__participant-list {
   max-height: 12rem;
   overflow-y: auto;
@@ -185,6 +191,153 @@
   border: 1px solid $color-border;
   border-radius: $radius-sm;
   background: $color-bg;
+}
+
+.scoring-panel__hole-stepper {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  margin-top: calc(#{$space-unit} * 2);
+  margin-bottom: calc(#{$space-unit} * 2);
+  padding: calc(#{$space-unit} * 2.5);
+  border: 1px solid $color-border;
+  border-radius: $radius-sm;
+  background: color-mix(in srgb, $color-surface 95%, $color-bg);
+}
+
+.scoring-panel__hole-stepper-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: calc(#{$space-unit} * 2);
+  margin-bottom: calc(#{$space-unit} * 2);
+}
+
+.scoring-panel__hole-stepper-title {
+  margin: 0;
+  font-weight: 700;
+}
+
+.scoring-panel__hole-stepper-meta {
+  margin: 0;
+  color: $color-text-muted;
+  font-size: 0.8rem;
+}
+
+.scoring-panel__hole-stepper-actions {
+  display: flex;
+  gap: calc(#{$space-unit} * 1.5);
+}
+
+.scoring-panel__hole-dots {
+  display: flex;
+  flex-wrap: wrap;
+  gap: calc(#{$space-unit} * 1);
+}
+
+.scoring-panel__hole-dot {
+  border: 1px solid $color-border;
+  border-radius: 999px;
+  background: $color-bg;
+  color: $color-text;
+  min-width: calc(#{$space-unit} * 6);
+  min-height: calc(#{$space-unit} * 6);
+  font-size: 0.78rem;
+  font-weight: 600;
+
+  &--active {
+    border-color: map.get($score-color, birdie);
+    background: map.get($score-color, birdie);
+    color: #fff;
+  }
+}
+
+.scoring-panel__hole-form {
+  border: 1px solid $color-border;
+  border-radius: $radius-sm;
+  background: $color-bg;
+  padding: calc(#{$space-unit} * 3);
+}
+
+.scoring-panel__hole-meta-row {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: calc(#{$space-unit} * 2);
+}
+
+.scoring-panel__player-rows {
+  display: flex;
+  flex-direction: column;
+  gap: calc(#{$space-unit} * 2);
+  margin-top: calc(#{$space-unit} * 2);
+}
+
+.scoring-panel__player-row {
+  border: 1px solid $color-border;
+  border-radius: $radius-sm;
+  overflow: hidden;
+  background: $color-surface;
+}
+
+.scoring-panel__player-row-toggle {
+  width: 100%;
+  border: 0;
+  background: color-mix(in srgb, $color-bg 85%, $color-surface);
+  color: $color-text;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: calc(#{$space-unit} * 2);
+  text-align: left;
+  padding: calc(#{$space-unit} * 2) calc(#{$space-unit} * 2.5);
+}
+
+.scoring-panel__player-row-name {
+  font-weight: 700;
+}
+
+.scoring-panel__player-row-summary {
+  color: $color-text-muted;
+  font-size: 0.8rem;
+}
+
+.scoring-panel__player-row-body {
+  padding: calc(#{$space-unit} * 2.5);
+  border-top: 1px solid $color-border;
+}
+
+.scoring-panel__player-row-notation {
+  margin: calc(#{$space-unit} * 1.5) 0 0;
+  font-size: 0.8rem;
+  font-weight: 700;
+
+  &.scoring-panel__notation--albatross-plus,
+  &.scoring-panel__notation--eagle {
+    color: map.get($score-color, eagle);
+  }
+
+  &.scoring-panel__notation--birdie {
+    color: map.get($score-color, birdie);
+  }
+
+  &.scoring-panel__notation--par {
+    color: map.get($score-color, par);
+  }
+
+  &.scoring-panel__notation--bogey {
+    color: map.get($score-color, bogey);
+  }
+
+  &.scoring-panel__notation--double-bogey,
+  &.scoring-panel__notation--triple-bogey-plus {
+    color: map.get($score-color, double-bogey-plus);
+  }
+}
+
+.scoring-panel__legend-footnote {
+  margin: calc(#{$space-unit} * 1.5) 0 0;
+  font-size: 0.75rem;
+  color: $color-text-muted;
 }
 
 .scoring-panel__score-notation {
@@ -262,221 +415,48 @@
   color: $color-text-muted;
 }
 
-.scoring-panel__scorecard-wrap {
-  --scorecard-shadow-width: calc(#{$space-unit} * 5);
-  --scorecard-hole-col-width: 4.5rem;
-  --scorecard-par-col-width: 5.75rem;
-  --scorecard-length-col-width: 6.5rem;
-  margin-top: calc(#{$space-unit} * 2);
-  position: relative;
-  overflow-x: auto;
-  overflow-y: auto;
-  max-height: min(70vh, 34rem);
-  border: 1px solid $color-border;
-  border-radius: $radius-sm;
-  background: $color-bg;
-  scrollbar-gutter: stable both-edges;
-
-  &::before,
-  &::after {
-    content: '';
-    position: absolute;
-    top: 0;
-    bottom: 0;
-    width: var(--scorecard-shadow-width);
-    pointer-events: none;
-    opacity: 0;
-    transition: opacity 140ms ease;
-    z-index: 5;
-  }
-
-  &::before {
-    left: 0;
-    background: linear-gradient(
-      90deg,
-      color-mix(in srgb, $color-surface 95%, transparent),
-      color-mix(in srgb, $color-surface 0%, transparent)
-    );
-  }
-
-  &::after {
-    right: 0;
-    background: linear-gradient(
-      270deg,
-      color-mix(in srgb, $color-surface 95%, transparent),
-      color-mix(in srgb, $color-surface 0%, transparent)
-    );
-  }
-
-  &--can-scroll-left::before {
-    opacity: 1;
-  }
-
-  &--can-scroll-right::after {
-    opacity: 1;
-  }
-}
-
-.scoring-panel__scorecard {
-  width: max-content;
-  min-width: max(100%, 44rem);
-  font-size: 0.8125rem;
-
-  th,
-  td {
-    white-space: nowrap;
-    vertical-align: middle;
-  }
-
-  thead th {
-    position: sticky;
-    top: 0;
-    z-index: 2;
-  }
-}
-
-.scoring-panel__scorecard-col--hole {
-  position: sticky;
-  left: 0;
-  width: var(--scorecard-hole-col-width);
-  min-width: var(--scorecard-hole-col-width);
-  z-index: 3;
-  background: $color-surface;
-}
-
-.scoring-panel__scorecard-col--par {
-  position: sticky;
-  left: var(--scorecard-hole-col-width);
-  width: var(--scorecard-par-col-width);
-  min-width: var(--scorecard-par-col-width);
-  z-index: 3;
-  background: color-mix(in srgb, $color-surface 88%, $color-bg);
-}
-
-.scoring-panel__scorecard-col--length {
-  position: sticky;
-  left: calc(var(--scorecard-hole-col-width) + var(--scorecard-par-col-width));
-  width: var(--scorecard-length-col-width);
-  min-width: var(--scorecard-length-col-width);
-  z-index: 3;
-  background: color-mix(in srgb, $color-surface 82%, $color-bg);
-}
-
-.scoring-panel__scorecard thead .scoring-panel__scorecard-col--hole,
-.scoring-panel__scorecard thead .scoring-panel__scorecard-col--par,
-.scoring-panel__scorecard thead .scoring-panel__scorecard-col--length {
-  z-index: 4;
-}
-
-.scoring-panel__scorecard-hole {
-  font-weight: 600;
-}
-
-.scoring-panel__scorecard-cell {
-  min-width: 7.5rem;
-}
-
-.scoring-panel__scorecard-participants {
-  margin-top: calc(#{$space-unit} * 2);
-  padding: calc(#{$space-unit} * 3);
-  display: flex;
-  flex-wrap: wrap;
-  gap: calc(#{$space-unit} * 3);
-  align-items: flex-end;
-  border: 1px solid $color-border;
-  border-radius: $radius-sm;
-  background: color-mix(in srgb, $color-bg 70%, $color-surface);
-}
-
-.scoring-panel__scorecard-input {
-  width: 4.75rem;
-  min-height: calc(#{$space-unit} * 8);
-  text-align: center;
-}
-
-.scoring-panel__scorecard-notation {
-  margin-left: calc(#{$space-unit} * 1.25);
-  min-width: 2rem;
-  min-height: 2rem;
-  font-size: 0.8rem;
-}
-
-.scoring-panel__scorecard-total-meta {
-  display: block;
-  margin-top: calc(#{$space-unit} * 1);
-  font-size: 0.75rem;
+.scoring-panel__analytics-summary {
+  margin: 0 0 calc(#{$space-unit} * 2);
+  font-size: 0.875rem;
   color: $color-text-muted;
 }
 
-.scoring-panel__scorecard-scroll-hint {
-  margin-top: calc(#{$space-unit} * 2);
+.scoring-panel__analytics-delta {
+  margin: 0 0 calc(#{$space-unit} * 2);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: calc(#{$space-unit} * 1.5);
+}
+
+.scoring-panel__analytics-delta-value {
+  min-width: auto;
+  min-height: auto;
+  font-size: 1rem;
+  font-weight: 700;
 }
 
 .scoring-panel__save-status {
   font-weight: 600;
   color: color-mix(in srgb, $color-text 84%, $color-text-muted);
-}
-
-.scoring-panel__scorecard-actions {
-  justify-content: space-between;
-  align-items: center;
   margin-top: calc(#{$space-unit} * 2);
-  margin-bottom: 0;
+  margin-bottom: calc(#{$space-unit} * 1);
 }
 
-@media (max-width: 767px) {
+.scoring-panel__scorecard-participants {
+  margin-top: calc(#{$space-unit} * 2);
+  padding: calc(#{$space-unit} * 3);
+  border: 1px solid $color-border;
+  border-radius: $radius-sm;
+  background: color-mix(in srgb, $color-bg 70%, $color-surface);
+}
+
+@media (min-width: 768px) {
   .scoring-panel {
-    padding: calc(#{$space-unit} * 3);
-    border-radius: $radius-sm;
+    padding: calc(#{$space-unit} * 4);
   }
 
-  .scoring-panel__row {
-    margin-bottom: calc(#{$space-unit} * 2.5);
-    align-items: stretch;
-  }
-
-  .scoring-panel__field {
-    min-width: 100%;
-
-    &--grow {
-      min-width: 100%;
-    }
-  }
-
-  .scoring-panel__button {
-    width: 100%;
-    justify-content: center;
-  }
-
-  .scoring-panel__mode-switch .scoring-panel__button {
-    width: auto;
-    flex: 1;
-  }
-
-  .scoring-panel__scorecard-wrap {
-    --scorecard-shadow-width: calc(#{$space-unit} * 4);
-    --scorecard-hole-col-width: 3.75rem;
-    --scorecard-par-col-width: 4.75rem;
-    --scorecard-length-col-width: 5.5rem;
-    max-height: min(62vh, 28rem);
-  }
-
-  .scoring-panel__scorecard {
-    min-width: max(100%, 35rem);
-  }
-
-  .scoring-panel__scorecard-cell {
-    min-width: 6.25rem;
-  }
-
-  .scoring-panel__scorecard-input {
-    width: 3.75rem;
-    min-height: calc(#{$space-unit} * 7);
-    padding-inline: calc(#{$space-unit} * 1);
-  }
-
-  .scoring-panel__scorecard-actions {
-    align-items: stretch;
-    gap: calc(#{$space-unit} * 2);
+  .scoring-panel__tabs {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
   }
 }
