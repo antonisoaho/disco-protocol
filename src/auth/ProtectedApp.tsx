@@ -17,7 +17,7 @@ export function ProtectedApp() {
   if (loading) {
     return (
       <div className="app-shell">
-        <main className="app-shell__main app-shell__main--centered">
+        <main className="app-shell__main app-shell__main--centered container">
           <p className="app-shell__placeholder">Loading session…</p>
         </main>
       </div>
@@ -27,11 +27,11 @@ export function ProtectedApp() {
   if (!user) {
     return (
       <div className="app-shell">
-        <header className="app-shell__header">
+        <header className="app-shell__header container">
           <h1 className="app-shell__title">Disc Golf Social</h1>
           <p className="app-shell__tagline">Sign in to continue.</p>
         </header>
-        <main className="app-shell__main">
+        <main className="app-shell__main container">
           <AuthPanel />
         </main>
       </div>
@@ -40,7 +40,7 @@ export function ProtectedApp() {
 
   return (
     <div className="app-shell">
-      <header className="app-shell__header app-shell__header--row">
+      <header className="app-shell__header app-shell__header--row container">
         <div>
           <h1 className="app-shell__title">Disc Golf Social</h1>
           <p className="app-shell__tagline app-shell__tagline--compact">
@@ -49,7 +49,8 @@ export function ProtectedApp() {
         </div>
         <button
           type="button"
-          className="app-shell__sign-out"
+          className="app-shell__sign-out outline"
+          data-variant="secondary"
           onClick={() => {
             setSignOutError(null)
             void signOut().catch(() => {
@@ -61,15 +62,17 @@ export function ProtectedApp() {
         </button>
       </header>
       {signOutError ? (
-        <p className="app-shell__placeholder" role="alert">
+        <p className="app-shell__placeholder" role="alert" data-variant="error">
           {signOutError}
         </p>
       ) : null}
-      <main className="app-shell__main">
-        <p className="app-shell__placeholder">
-          Signed in. Your profile is at <code className="app-shell__code">users/{user.uid}</code>. Pick a course for
-          the next round, then use shared rounds and offline scoring below.
-        </p>
+      <main className="app-shell__main container">
+        <section className="app-shell__intro card">
+          <p className="app-shell__placeholder">
+            Signed in. Your profile is at <code className="app-shell__code">users/{user.uid}</code>. Pick a course
+            for the next round, then use shared rounds and offline scoring below.
+          </p>
+        </section>
         <CoursePicker selection={selectedCourseTemplate} onSelectionChange={setSelectedCourseTemplate} />
         <ScoringPanel user={user} selectedCourseTemplate={selectedCourseTemplate} />
       </main>

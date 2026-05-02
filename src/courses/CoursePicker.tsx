@@ -232,17 +232,21 @@ export function CoursePicker({ selection, onSelectionChange }: Props) {
   }
 
   return (
-    <section className="course-picker" aria-label="Choose course and layout">
+    <section className="course-picker card" aria-label="Choose course and layout">
       <div className="course-picker__toolbar">
         <h2 className="course-picker__heading">Courses</h2>
         {isAdmin ? (
-          <span className="course-picker__badge" title="Firebase custom claim admin">
+          <span className="badge course-picker__badge" data-variant="success" title="Firebase custom claim admin">
             Admin
           </span>
         ) : null}
       </div>
 
-      {listError ? <p className="course-picker__error">{listError}</p> : null}
+      {listError ? (
+        <p className="course-picker__error" role="alert" data-variant="error">
+          {listError}
+        </p>
+      ) : null}
 
       {courses.length === 0 && !listError ? (
         <p className="course-picker__empty">No courses yet. Add one below to get started.</p>
@@ -275,7 +279,6 @@ export function CoursePicker({ selection, onSelectionChange }: Props) {
             <div className="course-picker__add-row">
               <input
                 id="course-picker-course-name"
-                className="course-picker__input"
                 value={renameName}
                 onChange={(e) =>
                   setRenameDraft({
@@ -288,17 +291,25 @@ export function CoursePicker({ selection, onSelectionChange }: Props) {
               />
               <button
                 type="submit"
-                className="course-picker__submit"
+                data-variant="secondary"
                 disabled={renaming || !isAdmin || validateCourseName(renameName) !== null}
               >
                 {renaming ? 'Saving…' : 'Save name'}
               </button>
             </div>
             {!isAdmin ? <p className="course-picker__hint">Only admins can rename canonical courses.</p> : null}
-            {renameError ? <p className="course-picker__error">{renameError}</p> : null}
+            {renameError ? (
+              <p className="course-picker__error" role="alert" data-variant="error">
+                {renameError}
+              </p>
+            ) : null}
           </form>
 
-          {templatesError ? <p className="course-picker__error">{templatesError}</p> : null}
+          {templatesError ? (
+            <p className="course-picker__error" role="alert" data-variant="error">
+              {templatesError}
+            </p>
+          ) : null}
           <ul className="course-picker__template-list">
             {templates.map((t) => (
               <li key={t.id} className="course-picker__item">
@@ -323,25 +334,28 @@ export function CoursePicker({ selection, onSelectionChange }: Props) {
             <div className="course-picker__add-row">
               <input
                 id="course-picker-template-label"
-                className="course-picker__input"
                 value={createTemplateLabel}
                 onChange={(e) => setCreateTemplateLabel(e.target.value)}
                 autoComplete="off"
               />
               <input
                 id="course-picker-template-holes"
-                className="course-picker__input course-picker__input--compact"
+                className="course-picker__input-compact"
                 type="number"
                 min={1}
                 max={27}
                 value={createTemplateHoleCount}
                 onChange={(e) => setCreateTemplateHoleCount(normalizeHoleCount(Number(e.target.value)))}
               />
-              <button type="submit" className="course-picker__submit" disabled={creatingTemplate}>
+              <button type="submit" disabled={creatingTemplate}>
                 {creatingTemplate ? 'Saving…' : 'Add template'}
               </button>
             </div>
-            {createTemplateError ? <p className="course-picker__error">{createTemplateError}</p> : null}
+            {createTemplateError ? (
+              <p className="course-picker__error" role="alert" data-variant="error">
+                {createTemplateError}
+              </p>
+            ) : null}
           </form>
           {pickedTemplate ? (
             <form className="course-picker__add" onSubmit={(e) => void handleUpdateTemplate(e)}>
@@ -351,7 +365,6 @@ export function CoursePicker({ selection, onSelectionChange }: Props) {
               <div className="course-picker__add-row">
                 <input
                   id="course-picker-template-edit-label"
-                  className="course-picker__input"
                   value={editTemplateLabel}
                   onChange={(e) =>
                     setTemplateEditDraft({
@@ -364,7 +377,7 @@ export function CoursePicker({ selection, onSelectionChange }: Props) {
                 />
                 <input
                   id="course-picker-template-edit-holes"
-                  className="course-picker__input course-picker__input--compact"
+                  className="course-picker__input-compact"
                   type="number"
                   min={1}
                   max={27}
@@ -377,11 +390,15 @@ export function CoursePicker({ selection, onSelectionChange }: Props) {
                     })
                   }
                 />
-                <button type="submit" className="course-picker__submit" disabled={savingTemplate}>
+                <button type="submit" disabled={savingTemplate}>
                   {savingTemplate ? 'Saving…' : 'Save template'}
                 </button>
               </div>
-              {editTemplateError ? <p className="course-picker__error">{editTemplateError}</p> : null}
+              {editTemplateError ? (
+                <p className="course-picker__error" role="alert" data-variant="error">
+                  {editTemplateError}
+                </p>
+              ) : null}
             </form>
           ) : null}
         </div>
@@ -404,17 +421,20 @@ export function CoursePicker({ selection, onSelectionChange }: Props) {
         <div className="course-picker__add-row">
           <input
             id="course-picker-new-name"
-            className="course-picker__input"
             placeholder="Course name"
             value={newName}
             onChange={(e) => setNewName(e.target.value)}
             autoComplete="off"
           />
-          <button type="submit" className="course-picker__submit" disabled={creating}>
+          <button type="submit" disabled={creating}>
             {creating ? 'Saving…' : 'Add'}
           </button>
         </div>
-        {createError ? <p className="course-picker__error">{createError}</p> : null}
+        {createError ? (
+          <p className="course-picker__error" role="alert" data-variant="error">
+            {createError}
+          </p>
+        ) : null}
       </form>
     </section>
   )
