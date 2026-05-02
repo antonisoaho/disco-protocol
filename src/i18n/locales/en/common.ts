@@ -10,30 +10,13 @@ export const commonEn = {
     },
     signOut: 'Sign out',
     signOutError: 'Could not sign out. Try again.',
+    profile: 'Profile',
     homeIntro: 'Start a round quickly, then visit Courses when you need to find or edit layouts.',
     selectedCourse: 'Selected course:',
     noneYet: 'None yet',
     browseCourses: 'Browse courses',
     coursesIntro: 'Search by course name or city, then use near-me sorting when location data is available.',
     backToRoundSetup: 'Back to round setup',
-    profile: {
-      title: 'Profile',
-      fields: {
-        displayName: 'Display name',
-      },
-      actions: {
-        save: 'Save name',
-        saving: 'Saving…',
-      },
-      status: {
-        saved: 'Display name saved.',
-      },
-      errors: {
-        required: 'Display name is required.',
-        tooLong: 'Display name must be at most {{max}} characters.',
-        updateFailed: 'Could not update display name. Try again.',
-      },
-    },
   },
   profile: {
     title: 'Profile',
