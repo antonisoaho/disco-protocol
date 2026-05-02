@@ -9,6 +9,11 @@ export function normalizeCourseName(value: string): string {
   return value.trim().replace(/\s+/g, ' ')
 }
 
+export function normalizeCourseCity(value: string): string | null {
+  const normalized = value.trim().replace(/\s+/g, ' ')
+  return normalized.length > 0 ? normalized : null
+}
+
 export function validateCourseName(value: string): string | null {
   return normalizeCourseName(value).length > 0 ? null : 'Course name is required'
 }

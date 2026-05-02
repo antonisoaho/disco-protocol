@@ -13,7 +13,7 @@ import { db } from '../firebase/firestore'
 import type { CourseDoc, CourseTemplateDoc } from '../firebase/models/course'
 import { COLLECTIONS } from '../firebase/paths'
 import { slugify } from './slug'
-import { createTemplateDraft, normalizeCourseName } from './templateDraft'
+import { createTemplateDraft, normalizeCourseCity, normalizeCourseName } from './templateDraft'
 
 export type CourseWithId = CourseDoc & { id: string }
 export type CourseTemplateWithId = CourseTemplateDoc & { id: string }
@@ -61,6 +61,7 @@ export function subscribeTemplates(
 export async function createCourseWithDefaultTemplate(params: {
   name: string
   uid: string
+  city?: string | null
   organization?: string | null
   holeCount?: number
 }): Promise<{ courseId: string; templateId: string }> {
@@ -69,6 +70,7 @@ export async function createCourseWithDefaultTemplate(params: {
 
   const courseRef = await addDoc(collection(db, COLLECTIONS.courses), {
     name: normalizedName,
+    city: normalizeCourseCity(params.city ?? ''),
     slug,
     organization: params.organization ?? null,
     geo: null,
@@ -135,8 +137,13 @@ export async function updateTemplate(params: {
 }
 
 /** Canonical course rename (admin-gated by Firestore rules). */
-export async function renameCourse(params: { courseId: string; name: string }): Promise<void> {
+export async function updateCourseDetails(params: {
+  courseId: string
+  name: string
+  city: string | null
+}): Promise<void> {
   await updateDoc(doc(db, COLLECTIONS.courses, params.courseId), {
     name: normalizeCourseName(params.name),
+    city: normalizeCourseCity(params.city ?? ''),
   })
 }

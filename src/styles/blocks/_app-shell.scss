@@ -1,3 +1,4 @@
+@use 'sass:map';
 @use '../variables' as *;
 
 // BEM block: app shell (mobile-first). Workers: extend with new __elements / --modifiers only.
@@ -48,6 +49,36 @@
   }
 }
 
+.app-shell__header-main {
+  display: flex;
+  flex-direction: column;
+  gap: calc(#{$space-unit} * 2);
+}
+
+.app-shell__nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: calc(#{$space-unit} * 2);
+}
+
+.app-shell__nav-link {
+  display: inline-flex;
+  align-items: center;
+  min-height: 36px;
+  padding: calc(#{$space-unit} * 1) calc(#{$space-unit} * 2);
+  border: 1px solid $color-border;
+  border-radius: $radius-sm;
+  text-decoration: none;
+  color: $color-text-muted;
+  background: $color-bg;
+
+  &--active {
+    color: $color-text;
+    border-color: map.get($score-color, birdie);
+    background: color-mix(in srgb, map.get($score-color, birdie) 8%, $color-bg);
+  }
+}
+
 .app-shell__main {
   flex: 1 1 auto;
   padding: calc(#{$space-unit} * 4);
@@ -74,6 +105,11 @@
 
 .app-shell__intro {
   margin-bottom: calc(#{$space-unit} * 4);
+}
+
+.app-shell__link {
+  display: inline-flex;
+  margin-top: calc(#{$space-unit} * 2);
 }
 
 .app-shell__code {

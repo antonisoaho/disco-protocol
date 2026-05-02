@@ -3,7 +3,7 @@ import { useAuth } from '../auth/useAuth'
 import {
   createTemplate,
   createCourseWithDefaultTemplate,
-  renameCourse,
+  updateCourseDetails,
   subscribeCourses,
   subscribeTemplates,
   updateTemplate,
@@ -11,7 +11,9 @@ import {
   type CourseTemplateWithId,
   type CourseWithId,
 } from './courseData'
+import { filterCoursesForDiscovery, type LatLng } from './discovery'
 import {
+  normalizeCourseCity,
   normalizeCourseName,
   normalizeHoleCount,
   validateCourseName,
@@ -26,6 +28,15 @@ export function CoursePicker({ selection, onSelectionChange }: Props) {
   const { user, isAdmin } = useAuth()
   const [courses, setCourses] = useState<CourseWithId[]>([])
   const [listError, setListError] = useState<string | null>(null)
+  const [nameQuery, setNameQuery] = useState('')
+  const [cityQuery, setCityQuery] = useState('')
+  const [sortByDistance, setSortByDistance] = useState(false)
+  const [nearMeOnly, setNearMeOnly] = useState(false)
+  const [userLocation, setUserLocation] = useState<LatLng | null>(null)
+  const [locationState, setLocationState] = useState<'idle' | 'requesting' | 'ready' | 'denied' | 'unavailable'>(
+    'idle',
+  )
+  const [locationError, setLocationError] = useState<string | null>(null)
   const [activeCourseId, setActiveCourseId] = useState<string | null>(selection?.courseId ?? null)
   const [templateState, setTemplateState] = useState<{
     courseId: string | null
@@ -35,11 +46,13 @@ export function CoursePicker({ selection, onSelectionChange }: Props) {
   const [pickedTemplateId, setPickedTemplateId] = useState<string | null>(selection?.templateId ?? null)
 
   const [newName, setNewName] = useState('')
+  const [newCity, setNewCity] = useState('')
   const [creating, setCreating] = useState(false)
   const [createError, setCreateError] = useState<string | null>(null)
-  const [renameDraft, setRenameDraft] = useState<{ courseId: string | null; value: string }>({
+  const [renameDraft, setRenameDraft] = useState<{ courseId: string | null; name: string; city: string }>({
     courseId: null,
-    value: '',
+    name: '',
+    city: '',
   })
   const [renaming, setRenaming] = useState(false)
   const [renameError, setRenameError] = useState<string | null>(null)
@@ -116,12 +129,25 @@ export function CoursePicker({ selection, onSelectionChange }: Props) {
     () => courses.find((course) => course.id === activeCourseId) ?? null,
     [activeCourseId, courses],
   )
+  const filteredCourses = useMemo(
+    () =>
+      filterCoursesForDiscovery(courses, {
+        nameQuery,
+        cityQuery,
+        userLocation,
+        nearMeOnly,
+        sortByDistance,
+      }),
+    [cityQuery, courses, nameQuery, nearMeOnly, sortByDistance, userLocation],
+  )
   const pickedTemplate = useMemo(
     () => templates.find((template) => template.id === pickedTemplateId) ?? null,
     [pickedTemplateId, templates],
   )
   const renameName =
-    activeCourse && renameDraft.courseId === activeCourse.id ? renameDraft.value : (activeCourse?.name ?? '')
+    activeCourse && renameDraft.courseId === activeCourse.id ? renameDraft.name : (activeCourse?.name ?? '')
+  const renameCity =
+    activeCourse && renameDraft.courseId === activeCourse.id ? renameDraft.city : (activeCourse?.city ?? '')
   const editTemplateLabel =
     pickedTemplate && templateEditDraft.templateId === pickedTemplate.id
       ? templateEditDraft.label
@@ -130,6 +156,22 @@ export function CoursePicker({ selection, onSelectionChange }: Props) {
     pickedTemplate && templateEditDraft.templateId === pickedTemplate.id
       ? templateEditDraft.holeCount
       : (pickedTemplate?.holes.length ?? 18)
+  const geolocationSupported = typeof navigator !== 'undefined' && 'geolocation' in navigator
+  const geolocationStatusMessage = useMemo(() => {
+    if (locationState === 'ready' && userLocation) {
+      return `Using your location (${userLocation.latitude.toFixed(3)}, ${userLocation.longitude.toFixed(3)}).`
+    }
+    if (locationState === 'requesting') {
+      return 'Requesting your location...'
+    }
+    if (locationState === 'denied') {
+      return 'Location permission denied. You can still search by name and city.'
+    }
+    if (locationState === 'unavailable') {
+      return 'Could not determine your location.'
+    }
+    return null
+  }, [locationState, userLocation])
 
   useEffect(() => {
     if (!activeCourse || !pickedTemplate) {
@@ -158,9 +200,11 @@ export function CoursePicker({ selection, onSelectionChange }: Props) {
     try {
       const { courseId } = await createCourseWithDefaultTemplate({
         name: normalizeCourseName(newName),
+        city: normalizeCourseCity(newCity),
         uid: user.uid,
       })
       setNewName('')
+      setNewCity('')
       setActiveCourseId(courseId)
     } catch (err) {
       setCreateError(err instanceof Error ? err.message : 'Could not create course')
@@ -180,8 +224,12 @@ export function CoursePicker({ selection, onSelectionChange }: Props) {
     setRenaming(true)
     setRenameError(null)
     try {
-      await renameCourse({ courseId: activeCourse.id, name: renameName })
-      setRenameDraft({ courseId: null, value: '' })
+      await updateCourseDetails({
+        courseId: activeCourse.id,
+        name: renameName,
+        city: normalizeCourseCity(renameCity),
+      })
+      setRenameDraft({ courseId: null, name: '', city: '' })
     } catch (err) {
       setRenameError(err instanceof Error ? err.message : 'Could not rename course')
     } finally {
@@ -231,6 +279,41 @@ export function CoursePicker({ selection, onSelectionChange }: Props) {
     }
   }
 
+  function handleUseMyLocation() {
+    if (!geolocationSupported) {
+      setLocationState('unavailable')
+      setLocationError('Geolocation is not available in this browser.')
+      return
+    }
+
+    setLocationState('requesting')
+    setLocationError(null)
+
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        setUserLocation({
+          latitude: position.coords.latitude,
+          longitude: position.coords.longitude,
+        })
+        setLocationState('ready')
+      },
+      (error) => {
+        if (error.code === error.PERMISSION_DENIED) {
+          setLocationState('denied')
+          setLocationError('Permission denied. Enable location permission to sort by distance.')
+          return
+        }
+        setLocationState('unavailable')
+        setLocationError('Could not determine your location right now.')
+      },
+      {
+        enableHighAccuracy: false,
+        timeout: 10000,
+        maximumAge: 5 * 60 * 1000,
+      },
+    )
+  }
+
   return (
     <section className="course-picker card" aria-label="Choose course and layout">
       <div className="course-picker__toolbar">
@@ -248,11 +331,89 @@ export function CoursePicker({ selection, onSelectionChange }: Props) {
         </p>
       ) : null}
 
+      <div className="course-picker__filters" aria-label="Filter courses">
+        <div className="course-picker__filter-group">
+          <label className="course-picker__add-label" htmlFor="course-picker-filter-name">
+            Search by name
+          </label>
+          <input
+            id="course-picker-filter-name"
+            value={nameQuery}
+            onChange={(e) => setNameQuery(e.target.value)}
+            placeholder="Maple Hill"
+            autoComplete="off"
+          />
+        </div>
+        <div className="course-picker__filter-group">
+          <label className="course-picker__add-label" htmlFor="course-picker-filter-city">
+            Filter by city
+          </label>
+          <input
+            id="course-picker-filter-city"
+            value={cityQuery}
+            onChange={(e) => setCityQuery(e.target.value)}
+            placeholder="Leicester"
+            autoComplete="off"
+          />
+        </div>
+        <div className="course-picker__filter-actions" role="group" aria-label="Location tools">
+          <button
+            type="button"
+            data-variant="secondary"
+            onClick={handleUseMyLocation}
+            disabled={!geolocationSupported || locationState === 'requesting'}
+          >
+            {locationState === 'requesting' ? 'Locating…' : 'Use my location'}
+          </button>
+          {userLocation ? (
+            <button
+              type="button"
+              data-variant="secondary"
+              onClick={() => {
+                setUserLocation(null)
+                setSortByDistance(false)
+                setNearMeOnly(false)
+                setLocationState('idle')
+                setLocationError(null)
+              }}
+            >
+              Clear location
+            </button>
+          ) : null}
+          <label className="course-picker__checkbox">
+            <input
+              type="checkbox"
+              checked={sortByDistance}
+              onChange={(e) => setSortByDistance(e.target.checked)}
+              disabled={!userLocation}
+            />
+            Sort by nearest
+          </label>
+          <label className="course-picker__checkbox">
+            <input
+              type="checkbox"
+              checked={nearMeOnly}
+              onChange={(e) => setNearMeOnly(e.target.checked)}
+              disabled={!userLocation}
+            />
+            Near me only
+          </label>
+        </div>
+        {geolocationStatusMessage ? <p className="course-picker__hint">{geolocationStatusMessage}</p> : null}
+        {locationError ? (
+          <p className="course-picker__error" role="alert" data-variant="error">
+            {locationError}
+          </p>
+        ) : null}
+      </div>
+
       {courses.length === 0 && !listError ? (
         <p className="course-picker__empty">No courses yet. Add one below to get started.</p>
+      ) : filteredCourses.length === 0 ? (
+        <p className="course-picker__empty">No courses match your filters yet.</p>
       ) : (
         <ul className="course-picker__list">
-          {courses.map((c) => (
+          {filteredCourses.map((c) => (
             <li key={c.id} className="course-picker__item">
               <button
                 type="button"
@@ -261,8 +422,11 @@ export function CoursePicker({ selection, onSelectionChange }: Props) {
               >
                 <span className="course-picker__course-name">{c.name}</span>
                 <span className="course-picker__course-meta">
-                  {[c.organization, c.slug].filter(Boolean).join(' · ') || 'Layout templates inside'}
+                  {[c.city, c.organization, c.slug].filter(Boolean).join(' · ') || 'Layout templates inside'}
                 </span>
+                {typeof c.distanceKm === 'number' ? (
+                  <span className="course-picker__course-meta">{c.distanceKm.toFixed(1)} km away</span>
+                ) : null}
               </button>
             </li>
           ))}
@@ -283,9 +447,25 @@ export function CoursePicker({ selection, onSelectionChange }: Props) {
                 onChange={(e) =>
                   setRenameDraft({
                     courseId: activeCourse.id,
-                    value: e.target.value,
+                    name: e.target.value,
+                    city: renameCity,
                   })
                 }
+                autoComplete="off"
+                disabled={renaming || !isAdmin}
+              />
+              <input
+                id="course-picker-course-city"
+                aria-label="Course city"
+                value={renameCity}
+                onChange={(e) =>
+                  setRenameDraft({
+                    courseId: activeCourse.id,
+                    name: renameName,
+                    city: e.target.value,
+                  })
+                }
+                placeholder="City"
                 autoComplete="off"
                 disabled={renaming || !isAdmin}
               />
@@ -425,6 +605,14 @@ export function CoursePicker({ selection, onSelectionChange }: Props) {
             value={newName}
             onChange={(e) => setNewName(e.target.value)}
             autoComplete="off"
+          />
+          <input
+            id="course-picker-new-city"
+            placeholder="City (optional)"
+            value={newCity}
+            onChange={(e) => setNewCity(e.target.value)}
+            autoComplete="off"
+            aria-label="New course city"
           />
           <button type="submit" disabled={creating}>
             {creating ? 'Saving…' : 'Add'}

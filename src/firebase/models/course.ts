@@ -38,6 +38,7 @@ export type CourseAdminMetadata = {
  */
 export type CourseDoc = {
   name: string
+  city?: string | null
   /** URL-safe unique-ish handle within project; enforce uniqueness in app or Cloud Function later. */
   slug: string
   organization?: string | null

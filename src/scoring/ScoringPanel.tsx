@@ -799,7 +799,7 @@ export function ScoringPanel({ user, selectedCourseTemplate }: Props) {
                   <strong>{selectedCourseTemplate.templateLabel}</strong> ({selectedCourseTemplate.holeCount} holes)
                 </p>
               ) : (
-                <p className="scoring-panel__muted">Pick a saved course + template above before starting.</p>
+                <p className="scoring-panel__muted">Pick a saved course + template on the Courses page before starting.</p>
               )
             ) : (
               <>
