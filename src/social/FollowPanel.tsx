@@ -2,6 +2,7 @@ import type { User } from 'firebase/auth'
 import { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { followUser, subscribeFollowers, subscribeFollowing, unfollowUser } from '../firebase/follows'
+import { translateUserError } from '../i18n/translateError'
 import { subscribeUserDirectory, type UserDirectoryEntry } from '../firebase/userDirectory'
 import { directoryDisplayName, filterDiscoverableUsers } from './followSearch'
 
@@ -28,10 +29,10 @@ export function FollowPanel({ user }: Props) {
   useEffect(() => {
     const unsub = subscribeUserDirectory(
       (entries) => setDirectoryEntries(entries),
-      (nextError) => setActionState((current) => ({ ...current, error: nextError.message })),
+      (nextError) => setActionState((current) => ({ ...current, error: translateUserError(t, nextError.message) })),
     )
     return () => unsub()
-  }, [])
+  }, [t])
 
   useEffect(() => {
     const unsub = subscribeFollowing(
@@ -42,10 +43,10 @@ export function FollowPanel({ user }: Props) {
           followingIds: Array.from(new Set(edges.map((edge) => edge.followeeUid))),
         }))
       },
-      (nextError) => setActionState((current) => ({ ...current, error: nextError.message })),
+      (nextError) => setActionState((current) => ({ ...current, error: translateUserError(t, nextError.message) })),
     )
     return () => unsub()
-  }, [user.uid])
+  }, [t, user.uid])
 
   useEffect(() => {
     const unsub = subscribeFollowers(
@@ -56,10 +57,10 @@ export function FollowPanel({ user }: Props) {
           followerIds: Array.from(new Set(edges.map((edge) => edge.followerUid))),
         }))
       },
-      (nextError) => setActionState((current) => ({ ...current, error: nextError.message })),
+      (nextError) => setActionState((current) => ({ ...current, error: translateUserError(t, nextError.message) })),
     )
     return () => unsub()
-  }, [user.uid])
+  }, [t, user.uid])
 
   const followingIdSet = useMemo(
     () => new Set(relationshipState.followingIds),
@@ -104,8 +105,7 @@ export function FollowPanel({ user }: Props) {
     } catch (nextError) {
       setActionState((current) => ({
         ...current,
-        error:
-          nextError instanceof Error ? nextError.message : t('follow.errors.updateRelationshipFallback'),
+        error: nextError instanceof Error ? translateUserError(t, nextError.message) : t('follow.errors.updateRelationshipFallback'),
       }))
     } finally {
       setActionState((current) => ({ ...current, pendingUid: null }))

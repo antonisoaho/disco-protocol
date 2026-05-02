@@ -1,8 +1,10 @@
 import { FirebaseError } from 'firebase/app'
+import type { TFunction } from 'i18next'
 import { type FormEvent, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useAuth } from './useAuth'
 
-function formatAuthError(err: unknown): string {
+function formatAuthError(err: unknown, t: TFunction<'common'>): string {
   const code = err instanceof FirebaseError ? err.code : null
   const message = err instanceof Error ? err.message : ''
 
@@ -15,27 +17,31 @@ function formatAuthError(err: unknown): string {
     message.includes('auth/wrong-password') ||
     message.includes('auth/invalid-login-credentials')
   ) {
-    return 'Invalid email or password.'
+    return t('auth.errors.invalidCredentials')
   }
   if (code === 'auth/email-already-in-use' || message.includes('auth/email-already-in-use')) {
-    return 'That email is already registered. Try signing in.'
+    return t('auth.errors.emailAlreadyUsed')
   }
   if (code === 'auth/weak-password' || message.includes('auth/weak-password')) {
-    return 'Password should be at least 6 characters.'
+    return t('auth.errors.weakPassword')
   }
   if (code === 'auth/invalid-email' || message.includes('auth/invalid-email')) {
-    return 'Enter a valid email address.'
+    return t('auth.errors.invalidEmail')
   }
   if (code === 'auth/too-many-requests' || message.includes('auth/too-many-requests')) {
-    return 'Too many attempts. Wait a bit and try again.'
+    return t('auth.errors.tooManyRequests')
   }
   if (code === 'auth/network-request-failed' || message.includes('auth/network-request-failed')) {
-    return 'Network error. Check your connection and try again.'
+    return t('auth.errors.network')
   }
-  return message.replace(/^Firebase:\s*/i, '').replace(/\s*\(auth\/[^)]+\)\s*\.?$/, '') || 'Something went wrong.'
+  return (
+    message.replace(/^Firebase:\s*/i, '').replace(/\s*\(auth\/[^)]+\)\s*\.?$/, '') ||
+    t('auth.errors.generic')
+  )
 }
 
 export function AuthPanel() {
+  const { t } = useTranslation('common')
   const { signInWithEmail, signUpWithEmail } = useAuth()
   const [mode, setMode] = useState<'signin' | 'signup'>('signin')
   const [email, setEmail] = useState('')
@@ -54,7 +60,7 @@ export function AuthPanel() {
         await signUpWithEmail(email, password)
       }
     } catch (err) {
-      setError(formatAuthError(err))
+      setError(formatAuthError(err, t))
     } finally {
       setBusy(false)
     }
@@ -63,13 +69,13 @@ export function AuthPanel() {
   return (
     <section className="auth-panel card" aria-labelledby="auth-heading">
       <h2 id="auth-heading" className="auth-panel__title">
-        {mode === 'signin' ? 'Sign in' : 'Create account'}
+        {mode === 'signin' ? t('auth.title.signIn') : t('auth.title.createAccount')}
       </h2>
-      <p className="auth-panel__hint">Email and password (OAuth can be added later).</p>
+      <p className="auth-panel__hint">{t('auth.hint')}</p>
 
       <form className="auth-panel__form" onSubmit={onSubmit} noValidate>
         <label className="auth-panel__field">
-          <span className="auth-panel__label">Email</span>
+          <span className="auth-panel__label">{t('auth.fields.email')}</span>
           <input
             type="email"
             name="email"
@@ -81,7 +87,7 @@ export function AuthPanel() {
           />
         </label>
         <label className="auth-panel__field">
-          <span className="auth-panel__label">Password</span>
+          <span className="auth-panel__label">{t('auth.fields.password')}</span>
           <input
             type="password"
             name="password"
@@ -100,7 +106,7 @@ export function AuthPanel() {
         ) : null}
 
         <button type="submit" disabled={busy}>
-          {busy ? 'Working…' : mode === 'signin' ? 'Sign in' : 'Sign up'}
+          {busy ? t('auth.actions.working') : mode === 'signin' ? t('auth.actions.signIn') : t('auth.actions.signUp')}
         </button>
       </form>
 
@@ -113,7 +119,7 @@ export function AuthPanel() {
           setError(null)
         }}
       >
-        {mode === 'signin' ? 'Need an account? Sign up' : 'Have an account? Sign in'}
+        {mode === 'signin' ? t('auth.actions.needAccount') : t('auth.actions.haveAccount')}
       </button>
     </section>
   )
