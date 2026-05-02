@@ -37,9 +37,16 @@ export type RoundCoursePromotion = {
   errorCode?: string | null
 }
 
+export type RoundAnonymousParticipant = {
+  id: string
+  displayName: string
+}
+
 export type RoundDoc = {
   ownerId: string
   participantIds: string[]
+  /** Metadata for anonymous participants whose ids are also in `participantIds`. */
+  anonymousParticipants?: RoundAnonymousParticipant[]
   courseId: string
   templateId: string
   courseSource?: RoundCourseSource

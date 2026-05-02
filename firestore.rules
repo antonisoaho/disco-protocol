@@ -67,6 +67,16 @@ service cloud.firestore {
         || isRoundOwner(resource.data);
     }
 
+    function anonymousParticipantsChangeAllowed() {
+      return request.resource.data.anonymousParticipants == resource.data.anonymousParticipants
+        || isRoundOwner(resource.data);
+    }
+
+    function validAnonymousParticipantsShape(data) {
+      return !data.keys().hasAny(['anonymousParticipants'])
+        || data.anonymousParticipants is list;
+    }
+
     function visibilityChangeAllowed() {
       return request.resource.data.visibility == resource.data.visibility
         || isRoundOwner(resource.data);
@@ -160,6 +170,7 @@ service cloud.firestore {
         && validCourseSource(request.resource.data.courseSource)
         && validRoundPromotionShape(request.resource.data)
         && freshDraftPresentWhenNeeded(request.resource.data)
+        && validAnonymousParticipantsShape(request.resource.data)
         && request.resource.data.keys().hasAll([
           'ownerId',
           'participantIds',
@@ -179,13 +190,15 @@ service cloud.firestore {
       allow update: if (isRoundOwner(resource.data) || isRoundParticipant(resource.data))
         && roundImmutableFieldsUnchanged()
         && participantIdsChangeAllowed()
+        && anonymousParticipantsChangeAllowed()
         && visibilityChangeAllowed()
         && courseOriginFieldsAllowed()
         && promotionChangeAllowed()
         && validVisibility(request.resource.data.visibility)
         && validCourseSource(request.resource.data.courseSource)
         && validRoundPromotionShape(request.resource.data)
-        && freshDraftPresentWhenNeeded(request.resource.data);
+        && freshDraftPresentWhenNeeded(request.resource.data)
+        && validAnonymousParticipantsShape(request.resource.data);
 
       allow delete: if isRoundOwner(resource.data);
     }

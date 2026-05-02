@@ -22,6 +22,11 @@ import {
   SCORE_PROTOCOL_V1,
   normalizeHoleScoreUpdate,
 } from '../scoring/protocol'
+import {
+  isAnonymousParticipantId,
+  mergeAnonymousParticipants,
+  normalizeAnonymousParticipantName,
+} from '../scoring/participantRoster'
 import { COLLECTIONS } from './paths'
 import { db } from './firestore'
 import {
@@ -33,6 +38,7 @@ import {
   type FreshRoundDraftIssue,
 } from './freshRoundCourse'
 import type {
+  RoundAnonymousParticipant,
   ParticipantHoleScores,
   RoundCourseDraft,
   RoundDoc,
@@ -47,6 +53,8 @@ type BaseCreateRoundInput = {
   visibility?: RoundVisibility
   /** Initial participants; must include `ownerId`. */
   participantIds: string[]
+  /** Optional display names for anonymous entries included in `participantIds`. */
+  anonymousParticipants?: RoundAnonymousParticipant[]
 }
 
 type CreateSavedRoundInput = BaseCreateRoundInput & {
@@ -89,6 +97,10 @@ function cloneParticipantHoleScores(
  */
 export async function createRound(input: CreateRoundInput): Promise<string> {
   const visibility = input.visibility ?? 'private'
+  const participantIds = Array.from(
+    new Set(input.participantIds.map((participantId) => participantId.trim()).filter((participantId) => participantId.length > 0)),
+  )
+  const anonymousParticipants = mergeAnonymousParticipants(participantIds, input.anonymousParticipants)
   const roundRef = doc(collection(db, ROUNDS))
   const isFreshRound = input.courseSource === 'fresh'
   const refs = isFreshRound
@@ -103,7 +115,8 @@ export async function createRound(input: CreateRoundInput): Promise<string> {
 
   await setDoc(roundRef, {
     ownerId: input.ownerId,
-    participantIds: input.participantIds,
+    participantIds,
+    anonymousParticipants,
     courseId: refs.courseId,
     templateId: refs.templateId,
     courseSource: isFreshRound ? 'fresh' : 'saved',
@@ -121,7 +134,7 @@ export async function createRound(input: CreateRoundInput): Promise<string> {
     startedAt: serverTimestamp(),
     completedAt: null,
     holeScores: {},
-    participantHoleScores: buildInitialParticipantHoleScores(input.participantIds),
+    participantHoleScores: buildInitialParticipantHoleScores(participantIds),
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
   })
@@ -268,6 +281,48 @@ export async function addParticipantToRound(
   await updateDoc(ref, {
     participantIds: arrayUnion(newParticipantUid),
     updatedAt: serverTimestamp(),
+  })
+}
+
+export async function addAnonymousParticipantToRound(params: {
+  roundId: string
+  ownerUid: string
+  participant: RoundAnonymousParticipant
+}): Promise<void> {
+  const participantId = params.participant.id.trim()
+  const displayName = normalizeAnonymousParticipantName(params.participant.displayName)
+  if (!isAnonymousParticipantId(participantId)) {
+    throw new Error('Anonymous participant id must start with anon:.')
+  }
+  if (displayName.length === 0) {
+    throw new Error('Anonymous participant name is required.')
+  }
+
+  const ref = doc(db, ROUNDS, params.roundId)
+  await runTransaction(db, async (tx) => {
+    const snap = await tx.get(ref)
+    if (!snap.exists()) {
+      throw new Error('Round not found')
+    }
+    const data = snap.data() as RoundDoc
+    if (data.ownerId !== params.ownerUid) {
+      throw new Error('Only owner can add anonymous participants')
+    }
+
+    const nextParticipantIds = Array.from(new Set([...data.participantIds, participantId]))
+    const nextAnonymousParticipants = mergeAnonymousParticipants(nextParticipantIds, [
+      ...(data.anonymousParticipants ?? []),
+      { id: participantId, displayName },
+    ])
+    const nextParticipantHoleScores = cloneParticipantHoleScores(data.participantHoleScores)
+    nextParticipantHoleScores[participantId] = nextParticipantHoleScores[participantId] ?? {}
+
+    tx.update(ref, {
+      participantIds: nextParticipantIds,
+      anonymousParticipants: nextAnonymousParticipants,
+      participantHoleScores: nextParticipantHoleScores,
+      updatedAt: serverTimestamp(),
+    })
   })
 }
 
