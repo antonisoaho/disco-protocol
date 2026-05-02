@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link, NavLink, Navigate, Route, Routes } from 'react-router-dom'
 import { CoursePicker } from '../courses/CoursePicker'
@@ -6,6 +6,7 @@ import type { CourseRoundSelection } from '../courses/courseData'
 import { AuthPanel } from './AuthPanel'
 import { useAuth } from './useAuth'
 import { ScoringPanel } from '../scoring/ScoringPanel'
+import { setCourseFavorite, subscribeFavoriteCourseIds } from '../firebase/userProfile'
 
 /** Protected shell: signed-in users can navigate between home and course discovery. */
 export function ProtectedApp() {
@@ -13,6 +14,40 @@ export function ProtectedApp() {
   const { user, loading, signOut } = useAuth()
   const [signOutError, setSignOutError] = useState<string | null>(null)
   const [selectedCourseTemplate, setSelectedCourseTemplate] = useState<CourseRoundSelection | null>(null)
+  const [favoriteCourseIds, setFavoriteCourseIds] = useState<string[]>([])
+  const [favoriteCourseError, setFavoriteCourseError] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (!user) return
+    const unsub = subscribeFavoriteCourseIds(
+      user.uid,
+      (next) => {
+        setFavoriteCourseIds(next)
+        setFavoriteCourseError(null)
+      },
+      () => {
+        setFavoriteCourseError(t('courses.errors.favoriteSyncFailed'))
+      },
+    )
+    return () => unsub()
+  }, [t, user])
+
+  const onToggleFavoriteCourse = useCallback(
+    async (courseId: string, isFavorite: boolean) => {
+      if (!user) return
+      setFavoriteCourseError(null)
+      try {
+        await setCourseFavorite({
+          uid: user.uid,
+          courseId,
+          isFavorite,
+        })
+      } catch {
+        setFavoriteCourseError(t('courses.errors.favoriteUpdateFailed'))
+      }
+    },
+    [t, user],
+  )
 
   if (loading) {
     return (
@@ -87,6 +122,13 @@ export function ProtectedApp() {
           </p>
         </div>
       ) : null}
+      {favoriteCourseError ? (
+        <div className="app-shell__container app-shell__status">
+          <p className="app-shell__placeholder" role="alert" data-variant="error">
+            {favoriteCourseError}
+          </p>
+        </div>
+      ) : null}
       <main className="app-shell__main">
         <div className="app-shell__container">
           <Routes>
@@ -112,7 +154,11 @@ export function ProtectedApp() {
                       {t('shell.browseCourses')}
                     </Link>
                   </section>
-                  <ScoringPanel user={user} selectedCourseTemplate={selectedCourseTemplate} />
+                  <ScoringPanel
+                    user={user}
+                    selectedCourseTemplate={selectedCourseTemplate}
+                    favoriteCourseIds={favoriteCourseIds}
+                  />
                 </>
               }
             />
@@ -128,7 +174,12 @@ export function ProtectedApp() {
                       {t('shell.backToRoundSetup')}
                     </Link>
                   </section>
-                  <CoursePicker selection={selectedCourseTemplate} onSelectionChange={setSelectedCourseTemplate} />
+                  <CoursePicker
+                    selection={selectedCourseTemplate}
+                    onSelectionChange={setSelectedCourseTemplate}
+                    favoriteCourseIds={favoriteCourseIds}
+                    onToggleFavoriteCourse={onToggleFavoriteCourse}
+                  />
                 </>
               }
             />

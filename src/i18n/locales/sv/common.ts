@@ -47,6 +47,7 @@ export const commonSv = {
   },
   courses: {
     heading: 'Banor',
+    freshOption: 'Ny bana',
     admin: {
       badge: 'Admin',
       title: 'Firebase custom claim admin',
@@ -115,12 +116,18 @@ export const commonSv = {
       selected: 'Vald',
       templateId: '(mall-id {{templateId}})',
     },
+    favourites: {
+      addAria: 'Lägg till {{courseName}} i favoriter',
+      removeAria: 'Ta bort {{courseName}} från favoriter',
+    },
     errors: {
       courseNameRequired: 'Bannamn krävs.',
       createCourseFailed: 'Kunde inte skapa bana.',
       renameCourseFailed: 'Kunde inte byta namn på bana.',
       createTemplateFailed: 'Kunde inte skapa mall.',
       updateTemplateFailed: 'Kunde inte uppdatera mall.',
+      favoriteSyncFailed: 'Kunde inte läsa in favoritbanor.',
+      favoriteUpdateFailed: 'Kunde inte uppdatera favoritbana.',
     },
     deleteCourseLabel: 'Ta bort bana',
     deleteCourse: 'Ta bort bana',
@@ -171,8 +178,10 @@ export const commonSv = {
       participantsAdded: 'Lade till {{count}} deltagare.',
     },
     start: {
-      usingSelection: 'Använder {{courseName}} / {{templateLabel}} ({{holeCount}} hål)',
-      savedHint: 'Välj en sparad bana + mall på Banor-sidan innan du startar.',
+      courseToPlay: 'Bana att spela',
+      savedSelection: 'Använder {{courseName}} / {{templateLabel}}',
+      defaultTemplateLabel: 'standardmall',
+      noSavedCourses: 'Inga sparade banor tillgängliga. Välj Ny bana eller lägg till en bana först.',
       freshHint: 'Starta snabbt med namn och antal hål, fyll sedan i par/längd medan du spelar.',
       courseName: 'Bannamn',
       courseNamePlaceholder: 'Ange bannamn',
@@ -281,6 +290,8 @@ export const commonSv = {
       freshHoleMetadataIncomplete: 'Ny hålmetadata är ofullständig.',
       holeIssue: 'Hål {{holeNumber}}: {{fields}}',
       failedToAutosaveHole: 'Kunde inte autospara hål.',
+      selectCourseOrFresh: 'Välj en sparad bana eller använd Ny bana.',
+      selectedCourseHasNoTemplates: 'Den valda banan har inga mallar att starta från.',
       selectTemplateOrFresh: 'Välj en sparad banmall eller byt till ny instans.',
       failedToCreateRound: 'Kunde inte skapa runda.',
       failedToAddParticipant: 'Kunde inte lägga till deltagare.',

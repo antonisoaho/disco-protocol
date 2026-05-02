@@ -81,8 +81,15 @@
   margin: 0;
 }
 
+.course-picker__course-row {
+  display: flex;
+  gap: calc(#{$space-unit} * 2);
+  align-items: stretch;
+}
+
 .course-picker__course-btn {
   width: 100%;
+  flex: 1;
   display: flex;
   flex-direction: column;
   align-items: flex-start;
@@ -105,6 +112,33 @@
   &--active {
     border-color: map.get($score-color, birdie);
     background: color-mix(in srgb, map.get($score-color, birdie) 6%, $color-bg);
+  }
+
+  &:focus-visible {
+    outline: 2px solid map.get($score-color, birdie);
+    outline-offset: 2px;
+  }
+}
+
+.course-picker__favorite-btn {
+  min-width: 44px;
+  border: 1px solid $color-border;
+  border-radius: $radius-md;
+  background: $color-bg;
+  color: $color-text-muted;
+  font-size: 1rem;
+  line-height: 1;
+  transition: border-color 0.15s ease, color 0.15s ease, background 0.15s ease;
+
+  &:hover {
+    border-color: map.get($score-color, birdie);
+    color: map.get($score-color, birdie);
+  }
+
+  &--active {
+    border-color: map.get($score-color, birdie);
+    color: map.get($score-color, birdie);
+    background: color-mix(in srgb, map.get($score-color, birdie) 8%, $color-bg);
   }
 
   &:focus-visible {

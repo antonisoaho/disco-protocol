@@ -46,6 +46,7 @@ export const commonEn = {
   },
   courses: {
     heading: 'Courses',
+    freshOption: 'Fresh course',
     admin: {
       badge: 'Admin',
       title: 'Firebase custom claim admin',
@@ -114,12 +115,18 @@ export const commonEn = {
       selected: 'Selected',
       templateId: '(template id {{templateId}})',
     },
+    favourites: {
+      addAria: 'Add {{courseName}} to favourites',
+      removeAria: 'Remove {{courseName}} from favourites',
+    },
     errors: {
       courseNameRequired: 'Course name is required.',
       createCourseFailed: 'Could not create course.',
       renameCourseFailed: 'Could not rename course.',
       createTemplateFailed: 'Could not create template.',
       updateTemplateFailed: 'Could not update template.',
+      favoriteSyncFailed: 'Could not load favourite courses.',
+      favoriteUpdateFailed: 'Could not update favourite course.',
     },
     deleteCourseLabel: 'Delete course',
     deleteCourse: 'Delete course',
@@ -170,8 +177,10 @@ export const commonEn = {
       participantsAdded: 'Added {{count}} participants.',
     },
     start: {
-      usingSelection: 'Using {{courseName}} / {{templateLabel}} ({{holeCount}} holes)',
-      savedHint: 'Pick a saved course + template on the Courses page before starting.',
+      courseToPlay: 'Course to play',
+      savedSelection: 'Using {{courseName}} / {{templateLabel}}',
+      defaultTemplateLabel: 'default template',
+      noSavedCourses: 'No saved courses available. Choose Fresh course or add a course first.',
       freshHint: 'Start quickly with name and hole count, then fill par/length as you play.',
       courseName: 'Course name',
       courseNamePlaceholder: 'Enter course name',
@@ -281,6 +290,8 @@ export const commonEn = {
       freshHoleMetadataIncomplete: 'Fresh hole metadata is incomplete.',
       holeIssue: 'Hole {{holeNumber}}: {{fields}}',
       failedToAutosaveHole: 'Failed to autosave hole.',
+      selectCourseOrFresh: 'Select a saved course or use Fresh course.',
+      selectedCourseHasNoTemplates: 'The selected course has no templates to start from.',
       selectTemplateOrFresh: 'Select a saved course template or switch to fresh setup.',
       failedToCreateRound: 'Failed to create round.',
       failedToAddParticipant: 'Failed to add participant.',
