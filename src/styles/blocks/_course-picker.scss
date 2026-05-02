@@ -17,16 +17,8 @@
 }
 
 .course-picker__badge {
-  display: inline-flex;
-  align-items: center;
-  padding: calc(#{$space-unit} * 1) calc(#{$space-unit} * 2);
-  font-size: 0.75rem;
-  font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.04em;
-  color: map.get($score-color, eagle);
-  background: color-mix(in srgb, map.get($score-color, eagle) 12%, $color-surface);
-  border-radius: $radius-sm;
 }
 
 .course-picker__heading {
@@ -201,46 +193,9 @@
   gap: calc(#{$space-unit} * 2);
 }
 
-.course-picker__input {
-  flex: 1 1 12rem;
-  min-height: 44px;
-  padding: calc(#{$space-unit} * 2) calc(#{$space-unit} * 3);
-  font-size: 1rem;
-  border: 1px solid $color-border;
-  border-radius: $radius-md;
-  background: $color-bg;
-  color: $color-text;
-
-  &:focus-visible {
-    outline: 2px solid map.get($score-color, birdie);
-    outline-offset: 2px;
-  }
-
-  &--compact {
-    flex: 0 0 7.5rem;
-  }
-}
-
-.course-picker__submit {
-  min-height: 44px;
-  padding: calc(#{$space-unit} * 2) calc(#{$space-unit} * 4);
-  font-size: 0.9375rem;
-  font-weight: 600;
-  color: $color-bg;
-  background: map.get($score-color, birdie);
-  border: none;
-  border-radius: $radius-md;
-  cursor: pointer;
-
-  &:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-  }
-
-  &:focus-visible {
-    outline: 2px solid map.get($score-color, eagle);
-    outline-offset: 2px;
-  }
+.course-picker__input-compact {
+  flex: 0 0 7.5rem;
+  max-width: 7.5rem;
 }
 
 .course-picker__empty {

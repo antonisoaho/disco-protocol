@@ -51,9 +51,6 @@
 .app-shell__main {
   flex: 1 1 auto;
   padding: calc(#{$space-unit} * 4);
-  max-width: 42rem;
-  width: 100%;
-  margin-inline: auto;
 
   &--centered {
     display: flex;
@@ -73,7 +70,10 @@
 .app-shell__sign-out {
   flex-shrink: 0;
   align-self: center;
-  min-height: 44px;
+}
+
+.app-shell__intro {
+  margin-bottom: calc(#{$space-unit} * 4);
 }
 
 .app-shell__code {

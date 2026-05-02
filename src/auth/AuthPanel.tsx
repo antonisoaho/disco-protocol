@@ -61,7 +61,7 @@ export function AuthPanel() {
   }
 
   return (
-    <section className="auth-panel" aria-labelledby="auth-heading">
+    <section className="auth-panel card" aria-labelledby="auth-heading">
       <h2 id="auth-heading" className="auth-panel__title">
         {mode === 'signin' ? 'Sign in' : 'Create account'}
       </h2>
@@ -71,7 +71,6 @@ export function AuthPanel() {
         <label className="auth-panel__field">
           <span className="auth-panel__label">Email</span>
           <input
-            className="auth-panel__input"
             type="email"
             name="email"
             autoComplete="email"
@@ -84,7 +83,6 @@ export function AuthPanel() {
         <label className="auth-panel__field">
           <span className="auth-panel__label">Password</span>
           <input
-            className="auth-panel__input"
             type="password"
             name="password"
             autoComplete={mode === 'signin' ? 'current-password' : 'new-password'}
@@ -101,14 +99,15 @@ export function AuthPanel() {
           </p>
         ) : null}
 
-        <button className="auth-panel__submit" type="submit" disabled={busy}>
+        <button type="submit" disabled={busy}>
           {busy ? 'Working…' : mode === 'signin' ? 'Sign in' : 'Sign up'}
         </button>
       </form>
 
       <button
         type="button"
-        className="auth-panel__toggle"
+        className="outline"
+        data-variant="secondary"
         onClick={() => {
           setMode((m) => (m === 'signin' ? 'signup' : 'signin'))
           setError(null)

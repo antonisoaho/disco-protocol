@@ -41,73 +41,18 @@
   color: $color-text;
 }
 
-.auth-panel__input {
-  width: 100%;
-  min-height: 44px;
-  padding: calc(#{$space-unit} * 3);
-  font-size: 1rem;
-  color: $color-text;
-  background: $color-bg;
-  border: 1px solid $color-border;
-  border-radius: $radius-md;
-  box-sizing: border-box;
-
-  &:focus {
-    outline: none;
-    border-color: $color-text-muted;
-  }
-
-  &:focus-visible {
-    outline: 2px solid $color-text;
-    outline-offset: 2px;
-  }
-}
-
 .auth-panel__error {
   margin: 0;
   font-size: 0.875rem;
   color: map.get($score-color, double-bogey-plus);
 }
 
-.auth-panel__submit {
-  min-height: 44px;
-  padding: calc(#{$space-unit} * 3);
-  font-size: 1rem;
-  font-weight: 600;
-  color: #fff;
-  background: map.get($score-color, birdie);
-  border: none;
-  border-radius: $radius-md;
-  cursor: pointer;
-
-  &:disabled {
-    opacity: 0.65;
-    cursor: not-allowed;
-  }
-
-  &:focus-visible {
-    outline: 2px solid map.get($score-color, eagle);
-    outline-offset: 2px;
-  }
-}
-
-.auth-panel__toggle {
-  margin-top: calc(#{$space-unit} * 4);
-  padding: calc(#{$space-unit} * 2);
+.auth-panel__form button {
   width: 100%;
   min-height: 44px;
-  font-size: 0.9375rem;
-  font-weight: 600;
-  color: map.get($score-color, birdie);
-  background: transparent;
-  border: none;
-  cursor: pointer;
-  text-decoration: underline;
-  text-underline-offset: 4px;
+}
 
-  &:focus-visible {
-    outline: 2px solid map.get($score-color, birdie);
-    outline-offset: 2px;
-    border-radius: $radius-sm;
-  }
+.auth-panel > button {
+  margin-top: calc(#{$space-unit} * 4);
+  width: 100%;
 }
