@@ -84,13 +84,14 @@ export function PlayerScoreRows({
             </button>
             {isExpanded ? (
               <div id={panelId} className="scoring-panel__player-row-body">
-                <label className="scoring-panel__field scoring-panel__field--grow">
-                  <span className="scoring-panel__label">{t('scoring.playerRows.strokes')}</span>
+                <label className="scoring-panel__field scoring-panel__field--grow field">
+                  <span className="scoring-panel__label field__label">{t('scoring.playerRows.strokes')}</span>
                   <input
-                    className="scoring-panel__input"
+                    className="scoring-panel__input field__control"
                     type="number"
                     min={1}
                     max={99}
+                    step={1}
                     value={inputValue}
                     onChange={(event) => onScoreChange(participantUid, event.target.value)}
                     aria-label={t('scoring.playerRows.strokesForPlayerAria', { displayName })}

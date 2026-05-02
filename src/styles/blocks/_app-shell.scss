@@ -173,6 +173,30 @@
   gap: $layout-section-gap;
 }
 
+.app-shell__profile {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: $space-3;
+}
+
+.app-shell__profile-title {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.app-shell__profile-form {
+  display: flex;
+  flex-direction: column;
+  gap: $space-3;
+}
+
+.app-shell__profile-status {
+  margin: 0;
+  font-size: 0.85rem;
+  color: map.get($score-color, birdie);
+}
+
 .app-shell__link {
   display: inline-flex;
   align-self: flex-start;
