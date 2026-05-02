@@ -37,6 +37,8 @@ $font-family-mono: ui-monospace, Consolas, monospace;
 $space-unit: 0.25rem;
 $radius-sm: 4px;
 $radius-md: 8px;
+$app-shell-content-max-width: 72rem;
+$app-shell-inline-padding: calc(#{$space-unit} * 4);
 
 // Neutral surface tokens (light default; dark can be layered later by Workers)
 $color-bg: #ffffff;
