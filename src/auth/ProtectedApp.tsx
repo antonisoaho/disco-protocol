@@ -1,21 +1,17 @@
 import { useCallback, useEffect, useState } from 'react'
-import { updateProfile } from 'firebase/auth'
 import { useTranslation } from 'react-i18next'
 import { Link, NavLink, Navigate, Route, Routes } from 'react-router-dom'
 import { CoursePicker } from '../courses/CoursePicker'
 import type { CourseRoundSelection } from '../courses/courseData'
 import { AuthPanel } from './AuthPanel'
-import { ProfileDisplayName } from './ProfileDisplayName'
 import { useAuth } from './useAuth'
 import { ScoringPanel } from '../scoring/ScoringPanel'
 import {
-  DISPLAY_NAME_MAX_LENGTH,
   normalizeDisplayName,
   setCourseFavorite,
   subscribeFavoriteCourseIds,
-  updateUserDisplayName,
-  validateDisplayName,
 } from '../firebase/userProfile'
+import { ProfilePage } from '../profile/ProfilePage'
 
 /** Protected shell: signed-in users can navigate between home and course discovery. */
 export function ProtectedApp() {
@@ -25,9 +21,6 @@ export function ProtectedApp() {
   const [selectedCourseTemplate, setSelectedCourseTemplate] = useState<CourseRoundSelection | null>(null)
   const [favoriteCourseIds, setFavoriteCourseIds] = useState<string[]>([])
   const [favoriteCourseError, setFavoriteCourseError] = useState<string | null>(null)
-  const [displayNameError, setDisplayNameError] = useState<string | null>(null)
-  const [displayNameNotice, setDisplayNameNotice] = useState<string | null>(null)
-  const [isSavingDisplayName, setIsSavingDisplayName] = useState(false)
 
   useEffect(() => {
     if (!user) return
@@ -60,42 +53,6 @@ export function ProtectedApp() {
     },
     [t, user],
   )
-
-  const onSaveDisplayName = useCallback(async (draftDisplayName: string) => {
-    if (!user) return
-    setDisplayNameError(null)
-    setDisplayNameNotice(null)
-    const validationError = validateDisplayName(draftDisplayName)
-    if (validationError === 'empty') {
-      setDisplayNameError(t('profile.errors.displayNameRequired'))
-      return
-    }
-    if (validationError === 'tooLong') {
-      setDisplayNameError(t('profile.errors.displayNameTooLong', { max: DISPLAY_NAME_MAX_LENGTH }))
-      return
-    }
-    const normalized = normalizeDisplayName(draftDisplayName)
-    const currentDisplayName =
-      normalizeDisplayName(user.displayName ?? '') ||
-      user.email?.split('@')[0] ||
-      user.uid
-    if (normalized === currentDisplayName) {
-      return
-    }
-    setIsSavingDisplayName(true)
-    try {
-      const savedDisplayName = await updateUserDisplayName({
-        uid: user.uid,
-        displayName: normalized,
-      })
-      await updateProfile(user, { displayName: savedDisplayName })
-      setDisplayNameNotice(t('profile.messages.displayNameSaved'))
-    } catch {
-      setDisplayNameError(t('profile.errors.displayNameUpdateFailed'))
-    } finally {
-      setIsSavingDisplayName(false)
-    }
-  }, [t, user])
 
   if (loading) {
     return (
@@ -151,6 +108,12 @@ export function ProtectedApp() {
               >
                 {t('shell.nav.courses')}
               </NavLink>
+              <NavLink
+                to="/profile"
+                className={({ isActive }) => `app-shell__nav-link${isActive ? ' app-shell__nav-link--active' : ''}`}
+              >
+                {t('shell.profile')}
+              </NavLink>
             </nav>
           </div>
           <button
@@ -189,52 +152,6 @@ export function ProtectedApp() {
               path="/"
               element={
                 <div className="app-shell__flow">
-                  <section className="app-shell__profile card">
-                    <h2 className="app-shell__section-title">{t('profile.title')}</h2>
-                    <p className="app-shell__placeholder">
-                      {t('profile.currentDisplayName', { displayName: currentDisplayName })}
-                    </p>
-                    <form
-                      className="app-shell__profile-form"
-                      onSubmit={(event) => {
-                        event.preventDefault()
-                        const formData = new FormData(event.currentTarget)
-                        const draftDisplayName = String(formData.get('displayName') ?? '')
-                        void onSaveDisplayName(draftDisplayName)
-                      }}
-                    >
-                      <label className="app-shell__profile-field">
-                        <span className="app-shell__profile-label">{t('profile.displayName')}</span>
-                        <input
-                          className="app-shell__profile-input"
-                          name="displayName"
-                          defaultValue={currentDisplayName}
-                          key={`${user.uid}:${currentDisplayName}`}
-                          maxLength={DISPLAY_NAME_MAX_LENGTH}
-                        />
-                      </label>
-                      <div className="app-shell__profile-actions">
-                        <button
-                          type="submit"
-                          className="outline"
-                          data-variant="secondary"
-                          disabled={isSavingDisplayName}
-                        >
-                          {isSavingDisplayName ? t('profile.actions.saving') : t('profile.actions.save')}
-                        </button>
-                      </div>
-                    </form>
-                    {displayNameError ? (
-                      <p className="app-shell__placeholder" role="alert" data-variant="error">
-                        {displayNameError}
-                      </p>
-                    ) : null}
-                    {displayNameNotice ? (
-                      <p className="app-shell__placeholder" data-variant="success">
-                        {displayNameNotice}
-                      </p>
-                    ) : null}
-                  </section>
                   <section className="app-shell__intro card">
                     <p className="app-shell__placeholder">
                       {t('shell.homeIntro')}
@@ -252,8 +169,10 @@ export function ProtectedApp() {
                     <Link className="app-shell__link" to="/courses">
                       {t('shell.browseCourses')}
                     </Link>
+                    <Link className="app-shell__link" to="/profile">
+                      {t('shell.profile')}
+                    </Link>
                   </section>
-                  <ProfileDisplayName user={user} />
                   <ScoringPanel
                     user={user}
                     selectedCourseTemplate={selectedCourseTemplate}
@@ -283,6 +202,7 @@ export function ProtectedApp() {
                 </div>
               }
             />
+            <Route path="/profile" element={<ProfilePage user={user} />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </div>

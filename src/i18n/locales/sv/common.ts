@@ -10,6 +10,7 @@ export const commonSv = {
     },
     signOut: 'Logga ut',
     signOutError: 'Kunde inte logga ut. Försök igen.',
+    profile: 'Profil',
     homeIntro: 'Starta en runda snabbt och besök sedan Banor när du behöver hitta eller redigera layouter.',
     selectedCourse: 'Vald bana:',
     noneYet: 'Ingen ännu',
@@ -17,24 +18,6 @@ export const commonSv = {
     coursesIntro:
       'Sök efter banans namn eller stad och använd sortering nära mig när platsdata är tillgänglig.',
     backToRoundSetup: 'Tillbaka till rundinställning',
-    profile: {
-      title: 'Profil',
-      fields: {
-        displayName: 'Visningsnamn',
-      },
-      actions: {
-        save: 'Spara namn',
-        saving: 'Sparar…',
-      },
-      status: {
-        saved: 'Visningsnamn sparat.',
-      },
-      errors: {
-        required: 'Visningsnamn krävs.',
-        tooLong: 'Visningsnamn får vara högst {{max}} tecken.',
-        updateFailed: 'Kunde inte uppdatera visningsnamn. Försök igen.',
-      },
-    },
   },
   profile: {
     title: 'Profil',
