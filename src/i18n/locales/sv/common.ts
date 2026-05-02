@@ -17,6 +17,24 @@ export const commonSv = {
     coursesIntro:
       'Sök efter banans namn eller stad och använd sortering nära mig när platsdata är tillgänglig.',
     backToRoundSetup: 'Tillbaka till rundinställning',
+    profile: {
+      title: 'Profil',
+      fields: {
+        displayName: 'Visningsnamn',
+      },
+      actions: {
+        save: 'Spara namn',
+        saving: 'Sparar…',
+      },
+      status: {
+        saved: 'Visningsnamn sparat.',
+      },
+      errors: {
+        required: 'Visningsnamn krävs.',
+        tooLong: 'Visningsnamn får vara högst {{max}} tecken.',
+        updateFailed: 'Kunde inte uppdatera visningsnamn. Försök igen.',
+      },
+    },
   },
   profile: {
     title: 'Profil',
@@ -194,6 +212,7 @@ export const commonSv = {
     messages: {
       participantDefaultsToFriends: 'Visar vänner som standard. Börja skriva för att söka alla.',
       anonymousNameRequired: 'Spelarnamn krävs.',
+      anonymousNameTooLong: 'Spelarnamn får vara högst {{max}} tecken.',
       addPlayerHelper: 'Valfritt: lägg till namn för spelare utan konto.',
       participantAdded: 'Lade till 1 deltagare.',
       participantsAdded: 'Lade till {{count}} deltagare.',

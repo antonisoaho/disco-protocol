@@ -16,6 +16,24 @@ export const commonEn = {
     browseCourses: 'Browse courses',
     coursesIntro: 'Search by course name or city, then use near-me sorting when location data is available.',
     backToRoundSetup: 'Back to round setup',
+    profile: {
+      title: 'Profile',
+      fields: {
+        displayName: 'Display name',
+      },
+      actions: {
+        save: 'Save name',
+        saving: 'Saving…',
+      },
+      status: {
+        saved: 'Display name saved.',
+      },
+      errors: {
+        required: 'Display name is required.',
+        tooLong: 'Display name must be at most {{max}} characters.',
+        updateFailed: 'Could not update display name. Try again.',
+      },
+    },
   },
   profile: {
     title: 'Profile',
@@ -193,6 +211,7 @@ export const commonEn = {
     messages: {
       participantDefaultsToFriends: 'Showing friends by default. Start typing to search everyone.',
       anonymousNameRequired: 'Player name is required.',
+      anonymousNameTooLong: 'Player name must be at most {{max}} characters.',
       addPlayerHelper: 'Optional: add a name for a player without an account.',
       participantAdded: 'Added 1 participant.',
       participantsAdded: 'Added {{count}} participants.',

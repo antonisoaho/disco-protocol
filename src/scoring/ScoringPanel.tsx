@@ -64,6 +64,8 @@ type Props = {
 const DEFAULT_ROUND_HOLE_COUNT = 18
 const DEFAULT_FRESH_HOLE_COUNT = 9
 const AUTOSAVE_DEBOUNCE_MS = 550
+const ANONYMOUS_NAME_MAX_LENGTH = 80
+const NON_WHITESPACE_PATTERN = '.*\\S.*'
 
 type AppTabId = 'scorecard' | 'participants' | 'analytics' | 'follow'
 type SaveState = 'saved' | 'dirty' | 'saving' | 'error'
@@ -236,6 +238,9 @@ export function ScoringPanel({ user, selectedCourseTemplate, favoriteCourseIds }
   const [newRoundParticipants, setNewRoundParticipants] = useState<string[]>([uid])
   const [newRoundParticipantQuery, setNewRoundParticipantQuery] = useState('')
   const [newRoundAnonymousName, setNewRoundAnonymousName] = useState('')
+  const [freshCourseNameError, setFreshCourseNameError] = useState<string | null>(null)
+  const [newRoundAnonymousNameError, setNewRoundAnonymousNameError] = useState<string | null>(null)
+  const [inviteAnonymousNameError, setInviteAnonymousNameError] = useState<string | null>(null)
   const [newRoundAnonymousParticipants, setNewRoundAnonymousParticipants] = useState<AnonymousParticipant[]>([])
   const [inviteParticipantQuery, setInviteParticipantQuery] = useState('')
   const [inviteAnonymousName, setInviteAnonymousName] = useState('')
@@ -252,6 +257,34 @@ export function ScoringPanel({ user, selectedCourseTemplate, favoriteCourseIds }
   const [error, setError] = useState<string | null>(null)
   const [notice, setNotice] = useState<string | null>(null)
   const autosaveTimerRef = useRef<number | null>(null)
+  const freshCourseNameInputRef = useRef<HTMLInputElement | null>(null)
+  const newRoundAnonymousNameInputRef = useRef<HTMLInputElement | null>(null)
+  const inviteAnonymousNameInputRef = useRef<HTMLInputElement | null>(null)
+
+  const resolveFreshCourseNameError = useCallback(
+    (input: HTMLInputElement): string => {
+      if (input.validity.valueMissing || input.validity.patternMismatch) {
+        return t('scoring.errors.courseNameRequired')
+      }
+      return input.validationMessage || t('scoring.errors.courseNameRequired')
+    },
+    [t],
+  )
+
+  const resolveAnonymousNameError = useCallback(
+    (input: HTMLInputElement): string => {
+      if (input.validity.valueMissing || input.validity.patternMismatch) {
+        return t('scoring.messages.anonymousNameRequired')
+      }
+      if (input.validity.tooLong) {
+        return t('scoring.messages.anonymousNameTooLong', {
+          max: ANONYMOUS_NAME_MAX_LENGTH,
+        })
+      }
+      return input.validationMessage || t('scoring.messages.anonymousNameRequired')
+    },
+    [t],
+  )
 
   useEffect(() => {
     const unsub = subscribeMyRounds(
@@ -725,17 +758,28 @@ export function ScoringPanel({ user, selectedCourseTemplate, favoriteCourseIds }
   )
 
   const onAddNewRoundAnonymousParticipant = useCallback(() => {
-    const normalizedName = normalizeAnonymousParticipantName(newRoundAnonymousName)
-    if (normalizedName.length === 0) {
-      setError(t('scoring.messages.anonymousNameRequired'))
+    const anonymousInput = newRoundAnonymousNameInputRef.current
+    if (!anonymousInput) {
       return
     }
+    anonymousInput.setCustomValidity('')
+    if (newRoundAnonymousName.trim().length === 0) {
+      anonymousInput.setCustomValidity(t('scoring.messages.anonymousNameRequired'))
+    }
+    if (!anonymousInput.checkValidity()) {
+      setNewRoundAnonymousNameError(resolveAnonymousNameError(anonymousInput))
+      return
+    }
+
+    const normalizedName = normalizeAnonymousParticipantName(newRoundAnonymousName)
     const id = createAnonymousParticipantId()
     setNewRoundAnonymousParticipants((current) => [...current, { id, displayName: normalizedName }])
     setNewRoundParticipants((current) => Array.from(new Set([...current, id])))
     setNewRoundAnonymousName('')
+    setNewRoundAnonymousNameError(null)
+    anonymousInput.setCustomValidity('')
     setError(null)
-  }, [newRoundAnonymousName, t])
+  }, [newRoundAnonymousName, resolveAnonymousNameError, t])
 
   const onRemoveNewRoundAnonymousParticipant = useCallback((participantId: string) => {
     setNewRoundAnonymousParticipants((current) =>
@@ -745,6 +789,16 @@ export function ScoringPanel({ user, selectedCourseTemplate, favoriteCourseIds }
   }, [])
 
   const onCreateRound = useCallback(async () => {
+    if (startMode === 'fresh') {
+      const freshNameInput = freshCourseNameInputRef.current
+      if (freshNameInput) {
+        if (!freshNameInput.checkValidity()) {
+          setFreshCourseNameError(resolveFreshCourseNameError(freshNameInput))
+          return
+        }
+      }
+    }
+
     setBusy(true)
     setError(null)
     setNotice(null)
@@ -806,8 +860,10 @@ export function ScoringPanel({ user, selectedCourseTemplate, favoriteCourseIds }
       setSaveState('saved')
       setExpandedPlayers({})
       setStartCourseSelection('fresh')
+      setFreshCourseNameError(null)
       setNewRoundParticipantQuery('')
       setNewRoundAnonymousName('')
+      setNewRoundAnonymousNameError(null)
       setNewRoundAnonymousParticipants([])
       setNewRoundParticipants([uid])
       setActiveTab('scorecard')
@@ -833,6 +889,7 @@ export function ScoringPanel({ user, selectedCourseTemplate, favoriteCourseIds }
     selectedCourseTemplate,
     selectedSavedCourse,
     startMode,
+    resolveFreshCourseNameError,
     t,
     uid,
     visibility,
@@ -840,6 +897,14 @@ export function ScoringPanel({ user, selectedCourseTemplate, favoriteCourseIds }
 
   const onAddParticipant = useCallback(async () => {
     if (!selectedId || !selected) return
+    const inviteInput = inviteAnonymousNameInputRef.current
+    if (inviteInput) {
+      inviteInput.setCustomValidity('')
+      if (!inviteInput.checkValidity()) {
+        setInviteAnonymousNameError(resolveAnonymousNameError(inviteInput))
+        return
+      }
+    }
     const normalizedAnonymousName = normalizeAnonymousParticipantName(inviteAnonymousName)
     const shouldAddAnonymous = normalizedAnonymousName.length > 0
     if (inviteSelections.length === 0 && !shouldAddAnonymous) return
@@ -867,6 +932,7 @@ export function ScoringPanel({ user, selectedCourseTemplate, favoriteCourseIds }
       ])
       setInviteSelections([])
       setInviteAnonymousName('')
+      setInviteAnonymousNameError(null)
       const totalAdded = inviteSelections.length + (anonymousParticipant ? 1 : 0)
       setNotice(
         totalAdded === 1
@@ -882,7 +948,7 @@ export function ScoringPanel({ user, selectedCourseTemplate, favoriteCourseIds }
     } finally {
       setBusy(false)
     }
-  }, [inviteAnonymousName, inviteSelections, selected, selectedId, t])
+  }, [inviteAnonymousName, inviteSelections, resolveAnonymousNameError, selected, selectedId, t])
 
   const onDeleteRound = useCallback(
     async (roundId: string, ownerId: string) => {
@@ -1051,7 +1117,10 @@ export function ScoringPanel({ user, selectedCourseTemplate, favoriteCourseIds }
                 id="round-course-selection"
                 className="scoring-panel__select"
                 value={effectiveStartCourseSelection}
-                onChange={(event) => setStartCourseSelection(event.target.value)}
+                onChange={(event) => {
+                  setStartCourseSelection(event.target.value)
+                  setFreshCourseNameError(null)
+                }}
                 disabled={busy}
               >
                 <option value="fresh">{t('courses.freshOption')}</option>
@@ -1087,29 +1156,51 @@ export function ScoringPanel({ user, selectedCourseTemplate, favoriteCourseIds }
                   {t('scoring.start.freshHint')}
                 </p>
                 <div className="scoring-panel__row">
-                  <div className="scoring-panel__field scoring-panel__field--grow">
-                    <label className="scoring-panel__label" htmlFor="fresh-course-name">
+                  <div className="scoring-panel__field scoring-panel__field--grow field">
+                    <label className="scoring-panel__label field__label" htmlFor="fresh-course-name">
                       {t('scoring.start.courseName')}
                     </label>
                     <input
                       id="fresh-course-name"
-                      className="scoring-panel__input"
+                      ref={freshCourseNameInputRef}
+                      className={`scoring-panel__input field__control${
+                        freshCourseNameError ? ' field__control--invalid' : ''
+                      }`}
                       value={freshCourseName}
-                      onChange={(event) => setFreshCourseName(event.target.value)}
+                      onChange={(event) => {
+                        setFreshCourseName(event.target.value)
+                        if (freshCourseNameError && event.currentTarget.validity.valid) {
+                          setFreshCourseNameError(null)
+                        }
+                      }}
+                      onInvalid={(event) => {
+                        event.preventDefault()
+                        setFreshCourseNameError(resolveFreshCourseNameError(event.currentTarget))
+                      }}
                       placeholder={t('scoring.start.courseNamePlaceholder')}
                       autoComplete="off"
+                      required
+                      pattern={NON_WHITESPACE_PATTERN}
+                      aria-invalid={freshCourseNameError ? 'true' : 'false'}
+                      aria-describedby={freshCourseNameError ? 'fresh-course-name-error' : undefined}
                     />
+                    {freshCourseNameError ? (
+                      <p id="fresh-course-name-error" className="field__error" role="alert">
+                        {freshCourseNameError}
+                      </p>
+                    ) : null}
                   </div>
-                  <div className="scoring-panel__field">
-                    <label className="scoring-panel__label" htmlFor="fresh-hole-count">
+                  <div className="scoring-panel__field field">
+                    <label className="scoring-panel__label field__label" htmlFor="fresh-hole-count">
                       {t('scoring.start.holes')}
                     </label>
                     <input
                       id="fresh-hole-count"
-                      className="scoring-panel__input"
+                      className="scoring-panel__input field__control"
                       type="number"
                       min={1}
                       max={36}
+                      step={1}
                       value={freshHoleCount}
                       onChange={(event) => {
                         setFreshHoleCount(normalizeFreshHoleCount(Number(event.target.value)))
@@ -1165,19 +1256,43 @@ export function ScoringPanel({ user, selectedCourseTemplate, favoriteCourseIds }
                 })}
               </div>
             </div>
-            <div className="scoring-panel__field scoring-panel__field--grow scoring-panel__field--compact scoring-panel__field--add-player">
-              <label className="scoring-panel__label" htmlFor="new-round-anonymous-name">
-                {t('scoring.labels.playerNameOptional')}
-              </label>
-              <input
-                id="new-round-anonymous-name"
-                className="scoring-panel__input"
-                value={newRoundAnonymousName}
-                onChange={(event) => setNewRoundAnonymousName(event.target.value)}
-                placeholder={t('scoring.placeholders.playerName')}
-                autoComplete="off"
-              />
-              <p className="scoring-panel__muted">{t('scoring.messages.addPlayerHelper')}</p>
+            <div className="scoring-panel__row scoring-panel__row--compact">
+              <div className="scoring-panel__field scoring-panel__field--grow scoring-panel__field--compact scoring-panel__field--add-player field">
+                <label className="scoring-panel__label field__label" htmlFor="new-round-anonymous-name">
+                  {t('scoring.labels.playerNameOptional')}
+                </label>
+                <input
+                  id="new-round-anonymous-name"
+                  ref={newRoundAnonymousNameInputRef}
+                  className={`scoring-panel__input field__control${
+                    newRoundAnonymousNameError ? ' field__control--invalid' : ''
+                  }`}
+                  value={newRoundAnonymousName}
+                  onChange={(event) => {
+                    event.currentTarget.setCustomValidity('')
+                    setNewRoundAnonymousName(event.target.value)
+                    if (newRoundAnonymousNameError && event.currentTarget.validity.valid) {
+                      setNewRoundAnonymousNameError(null)
+                    }
+                  }}
+                  onInvalid={(event) => {
+                    event.preventDefault()
+                    setNewRoundAnonymousNameError(resolveAnonymousNameError(event.currentTarget))
+                  }}
+                  pattern={NON_WHITESPACE_PATTERN}
+                  maxLength={ANONYMOUS_NAME_MAX_LENGTH}
+                  placeholder={t('scoring.placeholders.playerName')}
+                  autoComplete="off"
+                  aria-invalid={newRoundAnonymousNameError ? 'true' : 'false'}
+                  aria-describedby={newRoundAnonymousNameError ? 'new-round-anonymous-name-error' : undefined}
+                />
+                {newRoundAnonymousNameError ? (
+                  <p id="new-round-anonymous-name-error" className="field__error" role="alert">
+                    {newRoundAnonymousNameError}
+                  </p>
+                ) : null}
+                <p className="scoring-panel__muted">{t('scoring.messages.addPlayerHelper')}</p>
+              </div>
               <button
                 type="button"
                 className="scoring-panel__button scoring-panel__button--primary scoring-panel__button--field-submit"
@@ -1541,18 +1656,40 @@ export function ScoringPanel({ user, selectedCourseTemplate, favoriteCourseIds }
                       })}
                     </div>
                     <div className="scoring-panel__row scoring-panel__row--compact">
-                      <div className="scoring-panel__field scoring-panel__field--grow scoring-panel__field--compact">
-                        <label className="scoring-panel__label" htmlFor="invite-anonymous-name">
+                      <div className="scoring-panel__field scoring-panel__field--grow scoring-panel__field--compact field">
+                        <label className="scoring-panel__label field__label" htmlFor="invite-anonymous-name">
                           {t('scoring.labels.playerNameOptional')}
                         </label>
                         <input
                           id="invite-anonymous-name"
-                          className="scoring-panel__input"
+                          ref={inviteAnonymousNameInputRef}
+                          className={`scoring-panel__input field__control${
+                            inviteAnonymousNameError ? ' field__control--invalid' : ''
+                          }`}
                           value={inviteAnonymousName}
-                          onChange={(event) => setInviteAnonymousName(event.target.value)}
+                          onChange={(event) => {
+                            event.currentTarget.setCustomValidity('')
+                            setInviteAnonymousName(event.target.value)
+                            if (inviteAnonymousNameError && event.currentTarget.validity.valid) {
+                              setInviteAnonymousNameError(null)
+                            }
+                          }}
+                          onInvalid={(event) => {
+                            event.preventDefault()
+                            setInviteAnonymousNameError(resolveAnonymousNameError(event.currentTarget))
+                          }}
+                          pattern={`(?:${NON_WHITESPACE_PATTERN})?`}
+                          maxLength={ANONYMOUS_NAME_MAX_LENGTH}
                           placeholder={t('scoring.placeholders.playerName')}
                           autoComplete="off"
+                          aria-invalid={inviteAnonymousNameError ? 'true' : 'false'}
+                          aria-describedby={inviteAnonymousNameError ? 'invite-anonymous-name-error' : undefined}
                         />
+                        {inviteAnonymousNameError ? (
+                          <p id="invite-anonymous-name-error" className="field__error" role="alert">
+                            {inviteAnonymousNameError}
+                          </p>
+                        ) : null}
                         <p className="scoring-panel__muted">{t('scoring.messages.addPlayerHelper')}</p>
                       </div>
                     </div>

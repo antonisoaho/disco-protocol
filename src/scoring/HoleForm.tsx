@@ -30,25 +30,27 @@ export function HoleForm({
       aria-label={t('scoring.holeForm.sectionAria', { holeNumber })}
     >
       <div className="scoring-panel__hole-meta-row">
-        <label className="scoring-panel__field scoring-panel__field--compact">
-          <span className="scoring-panel__label">{t('scoring.holeForm.par')}</span>
+        <label className="scoring-panel__field scoring-panel__field--compact field">
+          <span className="scoring-panel__label field__label">{t('scoring.holeForm.par')}</span>
           <input
-            className="scoring-panel__input"
+            className="scoring-panel__input field__control"
             type="number"
             min={2}
             max={9}
+            step={1}
             value={parValue}
             onChange={(event) => onParChange(event.target.value)}
             aria-label={t('scoring.holeForm.parAria', { holeNumber })}
           />
         </label>
-        <label className="scoring-panel__field scoring-panel__field--compact">
-          <span className="scoring-panel__label">{t('scoring.holeForm.lengthMeters')}</span>
+        <label className="scoring-panel__field scoring-panel__field--compact field">
+          <span className="scoring-panel__label field__label">{t('scoring.holeForm.lengthMeters')}</span>
           <input
-            className="scoring-panel__input"
+            className="scoring-panel__input field__control"
             type="number"
             min={1}
             max={5000}
+            step={1}
             value={lengthValue}
             onChange={(event) => onLengthChange(event.target.value)}
             aria-label={t('scoring.holeForm.lengthAria', { holeNumber })}

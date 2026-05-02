@@ -5,6 +5,7 @@ import { Link, NavLink, Navigate, Route, Routes } from 'react-router-dom'
 import { CoursePicker } from '../courses/CoursePicker'
 import type { CourseRoundSelection } from '../courses/courseData'
 import { AuthPanel } from './AuthPanel'
+import { ProfileDisplayName } from './ProfileDisplayName'
 import { useAuth } from './useAuth'
 import { ScoringPanel } from '../scoring/ScoringPanel'
 import {
@@ -252,6 +253,7 @@ export function ProtectedApp() {
                       {t('shell.browseCourses')}
                     </Link>
                   </section>
+                  <ProfileDisplayName user={user} />
                   <ScoringPanel
                     user={user}
                     selectedCourseTemplate={selectedCourseTemplate}
