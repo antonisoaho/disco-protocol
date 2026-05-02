@@ -1,8 +1,10 @@
 import { type User } from 'firebase/auth'
 import type { Timestamp } from 'firebase/firestore'
+import type { TFunction } from 'i18next'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { CourseRoundSelection } from '../courses/courseData'
+import { translateUserError } from '../i18n/translateError'
 import { computeHeadToHeadSummary, computeParticipantParSummary } from '../analytics/roundAnalytics'
 import {
   FreshRoundDraftValidationError,
@@ -27,6 +29,7 @@ import {
   scoreTierToNotationClassName,
   strokesParDeltaToNotation,
   type ScoreDecorationShape,
+  type ScoreTier,
 } from '../lib/scoreSemantic'
 import { FollowPanel } from '../social/FollowPanel'
 import {
@@ -63,9 +66,9 @@ function normalizeFreshHoleCount(value: number): number {
   return Math.min(36, Math.max(1, Math.floor(value)))
 }
 
-function formatDraftIssues(issues: FreshRoundDraftIssue[]): string {
+function formatDraftIssues(t: TFunction<'common'>, issues: FreshRoundDraftIssue[]): string {
   if (issues.length === 0) {
-    return 'Fresh hole metadata is incomplete.'
+    return t('scoring.errors.freshHoleMetadataIncomplete')
   }
 
   const perHole = new Map<number, Set<string>>()
@@ -75,19 +78,21 @@ function formatDraftIssues(issues: FreshRoundDraftIssue[]): string {
     const holeMatch = issue.path.match(/^holes\.(\d+)\.(par|lengthMeters)$/)
     if (holeMatch) {
       const holeNumber = Number(holeMatch[1]) + 1
-      const field = holeMatch[2] === 'par' ? 'par' : 'length'
+      const field = holeMatch[2] === 'par' ? t('scoring.fields.par') : t('scoring.fields.length')
       if (!perHole.has(holeNumber)) {
         perHole.set(holeNumber, new Set<string>())
       }
       perHole.get(holeNumber)?.add(field)
       continue
     }
-    generalMessages.add(issue.message)
+    generalMessages.add(translateUserError(t, issue.message))
   }
 
   const holeMessages = Array.from(perHole.entries())
     .sort(([a], [b]) => a - b)
-    .map(([holeNumber, fields]) => `Hole ${holeNumber}: ${Array.from(fields).join(' + ')}`)
+    .map(([holeNumber, fields]) =>
+      t('scoring.errors.holeIssue', { holeNumber, fields: Array.from(fields).join(' + ') }),
+    )
 
   return [...holeMessages, ...Array.from(generalMessages)].join('. ')
 }
@@ -188,6 +193,27 @@ function ScoreNotationValue({ strokes, decorationShape, decorationLayers }: Scor
   return content
 }
 
+function scoreTierLabel(t: TFunction<'common'>, tier: ScoreTier): string {
+  switch (tier) {
+    case 'albatross-plus':
+      return t('scoring.scoreTier.albatrossPlus')
+    case 'eagle':
+      return t('scoring.scoreTier.eagle')
+    case 'birdie':
+      return t('scoring.scoreTier.birdie')
+    case 'par':
+      return t('scoring.scoreTier.par')
+    case 'bogey':
+      return t('scoring.scoreTier.bogey')
+    case 'double-bogey':
+      return t('scoring.scoreTier.doubleBogey')
+    case 'triple-bogey-plus':
+      return t('scoring.scoreTier.tripleBogeyPlus')
+    default:
+      return ''
+  }
+}
+
 export function ScoringPanel({ user, selectedCourseTemplate }: Props) {
   const { t } = useTranslation('common')
   const uid = user.uid
@@ -225,10 +251,10 @@ export function ScoringPanel({ user, selectedCourseTemplate }: Props) {
         setError(null)
         setItems(next)
       },
-      (nextError) => setError(nextError.message),
+      (nextError) => setError(translateUserError(t, nextError.message)),
     )
     return () => unsub()
-  }, [uid])
+  }, [t, uid])
 
   useEffect(() => {
     const unsub = subscribeUserDirectory(
@@ -289,12 +315,12 @@ export function ScoringPanel({ user, selectedCourseTemplate }: Props) {
     if (!map[uid]) {
       map[uid] = {
         uid,
-        displayName: user.displayName?.trim() || user.email?.split('@')[0] || 'You',
+        displayName: user.displayName?.trim() || user.email?.split('@')[0] || t('social.youFallback'),
         subtitle: uid,
       }
     }
     return map
-  }, [directoryEntries, uid, user.displayName, user.email])
+  }, [directoryEntries, t, uid, user.displayName, user.email])
 
   const allDirectoryEntries = useMemo(
     () =>
@@ -545,15 +571,15 @@ export function ScoringPanel({ user, selectedCourseTemplate }: Props) {
   const saveStateLabel = useMemo(() => {
     switch (saveState) {
       case 'dirty':
-        return 'Unsaved changes'
+        return t('scoring.saveState.unsavedChanges')
       case 'saving':
-        return 'Saving...'
+        return t('scoring.saveState.saving')
       case 'error':
-        return 'Save failed'
+        return t('scoring.saveState.saveFailed')
       default:
-        return 'Saved'
+        return t('scoring.saveState.saved')
     }
-  }, [saveState])
+  }, [saveState, t])
 
   const updateHoleDraft = useCallback(
     (updater: (current: HoleDraftInputs) => HoleDraftInputs) => {
@@ -616,14 +642,18 @@ export function ScoringPanel({ user, selectedCourseTemplate }: Props) {
       return true
     } catch (nextError) {
       if (nextError instanceof FreshRoundDraftValidationError) {
-        setError(formatDraftIssues(nextError.issues))
+        setError(formatDraftIssues(t, nextError.issues))
       } else {
-        setError(nextError instanceof Error ? nextError.message : 'Failed to autosave hole')
+        setError(
+          nextError instanceof Error
+            ? translateUserError(t, nextError.message)
+            : t('scoring.errors.failedToAutosaveHole'),
+        )
       }
       setSaveState('error')
       return false
     }
-  }, [activeHoleNumber, effectiveHoleDraft, persistedHoleState, selected, selectedId, uid])
+  }, [activeHoleNumber, effectiveHoleDraft, persistedHoleState, selected, selectedId, t, uid])
 
   useEffect(() => {
     if (saveState !== 'dirty' || !selected || !effectiveHoleDraft || !persistedHoleState) return
@@ -689,7 +719,7 @@ export function ScoringPanel({ user, selectedCourseTemplate }: Props) {
       let id = ''
       if (startMode === 'saved') {
         if (!selectedCourseTemplate) {
-          setError('Select a saved course template or switch to fresh setup.')
+          setError(t('scoring.errors.selectTemplateOrFresh'))
           return
         }
         const safeHoleCount = Math.min(36, Math.max(1, selectedCourseTemplate.holeCount))
@@ -731,12 +761,16 @@ export function ScoringPanel({ user, selectedCourseTemplate }: Props) {
       setNewRoundAnonymousParticipants([])
       setNewRoundParticipants([uid])
       setActiveTab('scorecard')
-      setNotice('Round created. Start scoring hole-by-hole.')
+      setNotice(t('scoring.notices.roundCreated'))
     } catch (nextError) {
       if (nextError instanceof FreshRoundDraftValidationError) {
-        setError(formatDraftIssues(nextError.issues))
+        setError(formatDraftIssues(t, nextError.issues))
       } else {
-        setError(nextError instanceof Error ? nextError.message : 'Failed to create round')
+        setError(
+          nextError instanceof Error
+            ? translateUserError(t, nextError.message)
+            : t('scoring.errors.failedToCreateRound'),
+        )
       }
     } finally {
       setBusy(false)
@@ -748,6 +782,7 @@ export function ScoringPanel({ user, selectedCourseTemplate }: Props) {
     newRoundAnonymousParticipants,
     selectedCourseTemplate,
     startMode,
+    t,
     uid,
     visibility,
   ])
@@ -788,16 +823,21 @@ export function ScoringPanel({ user, selectedCourseTemplate }: Props) {
           : t('scoring.messages.participantsAdded', { count: totalAdded }),
       )
     } catch (nextError) {
-      setError(nextError instanceof Error ? nextError.message : 'Failed to add participant')
+      setError(
+        nextError instanceof Error
+          ? translateUserError(t, nextError.message)
+          : t('scoring.errors.failedToAddParticipant'),
+      )
     } finally {
       setBusy(false)
     }
+  }, [inviteAnonymousName, inviteSelections, selected, selectedId, t])
   }, [inviteAnonymousName, inviteSelections, selected, selectedId, t])
 
   const onDeleteRound = useCallback(
     async (roundId: string, ownerId: string) => {
       if (ownerId !== uid) return
-      const confirmed = window.confirm('Delete this round permanently? This cannot be undone.')
+      const confirmed = window.confirm(t('scoring.confirmations.deleteRound'))
       if (!confirmed) return
       setBusy(true)
       setError(null)
@@ -811,14 +851,18 @@ export function ScoringPanel({ user, selectedCourseTemplate }: Props) {
           setSaveState('saved')
           setExpandedPlayers({})
         }
-        setNotice('Round deleted.')
+        setNotice(t('scoring.notices.roundDeleted'))
       } catch (nextError) {
-        setError(nextError instanceof Error ? nextError.message : 'Failed to delete round')
+        setError(
+          nextError instanceof Error
+            ? translateUserError(t, nextError.message)
+            : t('scoring.errors.failedToDeleteRound'),
+        )
       } finally {
         setBusy(false)
       }
     },
-    [selectedId, uid],
+    [selectedId, t, uid],
   )
 
   const onComplete = useCallback(async () => {
@@ -829,7 +873,9 @@ export function ScoringPanel({ user, selectedCourseTemplate }: Props) {
       } catch (nextError) {
         if (nextError instanceof FreshRoundDraftValidationError) {
           setError(
-            `Round cannot be completed yet. Fill missing hole metadata first. ${formatDraftIssues(nextError.issues)}`,
+            t('scoring.errors.roundCannotCompleteWithDetails', {
+              details: formatDraftIssues(t, nextError.issues),
+            }),
           )
           return
         }
@@ -842,20 +888,26 @@ export function ScoringPanel({ user, selectedCourseTemplate }: Props) {
     try {
       const result = await completeRoundAndPromote(selectedId, uid)
       if (result.promotionStatus === 'created' || result.promotionStatus === 'already_created') {
-        setNotice('Round completed. Fresh course was promoted to saved course catalog.')
+        setNotice(t('scoring.notices.roundCompletedPromoted'))
       } else if (result.promotionStatus === 'pending') {
-        setNotice('Round completed. Promotion is pending and will need a retry once online.')
+        setNotice(t('scoring.notices.roundCompletedPromotionPending'))
       } else if (result.promotionStatus === 'failed') {
         setError(
-          `Round cannot be completed yet. Fill missing hole metadata first. ${formatDraftIssues(result.validationIssues ?? [])}`,
+          t('scoring.errors.roundCannotCompleteWithDetails', {
+            details: formatDraftIssues(t, result.validationIssues ?? []),
+          }),
         )
       }
     } catch (nextError) {
-      setError(nextError instanceof Error ? nextError.message : 'Failed to complete round')
+      setError(
+        nextError instanceof Error
+          ? translateUserError(t, nextError.message)
+          : t('scoring.errors.failedToCompleteRound'),
+      )
     } finally {
       setBusy(false)
     }
-  }, [selected, selectedId, uid])
+  }, [selected, selectedId, t, uid])
 
   const onRetryPromotion = useCallback(async () => {
     if (!selectedId) return
@@ -865,20 +917,26 @@ export function ScoringPanel({ user, selectedCourseTemplate }: Props) {
     try {
       const result = await completeRoundAndPromote(selectedId, uid)
       if (result.promotionStatus === 'created' || result.promotionStatus === 'already_created') {
-        setNotice('Promotion succeeded. Fresh course is now available in saved courses.')
+        setNotice(t('scoring.notices.promotionSucceeded'))
       } else if (result.promotionStatus === 'pending') {
-        setNotice('Still pending. Retry again when network connectivity returns.')
+        setNotice(t('scoring.notices.promotionStillPending'))
       } else if (result.promotionStatus === 'failed') {
         setError(
-          `Promotion is still blocked by missing hole metadata. ${formatDraftIssues(result.validationIssues ?? [])}`,
+          t('scoring.errors.promotionBlockedWithDetails', {
+            details: formatDraftIssues(t, result.validationIssues ?? []),
+          }),
         )
       }
     } catch (nextError) {
-      setError(nextError instanceof Error ? nextError.message : 'Failed to retry promotion')
+      setError(
+        nextError instanceof Error
+          ? translateUserError(t, nextError.message)
+          : t('scoring.errors.failedToRetryPromotion'),
+      )
     } finally {
       setBusy(false)
     }
-  }, [selectedId, uid])
+  }, [selectedId, t, uid])
 
   return (
     <section className="scoring-panel" aria-labelledby="scoring-panel-title">
@@ -892,7 +950,7 @@ export function ScoringPanel({ user, selectedCourseTemplate }: Props) {
       ) : null}
       {notice ? <p className="scoring-panel__notice">{notice}</p> : null}
 
-      <div className="scoring-panel__tabs" role="tablist" aria-label="Scoring workspace tabs">
+      <div className="scoring-panel__tabs" role="tablist" aria-label={t('scoring.aria.workspaceTabs')}>
         <button
           type="button"
           role="tab"
@@ -900,7 +958,7 @@ export function ScoringPanel({ user, selectedCourseTemplate }: Props) {
           className={`scoring-panel__tab${activeTab === 'scorecard' ? ' scoring-panel__tab--active' : ''}`}
           onClick={() => setActiveTab('scorecard')}
         >
-          Scorecard
+          {t('scoring.tabs.scorecard')}
         </button>
         <button
           type="button"
@@ -909,7 +967,7 @@ export function ScoringPanel({ user, selectedCourseTemplate }: Props) {
           className={`scoring-panel__tab${activeTab === 'participants' ? ' scoring-panel__tab--active' : ''}`}
           onClick={() => setActiveTab('participants')}
         >
-          Participants
+          {t('scoring.tabs.participants')}
         </button>
         <button
           type="button"
@@ -918,7 +976,7 @@ export function ScoringPanel({ user, selectedCourseTemplate }: Props) {
           className={`scoring-panel__tab${activeTab === 'analytics' ? ' scoring-panel__tab--active' : ''}`}
           onClick={() => setActiveTab('analytics')}
         >
-          Analytics
+          {t('scoring.tabs.analytics')}
         </button>
         <button
           type="button"
@@ -927,14 +985,14 @@ export function ScoringPanel({ user, selectedCourseTemplate }: Props) {
           className={`scoring-panel__tab${activeTab === 'follow' ? ' scoring-panel__tab--active' : ''}`}
           onClick={() => setActiveTab('follow')}
         >
-          Follow
+          {t('scoring.tabs.follow')}
         </button>
       </div>
 
       {activeTab === 'scorecard' ? (
         <>
           <div className="scoring-panel__section">
-            <span className="scoring-panel__label">Start a round</span>
+            <span className="scoring-panel__label">{t('scoring.sections.startRound')}</span>
             <div className="scoring-panel__mode-switch">
               <button
                 type="button"
@@ -956,34 +1014,37 @@ export function ScoringPanel({ user, selectedCourseTemplate }: Props) {
             {startMode === 'saved' ? (
               selectedCourseTemplate ? (
                 <p className="scoring-panel__selection">
-                  Using <strong>{selectedCourseTemplate.courseName}</strong> /{' '}
-                  <strong>{selectedCourseTemplate.templateLabel}</strong> ({selectedCourseTemplate.holeCount} holes)
+                  {t('scoring.start.usingSelection', {
+                    courseName: selectedCourseTemplate.courseName,
+                    templateLabel: selectedCourseTemplate.templateLabel,
+                    holeCount: selectedCourseTemplate.holeCount,
+                  })}
                 </p>
               ) : (
-                <p className="scoring-panel__muted">Pick a saved course + template on the Courses page before starting.</p>
+                <p className="scoring-panel__muted">{t('scoring.start.savedHint')}</p>
               )
             ) : (
               <>
                 <p className="scoring-panel__muted">
-                  Start quickly with name and hole count, then fill par/length as you play.
+                  {t('scoring.start.freshHint')}
                 </p>
                 <div className="scoring-panel__row">
                   <div className="scoring-panel__field scoring-panel__field--grow">
                     <label className="scoring-panel__label" htmlFor="fresh-course-name">
-                      Course name
+                      {t('scoring.start.courseName')}
                     </label>
                     <input
                       id="fresh-course-name"
                       className="scoring-panel__input"
                       value={freshCourseName}
                       onChange={(event) => setFreshCourseName(event.target.value)}
-                      placeholder="Enter course name"
+                      placeholder={t('scoring.start.courseNamePlaceholder')}
                       autoComplete="off"
                     />
                   </div>
                   <div className="scoring-panel__field">
                     <label className="scoring-panel__label" htmlFor="fresh-hole-count">
-                      Holes
+                      {t('scoring.start.holes')}
                     </label>
                     <input
                       id="fresh-hole-count"
@@ -1002,20 +1063,24 @@ export function ScoringPanel({ user, selectedCourseTemplate }: Props) {
             )}
             <div className="scoring-panel__field scoring-panel__field--grow">
               <label className="scoring-panel__label" htmlFor="participant-search">
-                Participants
+                {t('scoring.start.participants')}
               </label>
               <input
                 id="participant-search"
                 className="scoring-panel__input"
                 value={newRoundParticipantQuery}
                 onChange={(event) => setNewRoundParticipantQuery(event.target.value)}
-                placeholder={t('scoring.placeholders.participantSearch')}
+                placeholder={t('scoring.start.searchParticipantsPlaceholder')}
                 autoComplete="off"
               />
               {newRoundParticipantQuery.trim().length === 0 ? (
                 <p className="scoring-panel__muted">{t('scoring.messages.participantDefaultsToFriends')}</p>
               ) : null}
-              <div className="scoring-panel__participant-list" role="group" aria-label="Select round participants">
+              <div
+                className="scoring-panel__participant-list"
+                role="group"
+                aria-label={t('scoring.aria.selectRoundParticipants')}
+              >
                 {availableNewRoundParticipants.map((entry) => {
                   const checked = newRoundParticipants.includes(entry.uid)
                   return (
@@ -1085,7 +1150,7 @@ export function ScoringPanel({ user, selectedCourseTemplate }: Props) {
             <div className="scoring-panel__row">
               <div className="scoring-panel__field">
                 <label className="scoring-panel__label" htmlFor="visibility">
-                  Visibility
+                  {t('scoring.start.visibility')}
                 </label>
                 <select
                   id="visibility"
@@ -1093,9 +1158,9 @@ export function ScoringPanel({ user, selectedCourseTemplate }: Props) {
                   value={visibility}
                   onChange={(event) => setVisibility(event.target.value as RoundVisibility)}
                 >
-                  <option value="private">private</option>
-                  <option value="unlisted">unlisted</option>
-                  <option value="public">public</option>
+                  <option value="private">{t('scoring.visibility.private')}</option>
+                  <option value="unlisted">{t('scoring.visibility.unlisted')}</option>
+                  <option value="public">{t('scoring.visibility.public')}</option>
                 </select>
               </div>
               <button
@@ -1110,9 +1175,9 @@ export function ScoringPanel({ user, selectedCourseTemplate }: Props) {
           </div>
 
           <div className="scoring-panel__section">
-            <span className="scoring-panel__label">Your rounds</span>
+            <span className="scoring-panel__label">{t('scoring.sections.yourRounds')}</span>
             {items.length === 0 ? (
-              <p className="scoring-panel__muted">No rounds yet.</p>
+              <p className="scoring-panel__muted">{t('scoring.rounds.none')}</p>
             ) : (
               <ul className="scoring-panel__list">
                 {items.map(({ id, data }) => {
@@ -1140,39 +1205,56 @@ export function ScoringPanel({ user, selectedCourseTemplate }: Props) {
                       <div>
                         <strong>{id}</strong>
                         <p className="scoring-panel__muted">
-                          {data.visibility} · {formatStartedAt(data.startedAt)}
-                          {data.completedAt ? ' · completed' : ''}
+                          {t(`scoring.visibility.${data.visibility}`)} · {formatStartedAt(data.startedAt)}
+                          {data.completedAt ? ` · ${t('scoring.rounds.completed')}` : ''}
                         </p>
                         <p className="scoring-panel__muted">
                           {data.courseSource === 'fresh'
-                            ? `fresh draft · ${data.courseDraft?.name ?? 'unnamed'}`
-                            : `saved course ${data.courseId} / ${data.templateId}`}
+                            ? t('scoring.rounds.freshDraft', { name: data.courseDraft?.name ?? t('scoring.rounds.unnamed') })
+                            : t('scoring.rounds.savedCourse', { courseId: data.courseId, templateId: data.templateId })}
                         </p>
                         {summary ? (
                           <p className="scoring-panel__muted">
-                            {summary.totalStrokes}/{summary.totalPar} ({formatDelta(summary.totalDelta)}) ·{' '}
-                            {summary.scoredHoles}/{inferRoundHoleCount(data)} holes
+                            {t('scoring.rounds.summary', {
+                              totalStrokes: summary.totalStrokes,
+                              totalPar: summary.totalPar,
+                              totalDelta: formatDelta(summary.totalDelta),
+                              scoredHoles: summary.scoredHoles,
+                              holeCount: inferRoundHoleCount(data),
+                            })}
                           </p>
                         ) : null}
                       </div>
                       <div>
                         {last && notation ? (
                           <span className="scoring-panel__score-notation">
-                            <span
-                              className={`scoring-panel__notation ${scoreTierToNotationClassName(notation.tier)}`}
-                              aria-label={`${notation.label}: ${last.strokes} strokes on par ${last.par}`}
-                              title={`${notation.label} (${formatDelta(notation.delta)} vs par)`}
-                            >
-                              <ScoreNotationValue
-                                strokes={last.strokes}
-                                decorationShape={notation.decorationShape}
-                                decorationLayers={notation.decorationLayers}
-                              />
-                            </span>
+                            {(() => {
+                              const notationLabel = scoreTierLabel(t, notation.tier)
+                              return (
+                                <span
+                                  className={`scoring-panel__notation ${scoreTierToNotationClassName(notation.tier)}`}
+                                  aria-label={t('scoring.rounds.latestScoreAria', {
+                                    label: notationLabel,
+                                    strokes: last.strokes,
+                                    par: last.par,
+                                  })}
+                                  title={t('scoring.rounds.latestScoreTitle', {
+                                    label: notationLabel,
+                                    delta: formatDelta(notation.delta),
+                                  })}
+                                >
+                                  <ScoreNotationValue
+                                    strokes={last.strokes}
+                                    decorationShape={notation.decorationShape}
+                                    decorationLayers={notation.decorationLayers}
+                                  />
+                                </span>
+                              )
+                            })()}
                             <span className="scoring-panel__notation-par">/{last.par}</span>
                           </span>
                         ) : (
-                          <span className="scoring-panel__muted">no scores</span>
+                          <span className="scoring-panel__muted">{t('scoring.rounds.noScores')}</span>
                         )}
                         <button
                           type="button"
@@ -1209,12 +1291,16 @@ export function ScoringPanel({ user, selectedCourseTemplate }: Props) {
 
           {selected ? (
             <div className="scoring-panel__section">
-              <span className="scoring-panel__label">Hole-by-hole scoring</span>
+              <span className="scoring-panel__label">{t('scoring.sections.holeByHole')}</span>
               {selectedSummary ? (
                 <p className="scoring-panel__muted">
-                  Round total {selectedSummary.totalStrokes}/{selectedSummary.totalPar} (
-                  {formatDelta(selectedSummary.totalDelta)}) · {selectedSummary.scoredHoles}/{selectedHoleCount} holes
-                  scored
+                  {t('scoring.rounds.roundTotal', {
+                    totalStrokes: selectedSummary.totalStrokes,
+                    totalPar: selectedSummary.totalPar,
+                    totalDelta: formatDelta(selectedSummary.totalDelta),
+                    scoredHoles: selectedSummary.scoredHoles,
+                    holeCount: selectedHoleCount ?? 0,
+                  })}
                 </p>
               ) : null}
               <HoleStepper
@@ -1276,10 +1362,10 @@ export function ScoringPanel({ user, selectedCourseTemplate }: Props) {
                   />
                 </HoleForm>
               ) : (
-                <p className="scoring-panel__muted">Select a round to load hole form.</p>
+                <p className="scoring-panel__muted">{t('scoring.rounds.selectRoundToLoadHoleForm')}</p>
               )}
               <p className="scoring-panel__legend-footnote">
-                Legend: Eagle+ ≤ -2, Birdie -1, Par 0, Bogey +1, Double+ ≥ +2.
+                {t('scoring.legend')}
               </p>
               <div className="scoring-panel__row">
                 <button
@@ -1305,16 +1391,16 @@ export function ScoringPanel({ user, selectedCourseTemplate }: Props) {
               </div>
             </div>
           ) : (
-            <p className="scoring-panel__muted">Select a round to record hole scores.</p>
+            <p className="scoring-panel__muted">{t('scoring.rounds.selectRoundToRecordScores')}</p>
           )}
         </>
       ) : null}
 
       {activeTab === 'participants' ? (
         <div className="scoring-panel__section">
-          <span className="scoring-panel__label">Round participants</span>
+          <span className="scoring-panel__label">{t('scoring.sections.roundParticipants')}</span>
           {!selected ? (
-            <p className="scoring-panel__muted">Select a round first.</p>
+            <p className="scoring-panel__muted">{t('scoring.participants.selectRoundFirst')}</p>
           ) : (
             <>
               <ul className="scoring-panel__list">
@@ -1335,36 +1421,44 @@ export function ScoringPanel({ user, selectedCourseTemplate }: Props) {
                         </p>
                       </div>
                       <p className="scoring-panel__muted">
-                        {totals.totalStrokes}/{totals.totalPar} ({formatDelta(totals.totalDelta)}) ·{' '}
-                        {totals.scoredHoles} holes
+                        {t('scoring.participants.playerSummary', {
+                          totalStrokes: totals.totalStrokes,
+                          totalPar: totals.totalPar,
+                          totalDelta: formatDelta(totals.totalDelta),
+                          scoredHoles: totals.scoredHoles,
+                        })}
                       </p>
                     </li>
                   )
                 })}
               </ul>
               <p className="scoring-panel__muted">
-                Grand total: {selectedGrandTotals.totalStrokes}/{selectedGrandTotals.totalPar} (
-                {formatDelta(selectedGrandTotals.totalDelta)}) across {selectedGrandTotals.participantCount}{' '}
-                participant{selectedGrandTotals.participantCount === 1 ? '' : 's'}.
+                {t('scoring.participants.grandTotal', {
+                  totalStrokes: selectedGrandTotals.totalStrokes,
+                  totalPar: selectedGrandTotals.totalPar,
+                  totalDelta: formatDelta(selectedGrandTotals.totalDelta),
+                  count: selectedGrandTotals.participantCount,
+                  participantCount: selectedGrandTotals.participantCount,
+                })}
               </p>
               {selected.data.ownerId === uid ? (
                 <div className="scoring-panel__row scoring-panel__scorecard-participants">
                   <div className="scoring-panel__field scoring-panel__field--grow">
                     <label className="scoring-panel__label" htmlFor="invite-search">
-                      Add participants
+                      {t('scoring.participants.addParticipants')}
                     </label>
                     <input
                       id="invite-search"
                       className="scoring-panel__input"
                       value={inviteParticipantQuery}
                       onChange={(event) => setInviteParticipantQuery(event.target.value)}
-                      placeholder={t('scoring.placeholders.inviteSearch')}
+                      placeholder={t('scoring.participants.searchUsersPlaceholder')}
                       autoComplete="off"
                     />
                     {inviteParticipantQuery.trim().length === 0 ? (
                       <p className="scoring-panel__muted">{t('scoring.messages.participantDefaultsToFriends')}</p>
                     ) : null}
-                    <div className="scoring-panel__participant-list" role="group" aria-label="Invite participants">
+                    <div className="scoring-panel__participant-list" role="group" aria-label={t('scoring.aria.inviteParticipants')}>
                       {inviteCandidateEntries.map((entry) => {
                         const checked = inviteSelections.includes(entry.uid)
                         return (
@@ -1415,7 +1509,7 @@ export function ScoringPanel({ user, selectedCourseTemplate }: Props) {
                         normalizeAnonymousParticipantName(inviteAnonymousName).length === 0)
                     }
                   >
-                    {t('scoring.buttons.addParticipants')}
+                    {t('scoring.participants.addSelectedParticipants')}
                   </button>
                 </div>
               ) : null}
@@ -1426,27 +1520,33 @@ export function ScoringPanel({ user, selectedCourseTemplate }: Props) {
 
       {activeTab === 'analytics' ? (
         <div className="scoring-panel__section">
-          <span className="scoring-panel__label">Analytics strip</span>
+          <span className="scoring-panel__label">{t('scoring.sections.analyticsStrip')}</span>
           {participantParSummary.scoredRounds === 0 ? (
-            <p className="scoring-panel__muted">Finish and score at least one round to unlock ±par analytics.</p>
+            <p className="scoring-panel__muted">{t('scoring.analytics.empty')}</p>
           ) : (
             <>
               <p className="scoring-panel__analytics-summary">
-                Completed rounds: {participantParSummary.completedRounds} · scored rounds:{' '}
-                {participantParSummary.scoredRounds} · scored holes: {participantParSummary.scoredHoles}
+                {t('scoring.analytics.completedRoundsSummary', {
+                  completedRounds: participantParSummary.completedRounds,
+                  scoredRounds: participantParSummary.scoredRounds,
+                  scoredHoles: participantParSummary.scoredHoles,
+                })}
               </p>
               <p className="scoring-panel__analytics-delta">
-                <strong>± par:</strong>
+                <strong>{t('scoring.analytics.deltaLabel')}</strong>
                 <span
                   className={`scoring-panel__notation scoring-panel__analytics-delta-value ${
                     participantParNotation ? scoreTierToNotationClassName(participantParNotation.tier) : ''
                   }`}
-                  aria-label={`Total round delta ${formatDelta(participantParSummary.totalDelta)}`}
+                  aria-label={t('scoring.aria.totalRoundDelta', { delta: formatDelta(participantParSummary.totalDelta) })}
                 >
                   {formatDelta(participantParSummary.totalDelta)}
                 </span>
                 <span className="scoring-panel__muted">
-                  from {participantParSummary.totalStrokes} strokes / {participantParSummary.totalPar} par
+                  {t('scoring.analytics.deltaFromTotals', {
+                    totalStrokes: participantParSummary.totalStrokes,
+                    totalPar: participantParSummary.totalPar,
+                  })}
                 </span>
               </p>
             </>
@@ -1456,7 +1556,7 @@ export function ScoringPanel({ user, selectedCourseTemplate }: Props) {
               <div className="scoring-panel__row">
                 <div className="scoring-panel__field">
                   <label className="scoring-panel__label" htmlFor="analytics-opponent">
-                    Head-to-head opponent
+                    {t('scoring.analytics.headToHeadOpponent')}
                   </label>
                   <select
                     id="analytics-opponent"
@@ -1478,20 +1578,22 @@ export function ScoringPanel({ user, selectedCourseTemplate }: Props) {
               </div>
               {headToHeadSummary ? (
                 <p className="scoring-panel__analytics-summary">
-                  Head-to-head:{' '}
+                  {t('scoring.analytics.headToHeadLabel')}{' '}
                   <strong>
                     {headToHeadSummary.wins}-{headToHeadSummary.losses}-{headToHeadSummary.ties}
                   </strong>{' '}
-                  across {headToHeadSummary.comparedRounds} comparable rounds
+                  {t('scoring.analytics.acrossComparableRounds', {
+                    comparedRounds: headToHeadSummary.comparedRounds,
+                  })}
                   {headToHeadSummary.skippedRounds > 0
-                    ? ` (${headToHeadSummary.skippedRounds} skipped for incomplete/mismatched scorecards).`
+                    ? ` (${t('scoring.analytics.skippedRoundsReason', { skippedRounds: headToHeadSummary.skippedRounds })}).`
                     : '.'}
                 </p>
               ) : null}
             </>
           ) : (
             <p className="scoring-panel__muted">
-              Add and complete rounds with other participants to unlock head-to-head analytics.
+              {t('scoring.analytics.addRoundsToUnlock')}
             </p>
           )}
         </div>

@@ -53,7 +53,7 @@ export function ProtectedApp() {
             <p className="app-shell__tagline app-shell__tagline--compact">
               {user.displayName || user.email}
             </p>
-            <nav className="app-shell__nav" aria-label="Primary">
+            <nav className="app-shell__nav" aria-label={t('shell.nav.primaryAria')}>
               <NavLink to="/" end className={({ isActive }) => `app-shell__nav-link${isActive ? ' app-shell__nav-link--active' : ''}`}>
                 {t('shell.nav.home')}
               </NavLink>

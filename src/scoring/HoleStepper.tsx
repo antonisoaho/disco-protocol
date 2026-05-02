@@ -1,3 +1,5 @@
+import { useTranslation } from 'react-i18next'
+
 type Props = {
   holeCount: number
   currentHole: number
@@ -17,13 +19,16 @@ export function HoleStepper({
   disabled = false,
   statusLabel,
 }: Props) {
+  const { t } = useTranslation('common')
   const safeHoleCount = Number.isFinite(holeCount) && holeCount > 0 ? Math.floor(holeCount) : 1
 
   return (
     <div className="scoring-panel__hole-stepper">
       <div className="scoring-panel__hole-stepper-header">
         <div>
-          <p className="scoring-panel__hole-stepper-title">Hole {currentHole}</p>
+          <p className="scoring-panel__hole-stepper-title">
+            {t('scoring.stepper.holeTitle', { holeNumber: currentHole })}
+          </p>
           <p className="scoring-panel__hole-stepper-meta">
             {currentHole} / {safeHoleCount}
             {statusLabel ? ` · ${statusLabel}` : ''}
@@ -36,7 +41,7 @@ export function HoleStepper({
             onClick={onPrevious}
             disabled={disabled || currentHole <= 1}
           >
-            Previous
+            {t('scoring.stepper.previous')}
           </button>
           <button
             type="button"
@@ -44,11 +49,11 @@ export function HoleStepper({
             onClick={onNext}
             disabled={disabled || currentHole >= safeHoleCount}
           >
-            Next
+            {t('scoring.stepper.next')}
           </button>
         </div>
       </div>
-      <div className="scoring-panel__hole-dots" role="tablist" aria-label="Select hole">
+      <div className="scoring-panel__hole-dots" role="tablist" aria-label={t('scoring.stepper.selectHoleAria')}>
         {Array.from({ length: safeHoleCount }, (_, index) => {
           const holeNumber = index + 1
           const isActive = holeNumber === currentHole
@@ -58,7 +63,7 @@ export function HoleStepper({
               type="button"
               role="tab"
               aria-selected={isActive}
-              aria-label={`Go to hole ${holeNumber}`}
+              aria-label={t('scoring.stepper.goToHoleAria', { holeNumber })}
               className={`scoring-panel__hole-dot${isActive ? ' scoring-panel__hole-dot--active' : ''}`}
               onClick={() => onSelectHole(holeNumber)}
               disabled={disabled}

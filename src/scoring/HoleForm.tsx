@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react'
+import { useTranslation } from 'react-i18next'
 
 type Props = {
   holeNumber: number
@@ -21,11 +22,16 @@ export function HoleForm({
   saveStateLabel,
   children,
 }: Props) {
+  const { t } = useTranslation('common')
+
   return (
-    <section className="scoring-panel__hole-form" aria-label={`Hole ${holeNumber} form`}>
+    <section
+      className="scoring-panel__hole-form"
+      aria-label={t('scoring.holeForm.sectionAria', { holeNumber })}
+    >
       <div className="scoring-panel__hole-meta-row">
         <label className="scoring-panel__field scoring-panel__field--compact">
-          <span className="scoring-panel__label">Par</span>
+          <span className="scoring-panel__label">{t('scoring.holeForm.par')}</span>
           <input
             className="scoring-panel__input"
             type="number"
@@ -33,11 +39,11 @@ export function HoleForm({
             max={9}
             value={parValue}
             onChange={(event) => onParChange(event.target.value)}
-            aria-label={`Hole ${holeNumber} par`}
+            aria-label={t('scoring.holeForm.parAria', { holeNumber })}
           />
         </label>
         <label className="scoring-panel__field scoring-panel__field--compact">
-          <span className="scoring-panel__label">Length (m)</span>
+          <span className="scoring-panel__label">{t('scoring.holeForm.lengthMeters')}</span>
           <input
             className="scoring-panel__input"
             type="number"
@@ -45,7 +51,7 @@ export function HoleForm({
             max={5000}
             value={lengthValue}
             onChange={(event) => onLengthChange(event.target.value)}
-            aria-label={`Hole ${holeNumber} length in meters`}
+            aria-label={t('scoring.holeForm.lengthAria', { holeNumber })}
             disabled={disableLength}
           />
         </label>

@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useAuth } from '../auth/useAuth'
+import { translateUserError } from '../i18n/translateError'
 import {
   createTemplate,
   createCourseWithDefaultTemplate,
@@ -92,10 +93,10 @@ export function CoursePicker({ selection, onSelectionChange }: Props) {
           return rows[0]?.id ?? null
         })
       },
-      (e) => setListError(e.message),
+      (e) => setListError(translateUserError(t, e.message)),
     )
     return () => unsub()
-  }, [selection?.courseId])
+  }, [selection?.courseId, t])
 
   useEffect(() => {
     if (!activeCourseId) return
@@ -118,10 +119,10 @@ export function CoursePicker({ selection, onSelectionChange }: Props) {
           return def?.id ?? rows[0]?.id ?? null
         })
       },
-      (e) => setTemplatesError(e.message),
+      (e) => setTemplatesError(translateUserError(t, e.message)),
     )
     return () => unsub()
-  }, [activeCourseId, selection?.courseId, selection?.templateId])
+  }, [activeCourseId, selection?.courseId, selection?.templateId, t])
 
   const templates = useMemo(() => {
     if (!activeCourseId || templateState.courseId !== activeCourseId) {
@@ -164,19 +165,22 @@ export function CoursePicker({ selection, onSelectionChange }: Props) {
   const geolocationSupported = typeof navigator !== 'undefined' && 'geolocation' in navigator
   const geolocationStatusMessage = useMemo(() => {
     if (locationState === 'ready' && userLocation) {
-      return `Using your location (${userLocation.latitude.toFixed(3)}, ${userLocation.longitude.toFixed(3)}).`
+      return t('courses.location.usingLocation', {
+        latitude: userLocation.latitude.toFixed(3),
+        longitude: userLocation.longitude.toFixed(3),
+      })
     }
     if (locationState === 'requesting') {
-      return 'Requesting your location...'
+      return t('courses.location.requesting')
     }
     if (locationState === 'denied') {
-      return 'Location permission denied. You can still search by name and city.'
+      return t('courses.location.deniedStatus')
     }
     if (locationState === 'unavailable') {
-      return 'Could not determine your location.'
+      return t('courses.location.unavailableStatus')
     }
     return null
-  }, [locationState, userLocation])
+  }, [locationState, t, userLocation])
 
   useEffect(() => {
     if (!activeCourse || !pickedTemplate) {
@@ -197,7 +201,7 @@ export function CoursePicker({ selection, onSelectionChange }: Props) {
     if (!user) return
     const nameError = validateCourseName(newName)
     if (nameError) {
-      setCreateError(nameError)
+      setCreateError(t('courses.errors.courseNameRequired'))
       return
     }
     setCreating(true)
@@ -212,7 +216,9 @@ export function CoursePicker({ selection, onSelectionChange }: Props) {
       setNewCity('')
       setActiveCourseId(courseId)
     } catch (err) {
-      setCreateError(err instanceof Error ? err.message : 'Could not create course')
+      setCreateError(
+        err instanceof Error ? translateUserError(t, err.message) : t('courses.errors.createCourseFailed'),
+      )
     } finally {
       setCreating(false)
     }
@@ -223,7 +229,7 @@ export function CoursePicker({ selection, onSelectionChange }: Props) {
     if (!activeCourse || !isAdmin) return
     const nameError = validateCourseName(renameName)
     if (nameError) {
-      setRenameError(nameError)
+      setRenameError(t('courses.errors.courseNameRequired'))
       return
     }
     setRenaming(true)
@@ -236,7 +242,9 @@ export function CoursePicker({ selection, onSelectionChange }: Props) {
       })
       setRenameDraft({ courseId: null, name: '', city: '' })
     } catch (err) {
-      setRenameError(err instanceof Error ? err.message : 'Could not rename course')
+      setRenameError(
+        err instanceof Error ? translateUserError(t, err.message) : t('courses.errors.renameCourseFailed'),
+      )
     } finally {
       setRenaming(false)
     }
@@ -258,7 +266,9 @@ export function CoursePicker({ selection, onSelectionChange }: Props) {
       setCreateTemplateLabel('Main')
       setCreateTemplateHoleCount(18)
     } catch (err) {
-      setCreateTemplateError(err instanceof Error ? err.message : 'Could not create template')
+      setCreateTemplateError(
+        err instanceof Error ? translateUserError(t, err.message) : t('courses.errors.createTemplateFailed'),
+      )
     } finally {
       setCreatingTemplate(false)
     }
@@ -278,7 +288,9 @@ export function CoursePicker({ selection, onSelectionChange }: Props) {
       })
       setTemplateEditDraft({ templateId: null, label: 'Main', holeCount: 18 })
     } catch (err) {
-      setEditTemplateError(err instanceof Error ? err.message : 'Could not update template')
+      setEditTemplateError(
+        err instanceof Error ? translateUserError(t, err.message) : t('courses.errors.updateTemplateFailed'),
+      )
     } finally {
       setSavingTemplate(false)
     }
@@ -308,7 +320,7 @@ export function CoursePicker({ selection, onSelectionChange }: Props) {
   function handleUseMyLocation() {
     if (!geolocationSupported) {
       setLocationState('unavailable')
-      setLocationError('Geolocation is not available in this browser.')
+      setLocationError(t('courses.location.unsupported'))
       return
     }
 
@@ -326,11 +338,11 @@ export function CoursePicker({ selection, onSelectionChange }: Props) {
       (error) => {
         if (error.code === error.PERMISSION_DENIED) {
           setLocationState('denied')
-          setLocationError('Permission denied. Enable location permission to sort by distance.')
+          setLocationError(t('courses.location.permissionDenied'))
           return
         }
         setLocationState('unavailable')
-        setLocationError('Could not determine your location right now.')
+        setLocationError(t('courses.location.unavailableNow'))
       },
       {
         enableHighAccuracy: false,
@@ -341,12 +353,12 @@ export function CoursePicker({ selection, onSelectionChange }: Props) {
   }
 
   return (
-    <section className="course-picker card" aria-label="Choose course and layout">
+    <section className="course-picker card" aria-label={t('courses.aria.chooseCourseAndLayout')}>
       <div className="course-picker__toolbar">
-        <h2 className="course-picker__heading">Courses</h2>
+        <h2 className="course-picker__heading">{t('courses.heading')}</h2>
         {isAdmin ? (
-          <span className="badge course-picker__badge" data-variant="success" title="Firebase custom claim admin">
-            Admin
+          <span className="badge course-picker__badge" data-variant="success" title={t('courses.admin.title')}>
+            {t('courses.admin.badge')}
           </span>
         ) : null}
       </div>
@@ -357,39 +369,39 @@ export function CoursePicker({ selection, onSelectionChange }: Props) {
         </p>
       ) : null}
 
-      <div className="course-picker__filters" aria-label="Filter courses">
+      <div className="course-picker__filters" aria-label={t('courses.aria.filterCourses')}>
         <div className="course-picker__filter-group">
           <label className="course-picker__add-label" htmlFor="course-picker-filter-name">
-            Search by name
+            {t('courses.filters.searchByName')}
           </label>
           <input
             id="course-picker-filter-name"
             value={nameQuery}
             onChange={(e) => setNameQuery(e.target.value)}
-            placeholder="Maple Hill"
+            placeholder={t('courses.filters.namePlaceholder')}
             autoComplete="off"
           />
         </div>
         <div className="course-picker__filter-group">
           <label className="course-picker__add-label" htmlFor="course-picker-filter-city">
-            Filter by city
+            {t('courses.filters.filterByCity')}
           </label>
           <input
             id="course-picker-filter-city"
             value={cityQuery}
             onChange={(e) => setCityQuery(e.target.value)}
-            placeholder="Leicester"
+            placeholder={t('courses.filters.cityPlaceholder')}
             autoComplete="off"
           />
         </div>
-        <div className="course-picker__filter-actions" role="group" aria-label="Location tools">
+        <div className="course-picker__filter-actions" role="group" aria-label={t('courses.aria.locationTools')}>
           <button
             type="button"
             data-variant="secondary"
             onClick={handleUseMyLocation}
             disabled={!geolocationSupported || locationState === 'requesting'}
           >
-            {locationState === 'requesting' ? 'Locating…' : 'Use my location'}
+            {locationState === 'requesting' ? t('courses.location.locating') : t('courses.location.useMyLocation')}
           </button>
           {userLocation ? (
             <button
@@ -403,7 +415,7 @@ export function CoursePicker({ selection, onSelectionChange }: Props) {
                 setLocationError(null)
               }}
             >
-              Clear location
+              {t('courses.location.clearLocation')}
             </button>
           ) : null}
           <label className="course-picker__checkbox">
@@ -413,7 +425,7 @@ export function CoursePicker({ selection, onSelectionChange }: Props) {
               onChange={(e) => setSortByDistance(e.target.checked)}
               disabled={!userLocation}
             />
-            Sort by nearest
+            {t('courses.filters.sortByNearest')}
           </label>
           <label className="course-picker__checkbox">
             <input
@@ -422,7 +434,7 @@ export function CoursePicker({ selection, onSelectionChange }: Props) {
               onChange={(e) => setNearMeOnly(e.target.checked)}
               disabled={!userLocation}
             />
-            Near me only
+            {t('courses.filters.nearMeOnly')}
           </label>
         </div>
         {geolocationStatusMessage ? <p className="course-picker__hint">{geolocationStatusMessage}</p> : null}
@@ -434,9 +446,9 @@ export function CoursePicker({ selection, onSelectionChange }: Props) {
       </div>
 
       {courses.length === 0 && !listError ? (
-        <p className="course-picker__empty">No courses yet. Add one below to get started.</p>
+        <p className="course-picker__empty">{t('courses.empty.noCourses')}</p>
       ) : filteredCourses.length === 0 ? (
-        <p className="course-picker__empty">No courses match your filters yet.</p>
+        <p className="course-picker__empty">{t('courses.empty.noMatches')}</p>
       ) : (
         <ul className="course-picker__list">
           {filteredCourses.map((c) => (
@@ -448,10 +460,12 @@ export function CoursePicker({ selection, onSelectionChange }: Props) {
               >
                 <span className="course-picker__course-name">{c.name}</span>
                 <span className="course-picker__course-meta">
-                  {[c.city, c.organization, c.slug].filter(Boolean).join(' · ') || 'Layout templates inside'}
+                  {[c.city, c.organization, c.slug].filter(Boolean).join(' · ') || t('courses.courseCard.fallbackMeta')}
                 </span>
                 {typeof c.distanceKm === 'number' ? (
-                  <span className="course-picker__course-meta">{c.distanceKm.toFixed(1)} km away</span>
+                  <span className="course-picker__course-meta">
+                    {t('courses.courseCard.distanceKmAway', { distanceKm: c.distanceKm.toFixed(1) })}
+                  </span>
                 ) : null}
               </button>
             </li>
@@ -461,10 +475,10 @@ export function CoursePicker({ selection, onSelectionChange }: Props) {
 
       {activeCourseId && activeCourse ? (
         <div className="course-picker__templates">
-          <h3 className="course-picker__templates-title">Layouts for {activeCourse.name}</h3>
+          <h3 className="course-picker__templates-title">{t('courses.layoutsForCourse', { courseName: activeCourse.name })}</h3>
           <form className="course-picker__add" onSubmit={(e) => void handleRenameCourse(e)}>
             <label className="course-picker__add-label" htmlFor="course-picker-course-name">
-              Course name
+              {t('courses.forms.courseName')}
             </label>
             <div className="course-picker__add-row">
               <input
@@ -482,7 +496,7 @@ export function CoursePicker({ selection, onSelectionChange }: Props) {
               />
               <input
                 id="course-picker-course-city"
-                aria-label="Course city"
+                aria-label={t('courses.aria.courseCity')}
                 value={renameCity}
                 onChange={(e) =>
                   setRenameDraft({
@@ -491,7 +505,7 @@ export function CoursePicker({ selection, onSelectionChange }: Props) {
                     city: e.target.value,
                   })
                 }
-                placeholder="City"
+                placeholder={t('courses.forms.cityPlaceholder')}
                 autoComplete="off"
                 disabled={renaming || !isAdmin}
               />
@@ -500,10 +514,10 @@ export function CoursePicker({ selection, onSelectionChange }: Props) {
                 data-variant="secondary"
                 disabled={renaming || !isAdmin || validateCourseName(renameName) !== null}
               >
-                {renaming ? 'Saving…' : 'Save name'}
+                {renaming ? t('courses.actions.saving') : t('courses.actions.saveName')}
               </button>
             </div>
-            {!isAdmin ? <p className="course-picker__hint">Only admins can rename canonical courses.</p> : null}
+            {!isAdmin ? <p className="course-picker__hint">{t('courses.hints.onlyAdminsRename')}</p> : null}
             {renameError ? (
               <p className="course-picker__error" role="alert" data-variant="error">
                 {renameError}
@@ -537,17 +551,17 @@ export function CoursePicker({ selection, onSelectionChange }: Props) {
             </p>
           ) : null}
           <ul className="course-picker__template-list">
-            {templates.map((t) => (
-              <li key={t.id} className="course-picker__item">
+            {templates.map((template) => (
+              <li key={template.id} className="course-picker__item">
                 <button
                   type="button"
-                  className={`course-picker__template-btn${t.id === pickedTemplateId ? ' course-picker__template-btn--picked' : ''}`}
-                  onClick={() => setPickedTemplateId(t.id)}
+                  className={`course-picker__template-btn${template.id === pickedTemplateId ? ' course-picker__template-btn--picked' : ''}`}
+                  onClick={() => setPickedTemplateId(template.id)}
                 >
-                  {t.label}
+                  {template.label}
                   <span className="course-picker__template-meta">
-                    {t.holes.length} holes · {t.source}
-                    {t.isDefault ? ' · default' : ''}
+                    {t('courses.templateMeta.holeCount', { count: template.holes.length })} · {template.source}
+                    {template.isDefault ? ` · ${t('courses.templateMeta.default')}` : ''}
                   </span>
                 </button>
               </li>
@@ -555,7 +569,7 @@ export function CoursePicker({ selection, onSelectionChange }: Props) {
           </ul>
           <form className="course-picker__add" onSubmit={(e) => void handleCreateTemplate(e)}>
             <label className="course-picker__add-label" htmlFor="course-picker-template-label">
-              Add template
+              {t('courses.forms.addTemplate')}
             </label>
             <div className="course-picker__add-row">
               <input
@@ -574,7 +588,7 @@ export function CoursePicker({ selection, onSelectionChange }: Props) {
                 onChange={(e) => setCreateTemplateHoleCount(normalizeHoleCount(Number(e.target.value)))}
               />
               <button type="submit" disabled={creatingTemplate}>
-                {creatingTemplate ? 'Saving…' : 'Add template'}
+                {creatingTemplate ? t('courses.actions.saving') : t('courses.actions.addTemplate')}
               </button>
             </div>
             {createTemplateError ? (
@@ -586,7 +600,7 @@ export function CoursePicker({ selection, onSelectionChange }: Props) {
           {pickedTemplate ? (
             <form className="course-picker__add" onSubmit={(e) => void handleUpdateTemplate(e)}>
               <label className="course-picker__add-label" htmlFor="course-picker-template-edit-label">
-                Edit selected template
+                {t('courses.forms.editSelectedTemplate')}
               </label>
               <div className="course-picker__add-row">
                 <input
@@ -617,7 +631,7 @@ export function CoursePicker({ selection, onSelectionChange }: Props) {
                   }
                 />
                 <button type="submit" disabled={savingTemplate}>
-                  {savingTemplate ? 'Saving…' : 'Save template'}
+                  {savingTemplate ? t('courses.actions.saving') : t('courses.actions.saveTemplate')}
                 </button>
               </div>
               {editTemplateError ? (
@@ -632,36 +646,36 @@ export function CoursePicker({ selection, onSelectionChange }: Props) {
 
       {activeCourse && pickedTemplate ? (
         <p className="course-picker__selection">
-          Selected:{' '}
+          {t('courses.selection.selected')}:{' '}
           <strong>
             {activeCourse.name} — {pickedTemplate.label}
           </strong>{' '}
-          <span className="course-picker__course-meta">(template id {pickedTemplate.id})</span>
+          <span className="course-picker__course-meta">{t('courses.selection.templateId', { templateId: pickedTemplate.id })}</span>
         </p>
       ) : null}
 
       <form className="course-picker__add" onSubmit={(e) => void handleCreate(e)}>
         <label className="course-picker__add-label" htmlFor="course-picker-new-name">
-          New course
+          {t('courses.forms.newCourse')}
         </label>
         <div className="course-picker__add-row">
           <input
             id="course-picker-new-name"
-            placeholder="Course name"
+            placeholder={t('courses.forms.courseNamePlaceholder')}
             value={newName}
             onChange={(e) => setNewName(e.target.value)}
             autoComplete="off"
           />
           <input
             id="course-picker-new-city"
-            placeholder="City (optional)"
+            placeholder={t('courses.forms.cityOptionalPlaceholder')}
             value={newCity}
             onChange={(e) => setNewCity(e.target.value)}
             autoComplete="off"
-            aria-label="New course city"
+            aria-label={t('courses.aria.newCourseCity')}
           />
           <button type="submit" disabled={creating}>
-            {creating ? 'Saving…' : 'Add'}
+            {creating ? t('courses.actions.saving') : t('courses.actions.add')}
           </button>
         </div>
         {createError ? (
