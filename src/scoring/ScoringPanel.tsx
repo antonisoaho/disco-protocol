@@ -1,6 +1,7 @@
 import { type User } from 'firebase/auth'
 import type { Timestamp } from 'firebase/firestore'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import type { CourseRoundSelection } from '../courses/courseData'
 import { computeHeadToHeadSummary, computeParticipantParSummary } from '../analytics/roundAnalytics'
 import {
@@ -185,6 +186,7 @@ function ScoreNotationValue({ strokes, decorationShape, decorationLayers }: Scor
 }
 
 export function ScoringPanel({ user, selectedCourseTemplate }: Props) {
+  const { t } = useTranslation('common')
   const uid = user.uid
   const [activeTab, setActiveTab] = useState<AppTabId>('scorecard')
   const [items, setItems] = useState<{ id: string; data: RoundDoc }[]>([])
@@ -750,7 +752,7 @@ export function ScoringPanel({ user, selectedCourseTemplate }: Props) {
   return (
     <section className="scoring-panel" aria-labelledby="scoring-panel-title">
       <h2 id="scoring-panel-title" className="scoring-panel__title">
-        Rounds & scoring
+        {t('scoring.title')}
       </h2>
       {error ? (
         <p className="scoring-panel__error" role="alert">
@@ -809,7 +811,7 @@ export function ScoringPanel({ user, selectedCourseTemplate }: Props) {
                 onClick={() => setStartMode('saved')}
                 disabled={busy}
               >
-                Saved course
+                {t('scoring.buttons.savedCourse')}
               </button>
               <button
                 type="button"
@@ -817,7 +819,7 @@ export function ScoringPanel({ user, selectedCourseTemplate }: Props) {
                 onClick={() => setStartMode('fresh')}
                 disabled={busy}
               >
-                Fresh instance
+                {t('scoring.buttons.freshInstance')}
               </button>
             </div>
             {startMode === 'saved' ? (
@@ -929,7 +931,7 @@ export function ScoringPanel({ user, selectedCourseTemplate }: Props) {
                 onClick={() => void onCreateRound()}
                 disabled={busy || (startMode === 'saved' && !selectedCourseTemplate)}
               >
-                New round
+                {t('scoring.buttons.newRound')}
               </button>
             </div>
           </div>
@@ -1012,7 +1014,7 @@ export function ScoringPanel({ user, selectedCourseTemplate }: Props) {
                           }}
                           disabled={busy}
                         >
-                          {selectedId === id ? 'Selected' : 'Select'}
+                          {selectedId === id ? t('scoring.buttons.selected') : t('scoring.buttons.select')}
                         </button>
                         {data.ownerId === uid ? (
                           <button
@@ -1021,7 +1023,7 @@ export function ScoringPanel({ user, selectedCourseTemplate }: Props) {
                             onClick={() => void onDeleteRound(id, data.ownerId)}
                             disabled={busy}
                           >
-                            Delete
+                            {t('scoring.buttons.delete')}
                           </button>
                         ) : null}
                       </div>
@@ -1113,7 +1115,7 @@ export function ScoringPanel({ user, selectedCourseTemplate }: Props) {
                   onClick={() => void onComplete()}
                   disabled={busy}
                 >
-                  Mark complete
+                  {t('scoring.buttons.markComplete')}
                 </button>
                 {selected.data.courseSource === 'fresh' &&
                 (selected.data.coursePromotion?.status === 'pending' ||
@@ -1124,7 +1126,7 @@ export function ScoringPanel({ user, selectedCourseTemplate }: Props) {
                     onClick={() => void onRetryPromotion()}
                     disabled={busy}
                   >
-                    Retry promotion
+                    {t('scoring.buttons.retryPromotion')}
                   </button>
                 ) : null}
               </div>
