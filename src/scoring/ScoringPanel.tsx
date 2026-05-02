@@ -13,6 +13,7 @@ import {
   addParticipantToRound,
   completeRoundAndPromote,
   createRound,
+  deleteRound,
   recordParticipantHoleScoreTransaction,
   subscribeMyRounds,
   updateFreshRoundHoleMetadata,
@@ -660,6 +661,33 @@ export function ScoringPanel({ user, selectedCourseTemplate }: Props) {
     }
   }, [inviteSelections, selectedId])
 
+  const onDeleteRound = useCallback(
+    async (roundId: string, ownerId: string) => {
+      if (ownerId !== uid) return
+      const confirmed = window.confirm('Delete this round permanently? This cannot be undone.')
+      if (!confirmed) return
+      setBusy(true)
+      setError(null)
+      setNotice(null)
+      try {
+        await deleteRound(roundId)
+        if (selectedId === roundId) {
+          setSelectedId(null)
+          setHoleNumber(1)
+          setHoleDraft(null)
+          setSaveState('saved')
+          setExpandedPlayers({})
+        }
+        setNotice('Round deleted.')
+      } catch (nextError) {
+        setError(nextError instanceof Error ? nextError.message : 'Failed to delete round')
+      } finally {
+        setBusy(false)
+      }
+    },
+    [selectedId, uid],
+  )
+
   const onComplete = useCallback(async () => {
     if (!selectedId || !selected) return
     if (selected.data.courseSource === 'fresh') {
@@ -986,6 +1014,16 @@ export function ScoringPanel({ user, selectedCourseTemplate }: Props) {
                         >
                           {selectedId === id ? 'Selected' : 'Select'}
                         </button>
+                        {data.ownerId === uid ? (
+                          <button
+                            type="button"
+                            className="scoring-panel__button scoring-panel__button--inline"
+                            onClick={() => void onDeleteRound(id, data.ownerId)}
+                            disabled={busy}
+                          >
+                            Delete
+                          </button>
+                        ) : null}
                       </div>
                     </li>
                   )

@@ -1,6 +1,7 @@
 import {
   arrayUnion,
   collection,
+  deleteDoc,
   doc,
   getDoc,
   getDocs,
@@ -268,6 +269,11 @@ export async function addParticipantToRound(
     participantIds: arrayUnion(newParticipantUid),
     updatedAt: serverTimestamp(),
   })
+}
+
+export async function deleteRound(roundId: string): Promise<void> {
+  const ref = doc(db, ROUNDS, roundId)
+  await deleteDoc(ref)
 }
 
 export type CompleteRoundResult = {
