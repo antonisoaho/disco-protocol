@@ -2,25 +2,27 @@
 @use '../variables' as *;
 
 .scoring-panel {
-  margin-top: calc(#{$space-unit} * 4);
-  padding: calc(#{$space-unit} * 3);
+  margin-top: 0;
+  padding: $layout-stack-gap;
   border: 1px solid $color-border;
   border-radius: $radius-md;
   background: $color-surface;
   box-shadow: 0 0.5rem 1.25rem color-mix(in srgb, $color-text 6%, transparent);
+  display: flex;
+  flex-direction: column;
+  gap: $layout-section-gap;
 }
 
 .scoring-panel__title {
-  margin: 0 0 calc(#{$space-unit} * 3);
+  margin: 0;
   font-size: 1.05rem;
 }
 
 .scoring-panel__section {
-  margin-bottom: calc(#{$space-unit} * 5);
-
-  &:last-child {
-    margin-bottom: 0;
-  }
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: $layout-stack-gap;
 }
 
 .scoring-panel__label {
@@ -33,16 +35,20 @@
 .scoring-panel__tabs {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: calc(#{$space-unit} * 1.5);
-  margin-bottom: calc(#{$space-unit} * 4);
+  gap: $space-2;
+  margin: 0;
 }
 
 .scoring-panel__tab {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   border: 1px solid $color-border;
   border-radius: $radius-sm;
   background: $color-bg;
   color: $color-text;
-  padding: calc(#{$space-unit} * 1.75) calc(#{$space-unit} * 2.25);
+  min-height: $touch-target-comfortable;
+  padding: $space-2 $space-3;
   font-weight: 600;
 
   &--active {
@@ -54,15 +60,15 @@
 .scoring-panel__row {
   display: flex;
   flex-wrap: wrap;
-  gap: calc(#{$space-unit} * 2);
+  gap: $space-3;
   align-items: flex-end;
-  margin-bottom: calc(#{$space-unit} * 3);
+  margin: 0;
 }
 
 .scoring-panel__field {
   display: flex;
   flex-direction: column;
-  gap: calc(#{$space-unit} * 1);
+  gap: $space-2;
   min-width: 6.5rem;
 
   &--grow {
@@ -87,13 +93,15 @@
 }
 
 .scoring-panel__button {
+  min-height: $touch-target-min;
+
   &:disabled {
     opacity: 0.55;
     cursor: not-allowed;
   }
 
   &--inline {
-    margin-left: calc(#{$space-unit} * 2);
+    margin-left: $space-2;
   }
 
   &--primary {
@@ -113,13 +121,13 @@
 }
 
 .scoring-panel__error {
-  margin: 0 0 calc(#{$space-unit} * 3);
+  margin: 0;
   color: map.get($score-color, double-bogey-plus);
   font-size: 0.9rem;
 }
 
 .scoring-panel__notice {
-  margin: 0 0 calc(#{$space-unit} * 3);
+  margin: 0;
   color: map.get($score-color, birdie);
   font-size: 0.9rem;
 }
@@ -127,13 +135,13 @@
 .scoring-panel__mode-switch {
   display: flex;
   flex-wrap: wrap;
-  gap: calc(#{$space-unit} * 2);
-  margin-bottom: calc(#{$space-unit} * 2);
+  gap: $space-2;
+  margin: 0;
 }
 
 .scoring-panel__selection {
-  margin: 0 0 calc(#{$space-unit} * 2);
-  padding: calc(#{$space-unit} * 2) calc(#{$space-unit} * 3);
+  margin: 0;
+  padding: $space-3 $layout-stack-gap;
   border: 1px solid $color-border;
   border-radius: $radius-sm;
   background: $color-bg;
@@ -178,7 +186,7 @@
   padding: 0;
   display: flex;
   flex-direction: column;
-  gap: calc(#{$space-unit} * 2);
+  gap: $space-3;
 }
 
 .scoring-panel__list-item {
@@ -197,20 +205,22 @@
   position: sticky;
   top: 0;
   z-index: 5;
-  margin-top: calc(#{$space-unit} * 2);
-  margin-bottom: calc(#{$space-unit} * 2);
-  padding: calc(#{$space-unit} * 2.5);
+  margin: 0;
+  padding: $space-3;
   border: 1px solid $color-border;
   border-radius: $radius-sm;
   background: color-mix(in srgb, $color-surface 95%, $color-bg);
+  display: flex;
+  flex-direction: column;
+  gap: $space-3;
 }
 
 .scoring-panel__hole-stepper-header {
   display: flex;
   justify-content: space-between;
-  align-items: center;
-  gap: calc(#{$space-unit} * 2);
-  margin-bottom: calc(#{$space-unit} * 2);
+  align-items: flex-start;
+  gap: $space-3;
+  margin: 0;
 }
 
 .scoring-panel__hole-stepper-title {
@@ -226,22 +236,26 @@
 
 .scoring-panel__hole-stepper-actions {
   display: flex;
-  gap: calc(#{$space-unit} * 1.5);
+  flex-wrap: wrap;
+  gap: $space-2;
 }
 
 .scoring-panel__hole-dots {
   display: flex;
   flex-wrap: wrap;
-  gap: calc(#{$space-unit} * 1);
+  gap: $space-1;
 }
 
 .scoring-panel__hole-dot {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   border: 1px solid $color-border;
   border-radius: 999px;
   background: $color-bg;
   color: $color-text;
-  min-width: calc(#{$space-unit} * 6);
-  min-height: calc(#{$space-unit} * 6);
+  min-width: $space-8;
+  min-height: $space-8;
   font-size: 0.78rem;
   font-weight: 600;
 
@@ -256,7 +270,10 @@
   border: 1px solid $color-border;
   border-radius: $radius-sm;
   background: $color-bg;
-  padding: calc(#{$space-unit} * 3);
+  padding: $layout-stack-gap;
+  display: flex;
+  flex-direction: column;
+  gap: $layout-stack-gap;
 }
 
 .scoring-panel__hole-meta-row {
@@ -269,7 +286,7 @@
   display: flex;
   flex-direction: column;
   gap: calc(#{$space-unit} * 2);
-  margin-top: calc(#{$space-unit} * 2);
+  margin-top: 0;
 }
 
 .scoring-panel__player-row {
@@ -289,7 +306,8 @@
   justify-content: space-between;
   gap: calc(#{$space-unit} * 2);
   text-align: left;
-  padding: calc(#{$space-unit} * 2) calc(#{$space-unit} * 2.5);
+  min-height: $touch-target-min;
+  padding: $space-3 $layout-stack-gap;
 }
 
 .scoring-panel__player-row-name {
@@ -302,8 +320,11 @@
 }
 
 .scoring-panel__player-row-body {
-  padding: calc(#{$space-unit} * 2.5);
+  padding: $layout-stack-gap;
   border-top: 1px solid $color-border;
+  display: flex;
+  flex-direction: column;
+  gap: $space-3;
 }
 
 .scoring-panel__player-row-notation {
@@ -335,7 +356,7 @@
 }
 
 .scoring-panel__legend-footnote {
-  margin: calc(#{$space-unit} * 1.5) 0 0;
+  margin: 0;
   font-size: 0.75rem;
   color: $color-text-muted;
 }
@@ -416,13 +437,13 @@
 }
 
 .scoring-panel__analytics-summary {
-  margin: 0 0 calc(#{$space-unit} * 2);
+  margin: 0;
   font-size: 0.875rem;
   color: $color-text-muted;
 }
 
 .scoring-panel__analytics-delta {
-  margin: 0 0 calc(#{$space-unit} * 2);
+  margin: 0;
   display: flex;
   flex-wrap: wrap;
   align-items: center;
@@ -439,13 +460,12 @@
 .scoring-panel__save-status {
   font-weight: 600;
   color: color-mix(in srgb, $color-text 84%, $color-text-muted);
-  margin-top: calc(#{$space-unit} * 2);
-  margin-bottom: calc(#{$space-unit} * 1);
+  margin: 0;
 }
 
 .scoring-panel__scorecard-participants {
-  margin-top: calc(#{$space-unit} * 2);
-  padding: calc(#{$space-unit} * 3);
+  margin-top: 0;
+  padding: $layout-stack-gap;
   border: 1px solid $color-border;
   border-radius: $radius-sm;
   background: color-mix(in srgb, $color-bg 70%, $color-surface);
@@ -453,7 +473,12 @@
 
 @media (min-width: 768px) {
   .scoring-panel {
-    padding: calc(#{$space-unit} * 4);
+    padding: $layout-section-gap;
+    gap: $layout-section-gap-lg;
+  }
+
+  .scoring-panel__section {
+    gap: $layout-section-gap;
   }
 
   .scoring-panel__tabs {

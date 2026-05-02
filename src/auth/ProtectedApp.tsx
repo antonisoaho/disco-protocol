@@ -135,7 +135,7 @@ export function ProtectedApp() {
             <Route
               path="/"
               element={
-                <>
+                <div className="app-shell__flow">
                   <section className="app-shell__intro card">
                     <p className="app-shell__placeholder">
                       {t('shell.homeIntro')}
@@ -159,13 +159,13 @@ export function ProtectedApp() {
                     selectedCourseTemplate={selectedCourseTemplate}
                     favoriteCourseIds={favoriteCourseIds}
                   />
-                </>
+                </div>
               }
             />
             <Route
               path="/courses"
               element={
-                <>
+                <div className="app-shell__flow">
                   <section className="app-shell__intro card">
                     <p className="app-shell__placeholder">
                       {t('shell.coursesIntro')}
@@ -180,7 +180,7 @@ export function ProtectedApp() {
                     favoriteCourseIds={favoriteCourseIds}
                     onToggleFavoriteCourse={onToggleFavoriteCourse}
                   />
-                </>
+                </div>
               }
             />
             <Route path="*" element={<Navigate to="/" replace />} />
