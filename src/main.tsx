@@ -1,6 +1,8 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { registerSW } from 'virtual:pwa-register'
+import '@knadh/oat/oat.min.css'
+import '@knadh/oat/oat.min.js'
 import { AuthProvider } from './auth/AuthProvider'
 import './firebase/app'
 import './firebase/firestore'
