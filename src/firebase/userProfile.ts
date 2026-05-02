@@ -5,6 +5,8 @@ import { db } from './firestore'
 export type UserProfileDoc = {
   displayName: string
   photoUrl: string | null
+  /** Set by trusted backend tooling; never client-assigned. */
+  admin?: boolean
   createdAt: Timestamp
 }
 

@@ -69,4 +69,12 @@ export const commonEn = {
       unfollow: 'Unfollow',
     },
   },
+  courses: {
+    deleteCourseLabel: 'Delete course',
+    deleteCourse: 'Delete course',
+    deletingCourse: 'Deleting…',
+    deleteCourseConfirm:
+      'Delete "{{courseName}}" and all templates under it? This cannot be undone.',
+    deleteCourseError: 'Could not delete course',
+  },
 } as const

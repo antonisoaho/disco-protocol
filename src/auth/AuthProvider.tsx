@@ -6,8 +6,12 @@ import {
   signOut as firebaseSignOut,
   type User,
 } from 'firebase/auth'
+import { doc, onSnapshot } from 'firebase/firestore'
 import { auth } from '../firebase/auth'
+import { db } from '../firebase/firestore'
+import { COLLECTIONS } from '../firebase/paths'
 import { ensureUserProfile } from '../firebase/userProfile'
+import { isUserProfileAdmin } from './adminProfile'
 import { AuthContext } from './auth-context'
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -16,7 +20,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isAdmin, setIsAdmin] = useState(false)
 
   useEffect(() => {
-    return onAuthStateChanged(auth, (u) => {
+    let unsubscribeProfile: (() => void) | null = null
+    const unsubscribeAuth = onAuthStateChanged(auth, (u) => {
+      if (unsubscribeProfile) {
+        unsubscribeProfile()
+        unsubscribeProfile = null
+      }
       // Update React state immediately; do not block on Firestore or the UI
       // stays on the sign-in form after a successful Firebase sign-in.
       setUser(u)
@@ -30,15 +39,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setIsAdmin(false)
         return
       }
-      void u
-        .getIdTokenResult()
-        .then((r) => {
-          setIsAdmin(r.claims.admin === true)
-        })
-        .catch(() => {
+
+      unsubscribeProfile = onSnapshot(
+        doc(db, COLLECTIONS.users, u.uid),
+        (snapshot) => {
+          setIsAdmin(isUserProfileAdmin((snapshot.data() ?? null) as { admin?: unknown } | null))
+        },
+        () => {
           setIsAdmin(false)
-        })
+        },
+      )
     })
+    return () => {
+      if (unsubscribeProfile) {
+        unsubscribeProfile()
+      }
+      unsubscribeAuth()
+    }
   }, [])
 
   const signInWithEmail = useCallback(async (email: string, password: string) => {

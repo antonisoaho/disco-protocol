@@ -70,4 +70,12 @@ export const commonSv = {
       unfollow: 'Sluta följa',
     },
   },
+  courses: {
+    deleteCourseLabel: 'Ta bort bana',
+    deleteCourse: 'Ta bort bana',
+    deletingCourse: 'Tar bort…',
+    deleteCourseConfirm:
+      'Ta bort "{{courseName}}" och alla tillhorande layouter? Det går inte att angra.',
+    deleteCourseError: 'Kunde inte ta bort banan',
+  },
 } as const
