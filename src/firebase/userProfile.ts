@@ -12,6 +12,17 @@ import {
   type Unsubscribe,
 } from 'firebase/firestore'
 import { db } from './firestore'
+import {
+  DISPLAY_NAME_MAX_LENGTH,
+  normalizeDisplayName,
+  validateDisplayName,
+} from '../profile/displayName'
+export {
+  DISPLAY_NAME_MAX_LENGTH,
+  normalizeDisplayName,
+  validateDisplayName,
+  type DisplayNameValidationError,
+} from '../profile/displayName'
 
 export type UserProfileDoc = {
   displayName: string
@@ -30,10 +41,12 @@ export async function ensureUserProfile(authUser: User): Promise<void> {
   const snap = await getDoc(ref)
   if (snap.exists()) return
 
-  const displayName =
-    authUser.displayName?.trim() ||
+  const seedDisplayName =
+    authUser.displayName ||
     authUser.email?.split('@')[0] ||
     'Player'
+  const normalizedSeed = normalizeDisplayName(seedDisplayName)
+  const displayName = normalizedSeed.slice(0, DISPLAY_NAME_MAX_LENGTH) || 'Player'
 
   await setDoc(ref, {
     displayName,
@@ -90,4 +103,21 @@ export async function setCourseFavorite(params: {
   await updateDoc(ref, {
     favoriteCourseIds: params.isFavorite ? arrayUnion(courseId) : arrayRemove(courseId),
   })
+}
+
+export async function updateUserDisplayName(params: {
+  uid: string
+  displayName: string
+}): Promise<string> {
+  const nextDisplayName = normalizeDisplayName(params.displayName)
+  const validationError = validateDisplayName(nextDisplayName)
+  if (validationError === 'empty') {
+    throw new Error('Display name is required.')
+  }
+  if (validationError === 'tooLong') {
+    throw new Error(`Display name must be at most ${DISPLAY_NAME_MAX_LENGTH} characters.`)
+  }
+  const ref = doc(db, USERS, params.uid)
+  await updateDoc(ref, { displayName: nextDisplayName })
+  return nextDisplayName
 }

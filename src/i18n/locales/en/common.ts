@@ -17,6 +17,23 @@ export const commonEn = {
     coursesIntro: 'Search by course name or city, then use near-me sorting when location data is available.',
     backToRoundSetup: 'Back to round setup',
   },
+  profile: {
+    title: 'Profile',
+    displayName: 'Display name',
+    currentDisplayName: 'Current display name: {{displayName}}',
+    actions: {
+      save: 'Save',
+      saving: 'Saving…',
+    },
+    messages: {
+      displayNameSaved: 'Display name updated.',
+    },
+    errors: {
+      displayNameRequired: 'Display name is required.',
+      displayNameTooLong: 'Display name must be {{max}} characters or fewer.',
+      displayNameUpdateFailed: 'Could not update display name.',
+    },
+  },
   auth: {
     title: {
       signIn: 'Sign in',
