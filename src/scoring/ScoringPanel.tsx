@@ -3,6 +3,7 @@ import type { Timestamp } from 'firebase/firestore'
 import { type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { CourseRoundSelection } from '../courses/courseData'
 import { subscribeUserDirectory, type UserDirectoryEntry } from '../firebase/userDirectory'
+import { computeHeadToHeadSummary, computeParticipantParSummary } from '../analytics/roundAnalytics'
 import {
   FreshRoundDraftValidationError,
   normalizeFreshCourseDraft,
@@ -183,6 +184,7 @@ export function ScoringPanel({ user, selectedCourseTemplate }: Props) {
   const [visibility, setVisibility] = useState<RoundVisibility>('private')
   const [newRoundParticipants, setNewRoundParticipants] = useState<string[]>([uid])
   const [inviteSelections, setInviteSelections] = useState<string[]>([])
+  const [analyticsOpponentUid, setAnalyticsOpponentUid] = useState('')
   const [directoryEntries, setDirectoryEntries] = useState<UserDirectoryEntry[]>([])
   const [directoryQuery, setDirectoryQuery] = useState('')
   const [scorecardEdits, setScorecardEdits] = useState<Record<string, string>>({})
@@ -224,6 +226,7 @@ export function ScoringPanel({ user, selectedCourseTemplate }: Props) {
     () => items.find((r) => r.id === selectedId) ?? null,
     [items, selectedId],
   )
+  const roundDocs = useMemo(() => items.map((item) => item.data), [items])
 
   const selectedHoleCount = useMemo(
     () => (selected ? inferRoundHoleCount(selected.data) : null),
@@ -263,6 +266,58 @@ export function ScoringPanel({ user, selectedCourseTemplate }: Props) {
       return display.includes(q) || entry.uid.toLowerCase().includes(q)
     })
   }, [allDirectoryEntries, directoryQuery])
+
+  const participantParSummary = useMemo(
+    () => computeParticipantParSummary(roundDocs, uid),
+    [roundDocs, uid],
+  )
+
+  const participantParNotation = useMemo(() => {
+    if (participantParSummary.scoredHoles === 0 || participantParSummary.totalPar <= 0) {
+      return null
+    }
+    return strokesParDeltaToNotation(participantParSummary.totalStrokes, participantParSummary.totalPar)
+  }, [participantParSummary])
+
+  const analyticsOpponentOptions = useMemo(() => {
+    const opponentIds = new Set<string>()
+    for (const round of roundDocs) {
+      if (round.completedAt === null) continue
+      for (const participantId of round.participantIds) {
+        if (participantId !== uid) {
+          opponentIds.add(participantId)
+        }
+      }
+    }
+    return Array.from(opponentIds).sort((a, b) => {
+      const aName = participantDisplayName(
+        directoryByUid[a] ?? {
+          uid: a,
+          displayName: a,
+          subtitle: a,
+        },
+      )
+      const bName = participantDisplayName(
+        directoryByUid[b] ?? {
+          uid: b,
+          displayName: b,
+          subtitle: b,
+        },
+      )
+      return aName.localeCompare(bName, undefined, { sensitivity: 'base' })
+    })
+  }, [directoryByUid, roundDocs, uid])
+
+  const selectedAnalyticsOpponentUid = analyticsOpponentOptions.includes(analyticsOpponentUid)
+    ? analyticsOpponentUid
+    : (analyticsOpponentOptions[0] ?? '')
+
+  const headToHeadSummary = useMemo(() => {
+    if (!selectedAnalyticsOpponentUid) {
+      return null
+    }
+    return computeHeadToHeadSummary(roundDocs, uid, selectedAnalyticsOpponentUid)
+  }, [roundDocs, selectedAnalyticsOpponentUid, uid])
 
   const selectedParticipantScores = useMemo(
     () => (selected ? readParticipantHoleScores(selected.data, uid) : null),
@@ -1007,6 +1062,77 @@ export function ScoringPanel({ user, selectedCourseTemplate }: Props) {
               )
             })}
           </ul>
+        )}
+      </div>
+
+      <div className="scoring-panel__section">
+        <span className="scoring-panel__label">Analytics MVP (client-side)</span>
+        {participantParSummary.scoredRounds === 0 ? (
+          <p className="scoring-panel__muted">Finish and score at least one round to unlock ±par analytics.</p>
+        ) : (
+          <>
+            <p className="scoring-panel__analytics-summary">
+              Completed rounds: {participantParSummary.completedRounds} · scored rounds:{' '}
+              {participantParSummary.scoredRounds} · scored holes: {participantParSummary.scoredHoles}
+            </p>
+            <p className="scoring-panel__analytics-delta">
+              <strong>± par:</strong>
+              <span
+                className={`scoring-panel__notation scoring-panel__analytics-delta-value ${
+                  participantParNotation ? scoreTierToNotationClassName(participantParNotation.tier) : ''
+                }`}
+                aria-label={`Total round delta ${formatDelta(participantParSummary.totalDelta)}`}
+              >
+                {formatDelta(participantParSummary.totalDelta)}
+              </span>
+              <span className="scoring-panel__muted">
+                from {participantParSummary.totalStrokes} strokes / {participantParSummary.totalPar} par
+              </span>
+            </p>
+          </>
+        )}
+
+        {analyticsOpponentOptions.length > 0 ? (
+          <>
+            <div className="scoring-panel__row">
+              <div className="scoring-panel__field">
+                <label className="scoring-panel__label" htmlFor="analytics-opponent">
+                  Head-to-head opponent
+                </label>
+                <select
+                  id="analytics-opponent"
+                  className="scoring-panel__select"
+                  value={selectedAnalyticsOpponentUid}
+                  onChange={(event) => setAnalyticsOpponentUid(event.target.value)}
+                >
+                  {analyticsOpponentOptions.map((opponentUid) => {
+                    const entry = directoryByUid[opponentUid]
+                    return (
+                      <option key={opponentUid} value={opponentUid}>
+                        {entry ? participantDisplayName(entry) : opponentUid}
+                      </option>
+                    )
+                  })}
+                </select>
+              </div>
+            </div>
+            {headToHeadSummary ? (
+              <p className="scoring-panel__analytics-summary">
+                Head-to-head:{' '}
+                <strong>
+                  {headToHeadSummary.wins}-{headToHeadSummary.losses}-{headToHeadSummary.ties}
+                </strong>{' '}
+                across {headToHeadSummary.comparedRounds} comparable rounds
+                {headToHeadSummary.skippedRounds > 0
+                  ? ` (${headToHeadSummary.skippedRounds} skipped for incomplete/mismatched scorecards).`
+                  : '.'}
+              </p>
+            ) : null}
+          </>
+        ) : (
+          <p className="scoring-panel__muted">
+            Add and complete rounds with other participants to unlock head-to-head analytics.
+          </p>
         )}
       </div>
 

@@ -118,6 +118,27 @@
   color: $color-text;
 }
 
+.scoring-panel__analytics-summary {
+  margin: 0 0 calc(#{$space-unit} * 2);
+  font-size: 0.875rem;
+  color: $color-text-muted;
+}
+
+.scoring-panel__analytics-delta {
+  margin: 0 0 calc(#{$space-unit} * 2);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: calc(#{$space-unit} * 1.5);
+}
+
+.scoring-panel__analytics-delta-value {
+  min-width: auto;
+  min-height: auto;
+  font-size: 1rem;
+  font-weight: 700;
+}
+
 .scoring-panel__participant-list {
   max-height: 12rem;
   overflow-y: auto;
