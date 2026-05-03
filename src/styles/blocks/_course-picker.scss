@@ -272,6 +272,58 @@
   max-width: 7.5rem;
 }
 
+.course-picker__hole-grid {
+  margin-top: $space-3;
+  max-height: min(50vh, 22rem);
+  overflow: auto;
+  border: 1px solid $color-border;
+  border-radius: $radius-sm;
+  background: $color-surface;
+}
+
+.course-picker__hole-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+
+  th,
+  td {
+    padding: $space-2 $space-3;
+    text-align: left;
+    border-bottom: 1px solid $color-border;
+  }
+
+  th {
+    font-weight: 600;
+    color: $color-text-muted;
+    position: sticky;
+    top: 0;
+    background: $color-surface;
+    z-index: 1;
+  }
+}
+
+.course-picker__hole-num {
+  font-variant-numeric: tabular-nums;
+  width: 3rem;
+  color: $color-text-muted;
+}
+
+.course-picker__hole-input {
+  width: 100%;
+  min-width: 4rem;
+  max-width: 8rem;
+  min-height: $touch-target-min;
+  padding: $space-2 $space-2;
+  border: 1px solid $color-border;
+  border-radius: $radius-sm;
+  font: inherit;
+}
+
+.course-picker__hole-input--length {
+  max-width: 9rem;
+}
+
 .course-picker__empty {
   margin: 0;
   font-size: 0.9375rem;
