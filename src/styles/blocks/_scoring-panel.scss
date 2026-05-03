@@ -273,6 +273,13 @@
   margin: 0;
 }
 
+.scoring-panel__hole-stepper-leader {
+  margin: 0 0 $space-1;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: $color-text-muted;
+}
+
 .scoring-panel__hole-stepper-title {
   margin: 0;
   font-weight: 700;

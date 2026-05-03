@@ -283,6 +283,7 @@ export const commonEn = {
     },
     stepper: {
       holeTitle: 'Hole {{holeNumber}}',
+      leaderHint: 'Best card · {{names}} ({{delta}})',
       previous: 'Previous',
       next: 'Next',
       selectHoleAria: 'Select hole',

@@ -85,6 +85,38 @@ export function computeParticipantTotals(
   return totals
 }
 
+/**
+ * Participant ids with the best score vs par among those with at least one scored hole.
+ * Tie-break: lower total strokes. Co-leaders keep the order from `participantIds`.
+ */
+export function pickLeadingParticipantIds(
+  participantIds: string[],
+  totalsByParticipant: Record<string, ParticipantTotals>,
+): string[] {
+  const eligible = participantIds.filter((id) => (totalsByParticipant[id]?.scoredHoles ?? 0) >= 1)
+  if (eligible.length === 0) return []
+
+  let bestDelta = Infinity
+  let bestStrokes = Infinity
+  const leaders: string[] = []
+
+  for (const id of eligible) {
+    const row = totalsByParticipant[id]
+    if (!row) continue
+    const { totalDelta, totalStrokes } = row
+    if (totalDelta < bestDelta || (totalDelta === bestDelta && totalStrokes < bestStrokes)) {
+      bestDelta = totalDelta
+      bestStrokes = totalStrokes
+      leaders.length = 0
+      leaders.push(id)
+    } else if (totalDelta === bestDelta && totalStrokes === bestStrokes) {
+      leaders.push(id)
+    }
+  }
+
+  return leaders
+}
+
 export function collectScorecardEditedHoleNumbers(edits: Record<string, string>): number[] {
   const holeNumbers = new Set<number>()
   for (const key of Object.keys(edits)) {

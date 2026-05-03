@@ -5,6 +5,7 @@ import {
   computeGrandTotals,
   computeParticipantTotals,
   getOutcomeForScore,
+  pickLeadingParticipantIds,
 } from './scorecardTable'
 
 describe('buildScorecardColumns', () => {
@@ -40,6 +41,36 @@ describe('computeParticipantTotals', () => {
       'u-1': { totalStrokes: 7, totalPar: 6, totalDelta: 1, scoredHoles: 2 },
       'u-2': { totalStrokes: 2, totalPar: 3, totalDelta: -1, scoredHoles: 1 },
     })
+  })
+})
+
+describe('pickLeadingParticipantIds', () => {
+  it('returns empty when nobody has scored a hole', () => {
+    expect(
+      pickLeadingParticipantIds(['u-1', 'u-2'], {
+        'u-1': { totalStrokes: 0, totalPar: 0, totalDelta: 0, scoredHoles: 0 },
+        'u-2': { totalStrokes: 0, totalPar: 0, totalDelta: 0, scoredHoles: 0 },
+      }),
+    ).toEqual([])
+  })
+
+  it('picks lowest totalDelta, tie-break by fewer total strokes', () => {
+    const totals = {
+      'u-1': { totalStrokes: 7, totalPar: 6, totalDelta: 1, scoredHoles: 2 },
+      'u-2': { totalStrokes: 2, totalPar: 3, totalDelta: -1, scoredHoles: 1 },
+    }
+    expect(pickLeadingParticipantIds(['u-1', 'u-2'], totals)).toEqual(['u-2'])
+    expect(pickLeadingParticipantIds(['u-2', 'u-1'], totals)).toEqual(['u-2'])
+  })
+
+  it('returns co-leaders in participant order when delta and strokes match', () => {
+    const totals = {
+      a: { totalStrokes: 4, totalPar: 3, totalDelta: 1, scoredHoles: 1 },
+      b: { totalStrokes: 4, totalPar: 3, totalDelta: 1, scoredHoles: 1 },
+      c: { totalStrokes: 6, totalPar: 3, totalDelta: 3, scoredHoles: 1 },
+    }
+    expect(pickLeadingParticipantIds(['a', 'b', 'c'], totals)).toEqual(['a', 'b'])
+    expect(pickLeadingParticipantIds(['b', 'a', 'c'], totals)).toEqual(['b', 'a'])
   })
 })
 

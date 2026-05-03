@@ -8,6 +8,8 @@ type Props = {
   onNext: () => void
   disabled?: boolean
   statusLabel?: string
+  /** Shown above the hole title (e.g. leading player vs par). */
+  leaderHint?: string | null
 }
 
 export function HoleStepper({
@@ -18,6 +20,7 @@ export function HoleStepper({
   onNext,
   disabled = false,
   statusLabel,
+  leaderHint,
 }: Props) {
   const { t } = useTranslation('common')
   const safeHoleCount = Number.isFinite(holeCount) && holeCount > 0 ? Math.floor(holeCount) : 1
@@ -26,6 +29,7 @@ export function HoleStepper({
     <div className="scoring-panel__hole-stepper">
       <div className="scoring-panel__hole-stepper-header">
         <div>
+          {leaderHint ? <p className="scoring-panel__hole-stepper-leader">{leaderHint}</p> : null}
           <p className="scoring-panel__hole-stepper-title">
             {t('scoring.stepper.holeTitle', { holeNumber: currentHole })}
           </p>
