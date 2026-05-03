@@ -7,6 +7,10 @@
   width: 100%;
   max-width: 22rem;
   margin-inline: auto;
+  padding: $layout-section-gap;
+  border: 1px solid $color-border;
+  border-radius: $radius-md;
+  background: $color-surface;
 }
 
 .auth-panel__title {
@@ -52,7 +56,16 @@
   min-height: 44px;
 }
 
-.auth-panel > button {
-  margin-top: calc(#{$space-unit} * 4);
+.auth-panel__toggle {
+  margin-top: $layout-stack-gap;
   width: 100%;
+  background: transparent;
+  color: $color-text-muted;
+  border-color: transparent;
+
+  &:hover:not(:disabled) {
+    color: $color-text;
+    border-color: $color-border;
+    background: transparent;
+  }
 }

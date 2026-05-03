@@ -90,7 +90,7 @@ export function FollowPanel({ user }: Props) {
   }
 
   return (
-    <section className="follow-panel card" aria-labelledby="follow-panel-title">
+    <section className="follow-panel" aria-labelledby="follow-panel-title">
       <h2 id="follow-panel-title" className="follow-panel__title">
         {t('follow.title')}
       </h2>
@@ -128,8 +128,7 @@ export function FollowPanel({ user }: Props) {
               </div>
               <button
                 type="button"
-                className={isFollowing ? 'outline' : ''}
-                data-variant={isFollowing ? 'secondary' : undefined}
+                className={`follow-panel__follow-btn${isFollowing ? ' follow-panel__follow-btn--following' : ''}`}
                 disabled={isPending}
                 onClick={() => void onToggleFollow(entry.uid)}
               >

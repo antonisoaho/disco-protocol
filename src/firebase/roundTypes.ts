@@ -51,6 +51,8 @@ export type RoundDoc = {
   templateId: string
   courseSource?: RoundCourseSource
   courseDraft?: RoundCourseDraft | null
+  /** Human-readable course name snapshot for saved rounds (fresh rounds use courseDraft.name). */
+  courseName?: string | null
   coursePromotion?: RoundCoursePromotion | null
   /** Score protocol schema version (currently v1). */
   scoreProtocolVersion?: number

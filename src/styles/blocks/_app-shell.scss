@@ -19,7 +19,7 @@
 .app-shell__header {
   flex-shrink: 0;
   border-bottom: 1px solid $color-border;
-  background: $color-surface;
+  background: $color-bg;
   width: 100%;
 }
 
@@ -44,10 +44,10 @@
 
 .app-shell__title {
   margin: 0;
-  font-size: 1.125rem;
-  font-weight: 600;
+  font-size: 1rem;
+  font-weight: 500;
   color: $color-text;
-  letter-spacing: -0.02em;
+  letter-spacing: -0.01em;
 }
 
 .app-shell__tagline {
@@ -76,17 +76,18 @@
   display: inline-flex;
   align-items: center;
   min-height: $touch-target-min;
-  padding: $space-1 $space-3;
-  border: 1px solid $color-border;
-  border-radius: $radius-sm;
+  padding: $space-1 $space-2;
+  border: none;
+  border-bottom: 2px solid transparent;
   text-decoration: none;
+  font-size: 0.875rem;
   color: $color-text-muted;
-  background: $color-bg;
+  background: transparent;
+  transition: color 0.15s ease;
 
   &--active {
     color: $color-text;
-    border-color: map.get($score-color, birdie);
-    background: color-mix(in srgb, map.get($score-color, birdie) 8%, $color-bg);
+    border-bottom-color: map.get($score-color, birdie);
   }
 }
 
@@ -119,12 +120,39 @@
   font-size: 0.9375rem;
   line-height: 1.5;
   color: $color-text-muted;
+
+  &--error {
+    color: map.get($score-color, double-bogey-plus);
+  }
+
+  &--success {
+    color: map.get($score-color, birdie);
+  }
 }
 
 .app-shell__sign-out {
   flex-shrink: 0;
   align-self: center;
-  min-height: $touch-target-min;
+  background: transparent;
+  color: $color-text-muted;
+  border-color: transparent;
+
+  &:hover:not(:disabled) {
+    color: $color-text;
+    border-color: $color-border;
+    background: transparent;
+  }
+}
+
+.app-shell__retry-btn {
+  background: transparent;
+  color: $color-text-muted;
+  border-color: $color-border;
+
+  &:hover:not(:disabled) {
+    color: $color-text;
+    background: transparent;
+  }
 }
 
 .app-shell__intro {
@@ -139,6 +167,21 @@
   display: flex;
   flex-direction: column;
   gap: $space-3;
+  padding: $layout-section-gap;
+  border: 1px solid $color-border;
+  border-radius: $radius-md;
+  background: $color-surface;
+}
+
+.app-shell__profile-actions button {
+  background: transparent;
+  color: $color-text-muted;
+  border-color: $color-border;
+
+  &:hover:not(:disabled) {
+    color: $color-text;
+    background: transparent;
+  }
 }
 
 .app-shell__section-title {

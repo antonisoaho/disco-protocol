@@ -67,7 +67,7 @@ export function AuthPanel() {
   }
 
   return (
-    <section className="auth-panel card" aria-labelledby="auth-heading">
+    <section className="auth-panel" aria-labelledby="auth-heading">
       <h2 id="auth-heading" className="auth-panel__title">
         {mode === 'signin' ? t('auth.title.signIn') : t('auth.title.createAccount')}
       </h2>
@@ -112,8 +112,7 @@ export function AuthPanel() {
 
       <button
         type="button"
-        className="outline"
-        data-variant="secondary"
+        className="auth-panel__toggle"
         onClick={() => {
           setMode((m) => (m === 'signin' ? 'signup' : 'signin'))
           setError(null)

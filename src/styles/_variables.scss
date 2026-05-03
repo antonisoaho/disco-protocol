@@ -6,15 +6,15 @@
 // Semantic score colors: relative to par (hole score − hole par).
 // Keys are semantic names; values are the canonical palette for UI (badges, charts, timeline).
 $score-color: (
-  eagle: #0d5c2e,
+  eagle: #22c55e,
   // -2
-  birdie: #1f8a4d,
+  birdie: #4ade80,
   // -1
-  par: #5c6370,
+  par: #4b5563,
   // 0
-  bogey: #c45c26,
+  bogey: #f97316,
   // +1
-  double-bogey-plus: #9e1b1b,
+  double-bogey-plus: #ef4444,
   // +2 and worse (double bogey or higher)
 );
 
@@ -56,9 +56,9 @@ $radius-md: 8px;
 $app-shell-content-max-width: 72rem;
 $app-shell-inline-padding: $space-5;
 
-// Neutral surface tokens (light default; dark can be layered later by Workers)
-$color-bg: #ffffff;
-$color-surface: #f6f7f9;
-$color-text: #1c1f26;
-$color-text-muted: #5c6370;
-$color-border: #e2e5eb;
+// Neutral surface tokens — dark by default
+$color-bg: #0b0d12;
+$color-surface: #13161e;
+$color-text: #dfe3ec;
+$color-text-muted: #525a6a;
+$color-border: #1c2030;

@@ -15,7 +15,7 @@
 // -----------------------------------------------------------------------------
 
 :root {
-  color-scheme: light;
+  color-scheme: dark;
   font-family: $font-family-sans;
   line-height: 1.45;
   color: $color-text;
@@ -39,6 +39,16 @@
   box-sizing: border-box;
 }
 
+fieldset {
+  border: none;
+  margin: 0;
+  padding: 0;
+}
+
+legend {
+  padding: 0;
+}
+
 body {
   margin: 0;
   min-height: 100svh;
@@ -47,4 +57,64 @@ body {
 
 #root {
   min-height: 100svh;
+}
+
+button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: $space-2;
+  min-height: $touch-target-min;
+  padding: $space-2 $space-4;
+  border: 1px solid $color-border;
+  border-radius: $radius-sm;
+  font: inherit;
+  font-size: 0.875rem;
+  color: $color-text;
+  background: $color-surface;
+  cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease, color 0.15s ease;
+
+  &:hover:not(:disabled) {
+    border-color: $color-text-muted;
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  &:focus-visible {
+    outline: 2px solid map.get($score-color, eagle);
+    outline-offset: 2px;
+  }
+}
+
+input:not([type='checkbox']):not([type='radio']),
+select,
+textarea {
+  min-height: $touch-target-min;
+  padding: $space-2 $space-3;
+  border: 1px solid $color-border;
+  border-radius: $radius-sm;
+  font: inherit;
+  font-size: 0.875rem;
+  color: $color-text;
+  background: $color-bg;
+
+  &::placeholder {
+    color: $color-text-muted;
+  }
+
+  &:focus-visible {
+    outline: 2px solid map.get($score-color, eagle);
+    outline-offset: 2px;
+    border-color: map.get($score-color, eagle);
+  }
+
+  &:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+    background: color-mix(in srgb, $color-surface 82%, $color-bg);
+  }
 }

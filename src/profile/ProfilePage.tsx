@@ -91,7 +91,7 @@ export function ProfilePage() {
 
   return (
     <div className="app-shell__flow">
-      <section className="app-shell__profile card">
+      <section className="app-shell__profile">
         <h2 className="app-shell__section-title">{t('profile.title')}</h2>
         <p className="app-shell__placeholder">
           {t('profile.currentDisplayName', { displayName: currentDisplayName })}
@@ -131,8 +131,6 @@ export function ProfilePage() {
           <div className="app-shell__profile-actions">
             <button
               type="submit"
-              className="outline"
-              data-variant="secondary"
               disabled={isSavingDisplayName}
             >
               {isSavingDisplayName ? t('profile.actions.saving') : t('profile.actions.save')}
@@ -140,12 +138,12 @@ export function ProfilePage() {
           </div>
         </form>
         {displayNameError ? (
-          <p className="app-shell__placeholder" role="alert" data-variant="error">
+          <p className="app-shell__placeholder app-shell__placeholder--error" role="alert">
             {displayNameError}
           </p>
         ) : null}
         {displayNameNotice ? (
-          <p className="app-shell__placeholder" data-variant="success">
+          <p className="app-shell__placeholder app-shell__placeholder--success">
             {displayNameNotice}
           </p>
         ) : null}

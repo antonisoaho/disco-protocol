@@ -132,7 +132,7 @@
 
   &--field-submit {
     width: 100%;
-    align-self: stretch;
+    align-self: flex-end;
   }
 }
 
@@ -187,6 +187,46 @@
 
   input {
     margin-top: calc(#{$space-unit} * 0.5);
+  }
+}
+
+// Segmented toggle — only activates when the label wraps a radio input
+.scoring-panel__participant-option:has(input[type='radio']) {
+  align-items: center;
+  gap: 0;
+  padding: $space-2 $space-4;
+  border: 1px solid $color-border;
+  border-radius: $radius-sm;
+  background: $color-bg;
+  color: $color-text-muted;
+  cursor: pointer;
+  user-select: none;
+  transition: border-color 0.15s ease, background 0.15s ease, color 0.15s ease;
+  min-height: $touch-target-min;
+
+  input[type='radio'] {
+    position: absolute;
+    opacity: 0;
+    width: 0;
+    height: 0;
+    pointer-events: none;
+    margin: 0;
+  }
+
+  &:hover {
+    border-color: $color-text-muted;
+    color: $color-text;
+  }
+
+  &:has(input:checked) {
+    border-color: map.get($score-color, eagle);
+    color: $color-text;
+    background: color-mix(in srgb, map.get($score-color, eagle) 10%, $color-bg);
+  }
+
+  &:has(input:disabled) {
+    opacity: 0.5;
+    cursor: not-allowed;
   }
 }
 
@@ -504,6 +544,6 @@
 
   .scoring-panel__button--field-submit {
     width: auto;
-    align-self: flex-start;
+    align-self: flex-end;
   }
 }

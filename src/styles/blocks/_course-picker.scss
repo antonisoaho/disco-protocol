@@ -18,8 +18,28 @@
 }
 
 .course-picker__badge {
+  display: inline-flex;
+  align-items: center;
+  padding: $space-1 $space-2;
+  border: 1px solid color-mix(in srgb, map.get($score-color, birdie) 30%, transparent);
+  border-radius: $radius-sm;
+  background: color-mix(in srgb, map.get($score-color, birdie) 10%, $color-surface);
+  color: map.get($score-color, birdie);
+  font-size: 0.75rem;
+  font-weight: 600;
   text-transform: uppercase;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.05em;
+}
+
+.course-picker__btn--danger {
+  border-color: color-mix(in srgb, map.get($score-color, double-bogey-plus) 50%, transparent);
+  color: map.get($score-color, double-bogey-plus);
+  background: transparent;
+
+  &:hover:not(:disabled) {
+    border-color: map.get($score-color, double-bogey-plus);
+    background: color-mix(in srgb, map.get($score-color, double-bogey-plus) 8%, $color-surface);
+  }
 }
 
 .course-picker__heading {

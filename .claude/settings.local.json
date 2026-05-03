@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(Get-ChildItem -Path C:\\\\Users\\\\Alexa\\\\Desktop\\\\disc-protocol -Recurse -Include \"package.json\")",
+      "Bash(Select-Object -First 5)",
+      "PowerShell(Get-ChildItem -Path \"C:\\\\Users\\\\Alexa\\\\Desktop\\\\disc-protocol\" -Recurse | Where-Object {$_.Extension -in @\\('.tsx', '.ts', '.jsx', '.js', '.scss', '.css'\\)} | Select-Object -First 30 FullName)"
+    ]
+  }
+}

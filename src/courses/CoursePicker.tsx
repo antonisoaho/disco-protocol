@@ -281,18 +281,18 @@ export function CoursePicker({
   }
 
   return (
-    <section className="course-picker card" aria-label={t('courses.aria.chooseCourse')}>
+    <section className="course-picker" aria-label={t('courses.aria.chooseCourse')}>
       <div className="course-picker__toolbar">
         <h2 className="course-picker__heading">{t('courses.heading')}</h2>
         {isAdmin ? (
-          <span className="badge course-picker__badge" data-variant="success" title={t('courses.admin.title')}>
+          <span className="course-picker__badge" title={t('courses.admin.title')}>
             {t('courses.admin.badge')}
           </span>
         ) : null}
       </div>
 
       {listError ? (
-        <p className="course-picker__error" role="alert" data-variant="error">
+        <p className="course-picker__error" role="alert">
           {listError}
         </p>
       ) : null}
@@ -325,7 +325,6 @@ export function CoursePicker({
         <div className="course-picker__filter-actions" role="group" aria-label={t('courses.aria.locationTools')}>
           <button
             type="button"
-            data-variant="secondary"
             onClick={handleUseMyLocation}
             disabled={!geolocationSupported || locationState === 'requesting'}
           >
@@ -334,7 +333,6 @@ export function CoursePicker({
           {userLocation ? (
             <button
               type="button"
-              data-variant="secondary"
               onClick={() => {
                 setUserLocation(null)
                 setSortByDistance(false)
@@ -367,7 +365,7 @@ export function CoursePicker({
         </div>
         {geolocationStatusMessage ? <p className="course-picker__hint">{geolocationStatusMessage}</p> : null}
         {locationError ? (
-          <p className="course-picker__error" role="alert" data-variant="error">
+          <p className="course-picker__error" role="alert">
             {locationError}
           </p>
         ) : null}
@@ -465,7 +463,6 @@ export function CoursePicker({
               />
               <button
                 type="submit"
-                data-variant="secondary"
                 disabled={renaming || !isAdmin || validateCourseName(renameName) !== null}
               >
                 {renaming ? t('courses.actions.saving') : t('courses.actions.saveName')}
@@ -473,7 +470,7 @@ export function CoursePicker({
             </div>
             {!isAdmin ? <p className="course-picker__hint">{t('courses.hints.onlyAdminsRename')}</p> : null}
             {renameError ? (
-              <p className="course-picker__error" role="alert" data-variant="error">
+              <p className="course-picker__error" role="alert">
                 {renameError}
               </p>
             ) : null}
@@ -484,7 +481,7 @@ export function CoursePicker({
               <div className="course-picker__add-row">
                 <button
                   type="button"
-                  data-variant="error"
+                  className="course-picker__btn--danger"
                   onClick={() => void handleDeleteCourse()}
                   disabled={deletingCourse}
                 >
@@ -492,7 +489,7 @@ export function CoursePicker({
                 </button>
               </div>
               {deleteCourseError ? (
-                <p className="course-picker__error" role="alert" data-variant="error">
+                <p className="course-picker__error" role="alert">
                   {deleteCourseError}
                 </p>
               ) : null}
@@ -500,7 +497,7 @@ export function CoursePicker({
           ) : null}
 
           {templatesError ? (
-            <p className="course-picker__error" role="alert" data-variant="error">
+            <p className="course-picker__error" role="alert">
               {templatesError}
             </p>
           ) : null}
@@ -552,7 +549,7 @@ export function CoursePicker({
           </button>
         </div>
         {createError ? (
-          <p className="course-picker__error" role="alert" data-variant="error">
+          <p className="course-picker__error" role="alert">
             {createError}
           </p>
         ) : null}

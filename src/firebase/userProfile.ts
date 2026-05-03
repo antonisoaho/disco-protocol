@@ -187,6 +187,19 @@ export async function updateUserDisplayName(params: {
     throw new Error(`Display name must be at most ${DISPLAY_NAME_MAX_LENGTH} characters.`)
   }
   const ref = doc(db, USERS, params.uid)
-  await updateDoc(ref, { displayName: nextDisplayName })
+  try {
+    await updateDoc(ref, { displayName: nextDisplayName })
+  } catch (err) {
+    // Profile document was never created (e.g. offline during sign-up). Create it now.
+    if ((err as { code?: string }).code === 'not-found') {
+      await setDoc(ref, {
+        displayName: nextDisplayName,
+        photoUrl: null,
+        createdAt: serverTimestamp(),
+      })
+    } else {
+      throw err
+    }
+  }
   return nextDisplayName
 }

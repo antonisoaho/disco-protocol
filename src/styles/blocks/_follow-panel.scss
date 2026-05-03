@@ -2,7 +2,10 @@
 @use '../variables' as *;
 
 .follow-panel {
-  margin-top: calc(#{$space-unit} * 4);
+  padding: $layout-section-gap;
+  border: 1px solid $color-border;
+  border-radius: $radius-md;
+  background: $color-surface;
 }
 
 .follow-panel__title {
@@ -51,5 +54,21 @@
   padding: calc(#{$space-unit} * 2.5) calc(#{$space-unit} * 3);
   border: 1px solid $color-border;
   border-radius: $radius-sm;
-  background: $color-surface;
+  background: $color-bg;
+}
+
+.follow-panel__follow-btn {
+  flex-shrink: 0;
+
+  &--following {
+    background: transparent;
+    color: $color-text-muted;
+    border-color: $color-border;
+
+    &:hover:not(:disabled) {
+      color: map.get($score-color, double-bogey-plus);
+      border-color: color-mix(in srgb, map.get($score-color, double-bogey-plus) 50%, transparent);
+      background: transparent;
+    }
+  }
 }

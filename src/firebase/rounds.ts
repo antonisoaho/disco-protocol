@@ -63,6 +63,7 @@ type CreateSavedRoundInput = BaseCreateRoundInput & {
   courseSource?: 'saved'
   courseId: string
   templateId: string
+  courseName?: string
 }
 
 type CreateFreshRoundInput = BaseCreateRoundInput & {
@@ -132,6 +133,7 @@ export async function createRound(input: CreateRoundInput): Promise<string> {
     templateId: refs.templateId,
     courseSource: isFreshRound ? 'fresh' : 'saved',
     courseDraft: isFreshRound ? input.courseDraft : null,
+    courseName: isFreshRound ? null : (input.courseName ?? null),
     coursePromotion: {
       status: 'none',
       targetCourseId: isFreshRound ? refs.courseId : null,

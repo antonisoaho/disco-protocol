@@ -122,8 +122,7 @@ export function ProtectedApp() {
           </div>
           <button
             type="button"
-            className="app-shell__sign-out outline"
-            data-variant="secondary"
+            className="app-shell__sign-out"
             onClick={() => {
               setSignOutError(null)
               void signOut().catch(() => {
@@ -137,14 +136,14 @@ export function ProtectedApp() {
       </header>
       {signOutError ? (
         <div className="app-shell__container app-shell__status">
-          <p className="app-shell__placeholder" role="alert" data-variant="error">
+          <p className="app-shell__placeholder app-shell__placeholder--error" role="alert">
             {signOutError}
           </p>
         </div>
       ) : null}
       {favoriteCourseError ? (
         <div className="app-shell__container app-shell__status">
-          <p className="app-shell__placeholder" role="alert" data-variant="error">
+          <p className="app-shell__placeholder app-shell__placeholder--error" role="alert">
             {favoriteCourseError}
           </p>
         </div>
@@ -158,13 +157,12 @@ export function ProtectedApp() {
       ) : null}
       {userProfileProvisionError ? (
         <div className="app-shell__container app-shell__status app-shell__status--row">
-          <p className="app-shell__placeholder" role="alert" data-variant="error">
+          <p className="app-shell__placeholder app-shell__placeholder--error" role="alert">
             {userProfileProvisionError}
           </p>
           <button
             type="button"
-            className="outline"
-            data-variant="secondary"
+            className="app-shell__retry-btn"
             onClick={() => {
               void retryUserProfileProvision()
             }}

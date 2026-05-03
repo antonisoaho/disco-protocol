@@ -351,6 +351,35 @@ export function ScoringPanel({ user, selectedCourseTemplate, favoriteCourseIds }
   }, [uid])
 
   const selected = useMemo(() => items.find((round) => round.id === selectedId) ?? null, [items, selectedId])
+
+  const roundDisplayNames = useMemo(() => {
+    const baseName = (data: RoundDoc) =>
+      data.courseSource === 'fresh'
+        ? (data.courseDraft?.name ?? t('scoring.rounds.unnamed'))
+        : (data.courseName ?? t('scoring.rounds.unnamed'))
+
+    // Count occurrences of each base name across all rounds
+    const counts: Record<string, number> = {}
+    for (const { data } of items) {
+      const name = baseName(data)
+      counts[name] = (counts[name] ?? 0) + 1
+    }
+
+    // Assign suffixes — iterate oldest→newest so the oldest gets no suffix
+    const index: Record<string, number> = {}
+    const result = new Map<string, string>()
+    for (const { id, data } of [...items].reverse()) {
+      const name = baseName(data)
+      if (counts[name] === 1) {
+        result.set(id, name)
+      } else {
+        index[name] = (index[name] ?? 0) + 1
+        result.set(id, index[name] === 1 ? name : `${name} ${index[name]}`)
+      }
+    }
+    return result
+  }, [items, t])
+
   const canManageRoundRoster = useMemo(() => {
     if (!selected) return false
     return selected.data.ownerId === uid || isAdmin
@@ -926,6 +955,7 @@ export function ScoringPanel({ user, selectedCourseTemplate, favoriteCourseIds }
           courseId: resolvedSelection.courseId,
           templateId: resolvedSelection.templateId,
           holeCount: resolvedSelection.holeCount,
+          courseName: selectedSavedCourse.name,
           visibility,
           participantIds,
           anonymousParticipants,
@@ -1529,18 +1559,10 @@ export function ScoringPanel({ user, selectedCourseTemplate, favoriteCourseIds }
                   return (
                     <li key={id} className="scoring-panel__list-item">
                       <div>
-                        <strong>{id}</strong>
+                        <strong>{roundDisplayNames.get(id)}</strong>
                         <p className="scoring-panel__muted">
-                          {t(`scoring.visibility.${data.visibility}`)} · {formatStartedAt(data.startedAt)}
+                          {t('courses.holeCount', { count: inferRoundHoleCount(data) })} · {t(`scoring.visibility.${data.visibility}`)} · {formatStartedAt(data.startedAt)}
                           {data.completedAt ? ` · ${t('scoring.rounds.completed')}` : ''}
-                        </p>
-                        <p className="scoring-panel__muted">
-                          {data.courseSource === 'fresh'
-                            ? t('scoring.rounds.freshDraft', { name: data.courseDraft?.name ?? t('scoring.rounds.unnamed') })
-                            : t('scoring.rounds.savedCourse', {
-                                courseId: data.courseId,
-                                holeCount: inferRoundHoleCount(data),
-                              })}
                         </p>
                         {summary ? (
                           <p className="scoring-panel__muted">
