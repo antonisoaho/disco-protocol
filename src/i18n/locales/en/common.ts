@@ -261,6 +261,8 @@ export const commonEn = {
       summary: '{{totalStrokes}}/{{totalPar}} ({{totalDelta}}) · {{scoredHoles}}/{{holeCount}} holes',
       latestScoreAria: '{{label}}: {{strokes}} strokes on par {{par}}',
       latestScoreTitle: '{{label}} ({{delta}} vs par)',
+      listLeaderAria: 'Round leader: {{names}}, {{delta}} versus par',
+      listLeaderDelta: '{{delta}} vs par',
       noScores: 'no scores',
       roundTotal: 'Round total {{totalStrokes}}/{{totalPar}} ({{totalDelta}}) · {{scoredHoles}}/{{holeCount}} holes scored',
       selectRoundToLoadHoleForm: 'Select a round to load hole form.',
