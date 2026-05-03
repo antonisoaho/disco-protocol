@@ -149,6 +149,10 @@ export const commonEn = {
       nonStandardHoleCount:
         'This layout has {{count}} holes. You can still edit par and length; switching between 9 and 18 is only offered for standard 9- or 18-hole layouts.',
       templateReadOnly: 'Only the person who added this layout or an admin can change par and length here.',
+      singleLayoutAutoUsed:
+        'This course has one saved layout; it is used automatically. You do not need to pick a template.',
+      multipleLayoutsUsingDefault:
+        'This course has multiple saved layouts. The app uses the layout marked default, or the first layout by name if none is marked default.',
     },
     selection: {
       selected: 'Selected',

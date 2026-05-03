@@ -594,12 +594,24 @@ export function CoursePicker({
           ) : null}
 
           {activeCourse && resolvedTemplate ? (
-            <p className="course-picker__selection">
-              {t('courses.selection.active', {
-                courseName: activeCourse.name,
-                holeCount: resolvedTemplate.holes.length,
-              })}
-            </p>
+            <>
+              <p className="course-picker__selection">
+                {t('courses.selection.active', {
+                  courseName: activeCourse.name,
+                  holeCount: resolvedTemplate.holes.length,
+                })}
+              </p>
+              {templates.length === 1 ? (
+                <p className="course-picker__hint" role="status">
+                  {t('courses.hints.singleLayoutAutoUsed')}
+                </p>
+              ) : null}
+              {templates.length > 1 ? (
+                <p className="course-picker__hint" role="status">
+                  {t('courses.hints.multipleLayoutsUsingDefault')}
+                </p>
+              ) : null}
+            </>
           ) : null}
         </div>
       </div>
