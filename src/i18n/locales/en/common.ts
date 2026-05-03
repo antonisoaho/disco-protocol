@@ -11,6 +11,10 @@ export const commonEn = {
     signOut: 'Sign out',
     signOutError: 'Could not sign out. Try again.',
     profile: 'Profile',
+    offlineBanner: 'You appear to be offline. Changes queue locally and sync when you are back online.',
+    userProfileSyncFailed:
+      'We could not finish saving your player profile to the cloud. Some features need that profile.',
+    retryUserProfileSync: 'Retry sync',
   },
   profile: {
     title: 'Profile',
@@ -22,6 +26,8 @@ export const commonEn = {
     },
     messages: {
       displayNameSaved: 'Display name updated.',
+      displayNameSavedLocalOnly:
+        'Display name saved for this app. Your sign-in provider may not allow updating the account display name.',
     },
     errors: {
       displayNameRequired: 'Display name is required.',
@@ -175,6 +181,7 @@ export const commonEn = {
       delete: 'Delete',
       markComplete: 'Mark complete',
       retryPromotion: 'Retry promotion',
+      removeParticipant: 'Remove from round',
     },
     labels: {
       addAnonymous: 'Player without account',
@@ -190,6 +197,7 @@ export const commonEn = {
       anonymousNameTooLong: 'Player name must be at most {{max}} characters.',
       participantAdded: 'Added 1 participant.',
       participantsAdded: 'Added {{count}} participants.',
+      participantRemoved: 'Removed 1 participant from this round.',
     },
     start: {
       courseToPlay: 'Course to play',
@@ -199,6 +207,10 @@ export const commonEn = {
       freshHint: 'Start quickly with name and hole count, then fill par/length as you play.',
       courseName: 'Course name',
       courseNamePlaceholder: 'Enter course name',
+      roundLength: 'Round length',
+      holes9: '9 holes',
+      holes18: '18 holes',
+      holesFullLayout: 'Full layout ({{count}} holes)',
       holes: 'Holes',
       participants: 'Participants',
       searchParticipantsPlaceholder: 'Search players by name',
@@ -310,6 +322,7 @@ export const commonEn = {
       selectTemplateOrFresh: 'Select a saved course template or switch to fresh setup.',
       failedToCreateRound: 'Failed to create round.',
       failedToAddParticipant: 'Failed to add participant.',
+      failedToRemoveParticipant: 'Failed to remove participant.',
       failedToDeleteRound: 'Failed to delete round.',
       roundCannotCompleteWithDetails:
         'Round cannot be completed yet. Fill missing hole metadata first. {{details}}',
@@ -318,6 +331,8 @@ export const commonEn = {
       failedToRetryPromotion: 'Failed to retry promotion.',
       roundNotFound: 'Round not found.',
       notRoundParticipant: 'You are not a participant in this round.',
+      notPermittedToManageRoundRoster: 'You are not allowed to change the player list for this round.',
+      cannotRemoveRoundOwner: 'The round host cannot be removed from the player list.',
       targetNotRoundParticipant: 'Selected participant is not in this round.',
       onlyOwnerCanEditParticipant: 'Only the owner can edit another participant score.',
       roundDoesNotSupportFreshMetadataEdits: 'This round does not support fresh hole metadata edits.',

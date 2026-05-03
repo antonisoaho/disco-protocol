@@ -3,6 +3,7 @@ import type { Timestamp } from 'firebase/firestore'
 import type { TFunction } from 'i18next'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { useAuth } from '../auth/useAuth'
 import {
   loadRoundSelectionForCourse,
   subscribeCourses,
@@ -25,6 +26,7 @@ import {
   createRound,
   deleteRound,
   recordParticipantHoleScoreTransaction,
+  removeParticipantFromRound,
   subscribeMyRounds,
   updateFreshRoundHoleMetadata,
 } from '../firebase/rounds'
@@ -62,18 +64,13 @@ type Props = {
 }
 
 const DEFAULT_ROUND_HOLE_COUNT = 18
-const DEFAULT_FRESH_HOLE_COUNT = 9
+type NineOrEighteen = 9 | 18
 const AUTOSAVE_DEBOUNCE_MS = 550
 const ANONYMOUS_NAME_MAX_LENGTH = 80
 const NON_WHITESPACE_PATTERN = '.*\\S.*'
 
 type AppTabId = 'scorecard' | 'participants' | 'analytics' | 'follow'
 type SaveState = 'saved' | 'dirty' | 'saving' | 'error'
-
-function normalizeFreshHoleCount(value: number): number {
-  if (!Number.isFinite(value)) return DEFAULT_FRESH_HOLE_COUNT
-  return Math.min(36, Math.max(1, Math.floor(value)))
-}
 
 function formatDraftIssues(t: TFunction<'common'>, issues: FreshRoundDraftIssue[]): string {
   if (issues.length === 0) {
@@ -225,6 +222,7 @@ function scoreTierLabel(t: TFunction<'common'>, tier: ScoreTier): string {
 
 export function ScoringPanel({ user, selectedCourseTemplate, favoriteCourseIds }: Props) {
   const { t } = useTranslation('common')
+  const { isAdmin } = useAuth()
   const uid = user.uid
   const [activeTab, setActiveTab] = useState<AppTabId>('scorecard')
   const [items, setItems] = useState<{ id: string; data: RoundDoc }[]>([])
@@ -233,7 +231,9 @@ export function ScoringPanel({ user, selectedCourseTemplate, favoriteCourseIds }
   const [availableCourses, setAvailableCourses] = useState<CourseWithId[]>([])
   const [courseLoadError, setCourseLoadError] = useState<string | null>(null)
   const [freshCourseName, setFreshCourseName] = useState('')
-  const [freshHoleCount, setFreshHoleCount] = useState(DEFAULT_FRESH_HOLE_COUNT)
+  const [freshHoleChoice, setFreshHoleChoice] = useState<NineOrEighteen>(18)
+  const [savedRoundHoleChoice, setSavedRoundHoleChoice] = useState<NineOrEighteen>(18)
+  const [savedTemplateHoleCount, setSavedTemplateHoleCount] = useState<number | null>(null)
   const [visibility, setVisibility] = useState<RoundVisibility>('private')
   const [newRoundParticipants, setNewRoundParticipants] = useState<string[]>([uid])
   const [newRoundParticipantQuery, setNewRoundParticipantQuery] = useState('')
@@ -346,6 +346,11 @@ export function ScoringPanel({ user, selectedCourseTemplate, favoriteCourseIds }
   }, [uid])
 
   const selected = useMemo(() => items.find((round) => round.id === selectedId) ?? null, [items, selectedId])
+  const canManageRoundRoster = useMemo(() => {
+    if (!selected) return false
+    return selected.data.ownerId === uid || isAdmin
+  }, [isAdmin, selected, uid])
+
   const effectiveStartCourseSelection = useMemo(() => {
     if (startCourseSelection === 'fresh') {
       return 'fresh'
@@ -363,6 +368,35 @@ export function ScoringPanel({ user, selectedCourseTemplate, favoriteCourseIds }
     () => sortedRoundStartCourses.find((course) => course.id === effectiveStartCourseSelection) ?? null,
     [effectiveStartCourseSelection, sortedRoundStartCourses],
   )
+
+  useEffect(() => {
+    let cancelled = false
+    const apply = (count: number | null) => {
+      queueMicrotask(() => {
+        if (!cancelled) {
+          setSavedTemplateHoleCount(count)
+        }
+      })
+    }
+    if (startMode !== 'saved' || !selectedSavedCourse) {
+      apply(null)
+    } else {
+      void loadRoundSelectionForCourse({
+        courseId: selectedSavedCourse.id,
+        courseName: selectedSavedCourse.name,
+        preferredTemplateId:
+          selectedCourseTemplate?.courseId === selectedSavedCourse.id
+            ? selectedCourseTemplate.templateId
+            : null,
+      }).then((selection) => {
+        apply(selection ? selection.holeCount : null)
+      })
+    }
+    return () => {
+      cancelled = true
+    }
+  }, [selectedCourseTemplate, selectedSavedCourse, startMode])
+
   const selectedHoleCount = useMemo(
     () => (selected ? inferRoundHoleCount(selected.data) : null),
     [selected],
@@ -825,7 +859,10 @@ export function ScoringPanel({ user, selectedCourseTemplate, favoriteCourseIds }
           setError(t('scoring.errors.selectedCourseHasNoTemplates'))
           return
         }
-        const safeHoleCount = Math.min(36, Math.max(1, resolvedSelection.holeCount))
+        const templateHoles = resolvedSelection.holeCount
+        const capped =
+          savedRoundHoleChoice === 9 ? Math.min(9, templateHoles) : Math.min(18, templateHoles)
+        const safeHoleCount = Math.min(36, Math.max(1, capped))
         id = await createRound({
           ownerId: uid,
           courseSource: 'saved',
@@ -839,7 +876,7 @@ export function ScoringPanel({ user, selectedCourseTemplate, favoriteCourseIds }
       } else {
         const courseDraft = normalizeFreshCourseDraft({
           name: freshCourseName,
-          holes: Array.from({ length: freshHoleCount }, () => ({
+          holes: Array.from({ length: freshHoleChoice }, () => ({
             par: null,
             lengthMeters: null,
           })),
@@ -866,6 +903,8 @@ export function ScoringPanel({ user, selectedCourseTemplate, favoriteCourseIds }
       setNewRoundAnonymousNameError(null)
       setNewRoundAnonymousParticipants([])
       setNewRoundParticipants([uid])
+      setFreshHoleChoice(18)
+      setSavedRoundHoleChoice(18)
       setActiveTab('scorecard')
       setNotice(t('scoring.notices.roundCreated'))
     } catch (nextError) {
@@ -883,10 +922,11 @@ export function ScoringPanel({ user, selectedCourseTemplate, favoriteCourseIds }
     }
   }, [
     freshCourseName,
-    freshHoleCount,
+    freshHoleChoice,
     newRoundParticipants,
     newRoundAnonymousParticipants,
     selectedCourseTemplate,
+    savedRoundHoleChoice,
     selectedSavedCourse,
     startMode,
     resolveFreshCourseNameError,
@@ -924,7 +964,7 @@ export function ScoringPanel({ user, selectedCourseTemplate, favoriteCourseIds }
           ? [
               addAnonymousParticipantToRound({
                 roundId: selectedId,
-                ownerUid: selected.data.ownerId,
+                actorUid: uid,
                 participant: anonymousParticipant,
               }),
             ]
@@ -948,7 +988,33 @@ export function ScoringPanel({ user, selectedCourseTemplate, favoriteCourseIds }
     } finally {
       setBusy(false)
     }
-  }, [inviteAnonymousName, inviteSelections, resolveAnonymousNameError, selected, selectedId, t])
+  }, [inviteAnonymousName, inviteSelections, resolveAnonymousNameError, selected, selectedId, t, uid])
+
+  const onRemoveRoundParticipant = useCallback(
+    async (participantId: string) => {
+      if (!selectedId || !canManageRoundRoster) return
+      setBusy(true)
+      setError(null)
+      setNotice(null)
+      try {
+        await removeParticipantFromRound({
+          roundId: selectedId,
+          actorUid: uid,
+          participantId,
+        })
+        setNotice(t('scoring.messages.participantRemoved'))
+      } catch (nextError) {
+        setError(
+          nextError instanceof Error
+            ? translateUserError(t, nextError.message)
+            : t('scoring.errors.failedToRemoveParticipant'),
+        )
+      } finally {
+        setBusy(false)
+      }
+    },
+    [canManageRoundRoster, selectedId, t, uid],
+  )
 
   const onDeleteRound = useCallback(
     async (roundId: string, ownerId: string) => {
@@ -1138,15 +1204,48 @@ export function ScoringPanel({ user, selectedCourseTemplate, favoriteCourseIds }
             </div>
             {startMode === 'saved' ? (
               selectedSavedCourse ? (
-                <p className="scoring-panel__selection">
-                  {t('scoring.start.savedSelection', {
-                    courseName: selectedSavedCourse.name,
-                    templateLabel:
-                      selectedCourseTemplate?.courseId === selectedSavedCourse.id
-                        ? selectedCourseTemplate.templateLabel
-                        : t('scoring.start.defaultTemplateLabel'),
-                  })}
-                </p>
+                <>
+                  <p className="scoring-panel__selection">
+                    {t('scoring.start.savedSelection', {
+                      courseName: selectedSavedCourse.name,
+                      templateLabel:
+                        selectedCourseTemplate?.courseId === selectedSavedCourse.id
+                          ? selectedCourseTemplate.templateLabel
+                          : t('scoring.start.defaultTemplateLabel'),
+                    })}
+                  </p>
+                  {savedTemplateHoleCount !== null && savedTemplateHoleCount > 9 ? (
+                    <fieldset className="scoring-panel__field field">
+                      <legend className="scoring-panel__label field__label">{t('scoring.start.roundLength')}</legend>
+                      <div className="scoring-panel__row scoring-panel__row--compact" role="group">
+                        <label className="scoring-panel__participant-option">
+                          <input
+                            type="radio"
+                            name="saved-hole-choice"
+                            checked={savedRoundHoleChoice === 9}
+                            disabled={busy}
+                            onChange={() => setSavedRoundHoleChoice(9)}
+                          />
+                          <span>{t('scoring.start.holes9')}</span>
+                        </label>
+                        <label className="scoring-panel__participant-option">
+                          <input
+                            type="radio"
+                            name="saved-hole-choice"
+                            checked={savedRoundHoleChoice === 18}
+                            disabled={busy}
+                            onChange={() => setSavedRoundHoleChoice(18)}
+                          />
+                          <span>
+                            {savedTemplateHoleCount >= 18
+                              ? t('scoring.start.holes18')
+                              : t('scoring.start.holesFullLayout', { count: savedTemplateHoleCount })}
+                          </span>
+                        </label>
+                      </div>
+                    </fieldset>
+                  ) : null}
+                </>
               ) : (
                 <p className="scoring-panel__muted">{t('scoring.start.noSavedCourses')}</p>
               )
@@ -1190,23 +1289,31 @@ export function ScoringPanel({ user, selectedCourseTemplate, favoriteCourseIds }
                       </p>
                     ) : null}
                   </div>
-                  <div className="scoring-panel__field field">
-                    <label className="scoring-panel__label field__label" htmlFor="fresh-hole-count">
-                      {t('scoring.start.holes')}
-                    </label>
-                    <input
-                      id="fresh-hole-count"
-                      className="scoring-panel__input field__control"
-                      type="number"
-                      min={1}
-                      max={36}
-                      step={1}
-                      value={freshHoleCount}
-                      onChange={(event) => {
-                        setFreshHoleCount(normalizeFreshHoleCount(Number(event.target.value)))
-                      }}
-                    />
-                  </div>
+                  <fieldset className="scoring-panel__field field">
+                    <legend className="scoring-panel__label field__label">{t('scoring.start.roundLength')}</legend>
+                    <div className="scoring-panel__row scoring-panel__row--compact" role="group">
+                      <label className="scoring-panel__participant-option">
+                        <input
+                          type="radio"
+                          name="fresh-hole-choice"
+                          checked={freshHoleChoice === 9}
+                          disabled={busy}
+                          onChange={() => setFreshHoleChoice(9)}
+                        />
+                        <span>{t('scoring.start.holes9')}</span>
+                      </label>
+                      <label className="scoring-panel__participant-option">
+                        <input
+                          type="radio"
+                          name="fresh-hole-choice"
+                          checked={freshHoleChoice === 18}
+                          disabled={busy}
+                          onChange={() => setFreshHoleChoice(18)}
+                        />
+                        <span>{t('scoring.start.holes18')}</span>
+                      </label>
+                    </div>
+                  </fieldset>
                 </div>
               </>
             )}
@@ -1579,6 +1686,7 @@ export function ScoringPanel({ user, selectedCourseTemplate, favoriteCourseIds }
                     scoredHoles: 0,
                   }
                   const isAnonymous = isAnonymousParticipantId(participantId)
+                  const canRemove = canManageRoundRoster && participantId !== selected.data.ownerId
                   return (
                     <li key={participantId} className="scoring-panel__list-item">
                       <div>
@@ -1595,6 +1703,16 @@ export function ScoringPanel({ user, selectedCourseTemplate, favoriteCourseIds }
                           scoredHoles: totals.scoredHoles,
                         })}
                       </p>
+                      {canRemove ? (
+                        <button
+                          type="button"
+                          className="scoring-panel__button scoring-panel__button--inline"
+                          disabled={busy}
+                          onClick={() => void onRemoveRoundParticipant(participantId)}
+                        >
+                          {t('scoring.buttons.removeParticipant')}
+                        </button>
+                      ) : null}
                     </li>
                   )
                 })}
@@ -1608,7 +1726,7 @@ export function ScoringPanel({ user, selectedCourseTemplate, favoriteCourseIds }
                   participantCount: selectedGrandTotals.participantCount,
                 })}
               </p>
-              {selected.data.ownerId === uid ? (
+              {canManageRoundRoster ? (
                 <div className="scoring-panel__scorecard-participants">
                   <div className="scoring-panel__field scoring-panel__field--grow">
                     <label className="scoring-panel__label" htmlFor="invite-search">

@@ -12,11 +12,14 @@ import {
   subscribeFavoriteCourseIds,
 } from '../firebase/userProfile'
 import { ProfilePage } from '../profile/ProfilePage'
+import { useNavigatorOnline } from '../shell/useNavigatorOnline'
 
 /** Protected shell: signed-in users can navigate between home and course discovery. */
 export function ProtectedApp() {
   const { t } = useTranslation('common')
-  const { user, loading, signOut } = useAuth()
+  const online = useNavigatorOnline()
+  const { user, loading, signOut, profileDisplayName, userProfileProvisionError, retryUserProfileProvision } =
+    useAuth()
   const [signOutError, setSignOutError] = useState<string | null>(null)
   const [selectedCourseTemplate, setSelectedCourseTemplate] = useState<CourseRoundSelection | null>(null)
   const [favoriteCourseIds, setFavoriteCourseIds] = useState<string[]>([])
@@ -85,6 +88,7 @@ export function ProtectedApp() {
   }
 
   const currentDisplayName =
+    profileDisplayName ||
     normalizeDisplayName(user.displayName ?? '') ||
     user.email?.split('@')[0] ||
     user.uid
@@ -145,6 +149,30 @@ export function ProtectedApp() {
           </p>
         </div>
       ) : null}
+      {!online ? (
+        <div className="app-shell__container app-shell__status">
+          <p className="app-shell__placeholder" role="status">
+            {t('shell.offlineBanner')}
+          </p>
+        </div>
+      ) : null}
+      {userProfileProvisionError ? (
+        <div className="app-shell__container app-shell__status app-shell__status--row">
+          <p className="app-shell__placeholder" role="alert" data-variant="error">
+            {userProfileProvisionError}
+          </p>
+          <button
+            type="button"
+            className="outline"
+            data-variant="secondary"
+            onClick={() => {
+              void retryUserProfileProvision()
+            }}
+          >
+            {t('shell.retryUserProfileSync')}
+          </button>
+        </div>
+      ) : null}
       <main className="app-shell__main">
         <div className="app-shell__container">
           <Routes>
@@ -173,7 +201,7 @@ export function ProtectedApp() {
                 </div>
               }
             />
-            <Route path="/profile" element={<ProfilePage user={user} />} />
+            <Route path="/profile" element={<ProfilePage />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </div>

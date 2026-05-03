@@ -66,12 +66,14 @@ service cloud.firestore {
 
     function participantIdsChangeAllowed() {
       return request.resource.data.participantIds == resource.data.participantIds
-        || isRoundOwner(resource.data);
+        || isRoundOwner(resource.data)
+        || isAdmin();
     }
 
     function anonymousParticipantsChangeAllowed() {
       return request.resource.data.anonymousParticipants == resource.data.anonymousParticipants
-        || isRoundOwner(resource.data);
+        || isRoundOwner(resource.data)
+        || isAdmin();
     }
 
     function validAnonymousParticipantsShape(data) {
@@ -214,7 +216,7 @@ service cloud.firestore {
           'updatedAt',
         ]);
 
-      allow update: if (isRoundOwner(resource.data) || isRoundParticipant(resource.data))
+      allow update: if (isRoundOwner(resource.data) || isRoundParticipant(resource.data) || isAdmin())
         && roundImmutableFieldsUnchanged()
         && participantIdsChangeAllowed()
         && anonymousParticipantsChangeAllowed()

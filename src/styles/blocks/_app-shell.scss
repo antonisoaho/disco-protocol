@@ -105,6 +105,13 @@
 
 .app-shell__status {
   padding-block: $space-3 0;
+
+  &--row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: $space-3;
+  }
 }
 
 .app-shell__placeholder {

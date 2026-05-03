@@ -11,6 +11,11 @@ export const commonSv = {
     signOut: 'Logga ut',
     signOutError: 'Kunde inte logga ut. Försök igen.',
     profile: 'Profil',
+    offlineBanner:
+      'Du verkar vara offline. Ändringar köas lokalt och synkas när du är online igen.',
+    userProfileSyncFailed:
+      'Vi kunde inte spara din spelarprofil i molnet. Vissa funktioner behöver den profilen.',
+    retryUserProfileSync: 'Försök synka igen',
   },
   profile: {
     title: 'Profil',
@@ -22,6 +27,8 @@ export const commonSv = {
     },
     messages: {
       displayNameSaved: 'Visningsnamnet uppdaterades.',
+      displayNameSavedLocalOnly:
+        'Visningsnamnet sparades i appen. Din inloggningsleverantör tillåter kanske inte att kontots visningsnamn uppdateras.',
     },
     errors: {
       displayNameRequired: 'Visningsnamn krävs.',
@@ -175,6 +182,7 @@ export const commonSv = {
       delete: 'Ta bort',
       markComplete: 'Markera klar',
       retryPromotion: 'Försök igen',
+      removeParticipant: 'Ta bort från runda',
     },
     labels: {
       addAnonymous: 'Spelare utan konto',
@@ -190,6 +198,7 @@ export const commonSv = {
       anonymousNameTooLong: 'Spelarnamn får vara högst {{max}} tecken.',
       participantAdded: 'Lade till 1 deltagare.',
       participantsAdded: 'Lade till {{count}} deltagare.',
+      participantRemoved: 'Tog bort 1 deltagare från den här rundan.',
     },
     start: {
       courseToPlay: 'Bana att spela',
@@ -199,6 +208,10 @@ export const commonSv = {
       freshHint: 'Starta snabbt med namn och antal hål, fyll sedan i par/längd medan du spelar.',
       courseName: 'Bannamn',
       courseNamePlaceholder: 'Ange bannamn',
+      roundLength: 'Rundlängd',
+      holes9: '9 hål',
+      holes18: '18 hål',
+      holesFullLayout: 'Hel layout ({{count}} hål)',
       holes: 'Hål',
       participants: 'Deltagare',
       searchParticipantsPlaceholder: 'Sök spelare via namn',
@@ -309,6 +322,7 @@ export const commonSv = {
       selectTemplateOrFresh: 'Välj en sparad banmall eller byt till ny instans.',
       failedToCreateRound: 'Kunde inte skapa runda.',
       failedToAddParticipant: 'Kunde inte lägga till deltagare.',
+      failedToRemoveParticipant: 'Kunde inte ta bort deltagare.',
       failedToDeleteRound: 'Kunde inte ta bort runda.',
       roundCannotCompleteWithDetails:
         'Rundan kan inte slutföras ännu. Fyll i saknad hålmetadata först. {{details}}',
@@ -317,6 +331,8 @@ export const commonSv = {
       failedToRetryPromotion: 'Kunde inte försöka flytt igen.',
       roundNotFound: 'Rundan hittades inte.',
       notRoundParticipant: 'Du är inte deltagare i den här rundan.',
+      notPermittedToManageRoundRoster: 'Du får inte ändra spellistan för den här rundan.',
+      cannotRemoveRoundOwner: 'Rundvärd kan inte tas bort från spellistan.',
       targetNotRoundParticipant: 'Vald deltagare finns inte i den här rundan.',
       onlyOwnerCanEditParticipant: 'Endast ägaren kan redigera en annan deltagares poäng.',
       roundDoesNotSupportFreshMetadataEdits: 'Den här rundan stöder inte redigering av ny hålmetadata.',
