@@ -60,7 +60,7 @@ import { HoleStepper } from './HoleStepper'
 import { mergeAutosavePayload, type HoleDraftInputs, clampHoleNumber, stepHoleNumber } from './holeAutosave'
 import { PlayerScoreRows } from './PlayerScoreRows'
 import { aggregateScoreProtocol, normalizeScoreProtocol } from './protocol'
-import { computeGrandTotals, computeParticipantTotals } from './scorecardTable'
+import { computeGrandTotals, computeParticipantTotals, pickLeadingParticipantIds } from './scorecardTable'
 
 type Props = {
   user: User
@@ -653,6 +653,18 @@ export function ScoringPanel({ user, selectedCourseTemplate, favoriteCourseIds }
     if (!selected || !selectedParticipantScores) return {}
     return computeParticipantTotals(selected.data.participantIds, selectedParticipantScores)
   }, [selected, selectedParticipantScores])
+
+  const scorecardLeaderHint = useMemo(() => {
+    if (!selected) return null
+    const leaderIds = pickLeadingParticipantIds(selected.data.participantIds, selectedParticipantTotals)
+    if (leaderIds.length === 0) return null
+    const delta = selectedParticipantTotals[leaderIds[0]]?.totalDelta ?? 0
+    const namesJoined = leaderIds.map((id) => selectedParticipantNames[id] ?? id).join(', ')
+    return t('scoring.stepper.leaderHint', {
+      names: namesJoined,
+      delta: formatDelta(delta),
+    })
+  }, [selected, selectedParticipantNames, selectedParticipantTotals, t])
 
   const selectedGrandTotals = useMemo(
     () => computeGrandTotals(selectedParticipantTotals),
@@ -1668,6 +1680,7 @@ export function ScoringPanel({ user, selectedCourseTemplate, favoriteCourseIds }
                 }}
                 disabled={busy || !effectiveHoleDraft}
                 statusLabel={saveStateLabel}
+                leaderHint={scorecardLeaderHint}
               />
               {effectiveHoleDraft ? (
                 <HoleForm

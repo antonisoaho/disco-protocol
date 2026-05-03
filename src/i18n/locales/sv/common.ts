@@ -284,6 +284,7 @@ export const commonSv = {
     },
     stepper: {
       holeTitle: 'Hål {{holeNumber}}',
+      leaderHint: 'Bästa rundan · {{names}} ({{delta}})',
       previous: 'Föregående',
       next: 'Nästa',
       selectHoleAria: 'Välj hål',
