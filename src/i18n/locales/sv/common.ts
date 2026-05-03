@@ -77,6 +77,7 @@ export const commonSv = {
       locationTools: 'Platsverktyg',
       courseCity: 'Banstad',
       newCourseCity: 'Ny banstad',
+      layoutName: 'Layoutnamn',
       holePar: 'Par för hål {{hole}}',
       holeLength: 'Längd i meter för hål {{hole}}',
     },
@@ -101,9 +102,12 @@ export const commonSv = {
       unavailableNow: 'Kunde inte avgöra din plats just nu.',
     },
     empty: {
-      noCourses: 'Inga banor ännu. Lägg till en nedan för att komma igång.',
+      noCourses: 'Inga banor ännu. Lägg till en i banpanelen (under listan på små skärmar).',
       noMatches: 'Inga banor matchar dina filter ännu.',
       noLayouts: 'Den här banan har ingen sparad layout ännu.',
+      detailsTitle: 'Baninställningar',
+      detailsIntro:
+        'Skapa en bana här och fyll sedan i par och längd för varje hål i samma panel när banan syns i listan.',
     },
     courseCard: {
       fallbackMeta: 'Layoutmallar finns här',
@@ -119,6 +123,7 @@ export const commonSv = {
       addTemplate: 'Lägg till mall',
       editSelectedTemplate: 'Redigera vald mall',
       newCourse: 'Ny bana',
+      layoutName: 'Layoutnamn',
       templateHoleDetails: 'Par och längd per hål',
       holeNumber: 'Hål',
       holePar: 'Par',
@@ -141,6 +146,7 @@ export const commonSv = {
       onlyAdminsRename: 'Endast administratörer kan byta namn på kanoniska banor.',
       canonicalLayout:
         'Par och längd följer layouten «{{label}}» ({{holeCount}} hål). När du startar en runda väljer du 9 eller 18 hål; appen väljer matchande layout.',
+      templateReadOnly: 'Bara den som lade till layouten eller en administratör kan ändra par och längd här.',
     },
     selection: {
       selected: 'Vald',
