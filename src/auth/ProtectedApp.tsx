@@ -152,27 +152,6 @@ export function ProtectedApp() {
               path="/"
               element={
                 <div className="app-shell__flow">
-                  <section className="app-shell__intro card">
-                    <p className="app-shell__placeholder">
-                      {t('shell.homeIntro')}
-                    </p>
-                    <p className="app-shell__placeholder">
-                      {t('shell.selectedCourse')}{' '}
-                      {selectedCourseTemplate ? (
-                        <strong>
-                          {selectedCourseTemplate.courseName} — {selectedCourseTemplate.templateLabel}
-                        </strong>
-                      ) : (
-                        t('shell.noneYet')
-                      )}
-                    </p>
-                    <Link className="app-shell__link" to="/courses">
-                      {t('shell.browseCourses')}
-                    </Link>
-                    <Link className="app-shell__link" to="/profile">
-                      {t('shell.profile')}
-                    </Link>
-                  </section>
                   <ScoringPanel
                     user={user}
                     selectedCourseTemplate={selectedCourseTemplate}
