@@ -1,11 +1,11 @@
 import { describe, expect, it } from 'vitest'
 import type { Timestamp } from 'firebase/firestore'
-import { pickTemplateForRoundLength, type CourseTemplateWithId } from './courseData'
+import { pickCanonicalCourseTemplate, type CourseTemplateWithId } from './courseData'
 
-function tpl(id: string, holes: number): CourseTemplateWithId {
+function tpl(id: string, holes: number, isDefault?: boolean): CourseTemplateWithId {
   return {
     id,
-    label: 'Main',
+    label: id === 'a' ? 'A' : 'B',
     holes: Array.from({ length: holes }, (_, i) => ({
       number: i + 1,
       par: 3,
@@ -15,20 +15,18 @@ function tpl(id: string, holes: number): CourseTemplateWithId {
     source: 'crowd',
     createdBy: 'u',
     createdAt: { seconds: 0, nanoseconds: 0 } as unknown as Timestamp,
-    isDefault: holes === 18,
+    isDefault: isDefault === true,
   }
 }
 
-describe('pickTemplateForRoundLength', () => {
-  it('prefers exact hole count match', () => {
-    const rows = [tpl('a', 9), tpl('b', 18)]
-    expect(pickTemplateForRoundLength(rows, 9)?.id).toBe('a')
-    expect(pickTemplateForRoundLength(rows, 18)?.id).toBe('b')
+describe('pickCanonicalCourseTemplate', () => {
+  it('prefers the default template when present', () => {
+    const rows = [tpl('a', 9, false), tpl('b', 18, true)]
+    expect(pickCanonicalCourseTemplate(rows)?.id).toBe('b')
   })
 
-  it('uses smallest template that fits when no exact match', () => {
-    const rows = [tpl('short', 12)]
-    expect(pickTemplateForRoundLength(rows, 9)?.id).toBe('short')
-    expect(pickTemplateForRoundLength(rows, 18)?.id).toBe('short')
+  it('falls back to the first template when no default', () => {
+    const rows = [tpl('first', 12, false), tpl('second', 18, false)]
+    expect(pickCanonicalCourseTemplate(rows)?.id).toBe('first')
   })
 })

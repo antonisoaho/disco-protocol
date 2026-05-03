@@ -105,10 +105,10 @@ export const commonEn = {
       noMatches: 'No courses match your filters yet.',
       noLayouts: 'This course has no saved layout yet.',
       detailsTitle: 'Course setup',
-      detailsIntro: 'Create a course here, then fill par and length for each hole in the same panel after it appears in the list.',
+      detailsIntro: 'Create a course here, then add par and length for each hole in the same panel.',
     },
     courseCard: {
-      fallbackMeta: 'Layout templates inside',
+      fallbackMeta: 'Course details',
       distanceKmAway: '{{distanceKm}} km away',
     },
     layoutsForCourse: 'Layouts for {{courseName}}',
@@ -121,6 +121,9 @@ export const commonEn = {
       addTemplate: 'Add template',
       editSelectedTemplate: 'Edit selected template',
       newCourse: 'New course',
+      courseHoleCount: 'Holes',
+      nineHoles: '9 holes',
+      eighteenHoles: '18 holes',
       layoutName: 'Layout name',
       templateHoleDetails: 'Par and length per hole',
       holeNumber: 'Hole',
@@ -142,13 +145,11 @@ export const commonEn = {
     },
     hints: {
       onlyAdminsRename: 'Only admins can rename canonical courses.',
-      canonicalLayout:
-        'Par and length follow layout «{{label}}» ({{holeCount}} holes). When you start a round you choose 9 or 18 holes; the app picks the matching layout.',
       templateReadOnly: 'Only the person who added this layout or an admin can change par and length here.',
     },
     selection: {
       selected: 'Selected',
-      active: '{{courseName}} · {{layoutLabel}} · {{holeCount}} holes',
+      active: '{{courseName}} · {{holeCount}} holes',
       templateId: '(template id {{templateId}})',
     },
     favourites: {

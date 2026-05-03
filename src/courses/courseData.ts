@@ -66,6 +66,17 @@ export function subscribeTemplates(
   )
 }
 
+export type RoundHoleLengthChoice = 9 | 18
+
+/**
+ * One layout per course in the product model: the default template, or the first row if legacy data
+ * has no default flag.
+ */
+export function pickCanonicalCourseTemplate(templates: CourseTemplateWithId[]): CourseTemplateWithId | null {
+  if (templates.length === 0) return null
+  return templates.find((row) => row.isDefault === true) ?? templates[0] ?? null
+}
+
 export async function loadRoundSelectionForCourse(params: {
   courseId: string
   courseName: string
@@ -81,12 +92,14 @@ export async function loadRoundSelectionForCourse(params: {
   if (templates.length === 0) {
     return null
   }
-  const preferredTemplate =
-    (params.preferredTemplateId
+  const explicit =
+    params.preferredTemplateId != null && params.preferredTemplateId !== ''
       ? templates.find((template) => template.id === params.preferredTemplateId)
-      : null) ??
-    templates.find((template) => template.isDefault) ??
-    templates[0]
+      : undefined
+  const preferredTemplate = explicit ?? pickCanonicalCourseTemplate(templates)
+  if (!preferredTemplate) {
+    return null
+  }
 
   return {
     courseId: params.courseId,
@@ -95,22 +108,6 @@ export async function loadRoundSelectionForCourse(params: {
     templateLabel: preferredTemplate.label,
     holeCount: preferredTemplate.holes.length,
   }
-}
-
-export type RoundHoleLengthChoice = 9 | 18
-
-/** Picks the best stored template for a 9- or 18-hole round (exact length preferred, else smallest fit). */
-export function pickTemplateForRoundLength(
-  templates: CourseTemplateWithId[],
-  holeChoice: RoundHoleLengthChoice,
-): CourseTemplateWithId | null {
-  if (templates.length === 0) return null
-  const exact = templates.find((row) => row.holes.length === holeChoice)
-  if (exact) return exact
-  const sorted = [...templates].sort((a, b) => a.holes.length - b.holes.length)
-  const fits = sorted.find((row) => row.holes.length >= holeChoice)
-  if (fits) return fits
-  return sorted[sorted.length - 1] ?? null
 }
 
 /** Resolves course + template for starting a saved round with a 9/18 hole choice. */
@@ -129,10 +126,10 @@ export async function loadRoundSelectionForCourseAndHoleChoice(params: {
   if (templates.length === 0) {
     return null
   }
-  const picked =
-    pickTemplateForRoundLength(templates, params.holeChoice) ??
-    templates.find((row) => row.isDefault) ??
-    templates[0]
+  const picked = pickCanonicalCourseTemplate(templates)
+  if (!picked) {
+    return null
+  }
   const cap =
     params.holeChoice === 9 ? Math.min(9, picked.holes.length) : Math.min(18, picked.holes.length)
   return {
@@ -165,9 +162,10 @@ export async function createCourseWithDefaultTemplate(params: {
     createdAt: serverTimestamp(),
   })
 
+  const layoutHoles = params.holeCount === 18 ? 18 : 9
   const draft = createTemplateDraft({
     label: 'Main',
-    holeCount: params.holeCount ?? 9,
+    holeCount: layoutHoles,
   })
 
   const templateRef = await addDoc(
