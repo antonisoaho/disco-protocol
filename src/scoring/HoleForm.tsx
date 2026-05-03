@@ -7,6 +7,7 @@ type Props = {
   lengthValue: string
   onParChange: (value: string) => void
   onLengthChange: (value: string) => void
+  disablePar?: boolean
   disableLength: boolean
   saveStateLabel: string
   children: ReactNode
@@ -18,6 +19,7 @@ export function HoleForm({
   lengthValue,
   onParChange,
   onLengthChange,
+  disablePar = false,
   disableLength,
   saveStateLabel,
   children,
@@ -41,6 +43,7 @@ export function HoleForm({
             value={parValue}
             onChange={(event) => onParChange(event.target.value)}
             aria-label={t('scoring.holeForm.parAria', { holeNumber })}
+            disabled={disablePar}
           />
         </label>
         <label className="scoring-panel__field scoring-panel__field--compact field">

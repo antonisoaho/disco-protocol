@@ -71,6 +71,7 @@ export const commonSv = {
       title: 'Firebase custom claim admin',
     },
     aria: {
+      chooseCourse: 'Välj bana',
       chooseCourseAndLayout: 'Välj bana och layout',
       filterCourses: 'Filtrera banor',
       locationTools: 'Platsverktyg',
@@ -102,12 +103,14 @@ export const commonSv = {
     empty: {
       noCourses: 'Inga banor ännu. Lägg till en nedan för att komma igång.',
       noMatches: 'Inga banor matchar dina filter ännu.',
+      noLayouts: 'Den här banan har ingen sparad layout ännu.',
     },
     courseCard: {
       fallbackMeta: 'Layoutmallar finns här',
       distanceKmAway: '{{distanceKm}} km bort',
     },
     layoutsForCourse: 'Layouter för {{courseName}}',
+    courseDetailsFor: 'Bana · {{courseName}}',
     forms: {
       courseName: 'Bannamn',
       courseNamePlaceholder: 'Bannamn',
@@ -136,9 +139,12 @@ export const commonSv = {
     },
     hints: {
       onlyAdminsRename: 'Endast administratörer kan byta namn på kanoniska banor.',
+      canonicalLayout:
+        'Par och längd följer layouten «{{label}}» ({{holeCount}} hål). När du startar en runda väljer du 9 eller 18 hål; appen väljer matchande layout.',
     },
     selection: {
       selected: 'Vald',
+      active: '{{courseName}} · {{layoutLabel}} · {{holeCount}} hål',
       templateId: '(mall-id {{templateId}})',
     },
     favourites: {
@@ -209,7 +215,8 @@ export const commonSv = {
     },
     start: {
       courseToPlay: 'Bana att spela',
-      savedSelection: 'Använder {{courseName}} / {{templateLabel}}',
+      savedSelection:
+        'Använder {{courseName}}. Par och längd hämtas från den sparade layouten för den rundlängd du väljer.',
       defaultTemplateLabel: 'standardmall',
       noSavedCourses: 'Inga sparade banor tillgängliga. Välj Ny bana eller lägg till en bana först.',
       freshHint: 'Starta snabbt med namn och antal hål, fyll sedan i par/längd medan du spelar.',
@@ -234,7 +241,7 @@ export const commonSv = {
       completed: 'klar',
       freshDraft: 'nytt utkast · {{name}}',
       unnamed: 'utan namn',
-      savedCourse: 'sparad bana {{courseId}} / {{templateId}}',
+      savedCourse: 'Sparad layout · {{holeCount}} hål · bana {{courseId}}',
       summary: '{{totalStrokes}}/{{totalPar}} ({{totalDelta}}) · {{scoredHoles}}/{{holeCount}} hål',
       latestScoreAria: '{{label}}: {{strokes}} kast på par {{par}}',
       latestScoreTitle: '{{label}} ({{delta}} mot par)',
@@ -278,6 +285,10 @@ export const commonSv = {
       parAria: 'Par för hål {{holeNumber}}',
       lengthMeters: 'Längd (m)',
       lengthAria: 'Hålets längd i meter för hål {{holeNumber}}',
+    },
+    form: {
+      savedLayoutLockedHint:
+        'Par och längd är låsta till banans layout. Rundägare eller administratör kan låsa upp par för att rätta fel när det redan finns poäng.',
     },
     playerRows: {
       listAria: 'Spelarens poängrader',

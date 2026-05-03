@@ -1,15 +1,19 @@
 import { type User } from 'firebase/auth'
+import { doc, onSnapshot } from 'firebase/firestore'
 import type { Timestamp } from 'firebase/firestore'
 import type { TFunction } from 'i18next'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useAuth } from '../auth/useAuth'
 import {
-  loadRoundSelectionForCourse,
+  loadRoundSelectionForCourseAndHoleChoice,
   subscribeCourses,
   type CourseRoundSelection,
   type CourseWithId,
 } from '../courses/courseData'
+import type { CourseTemplateDoc } from '../firebase/models/course'
+import { db } from '../firebase/firestore'
+import { COLLECTIONS } from '../firebase/paths'
 import { sortCoursesForRoundStart } from '../courses/roundStartSort'
 import { translateUserError } from '../i18n/translateError'
 import { computeHeadToHeadSummary, computeParticipantParSummary } from '../analytics/roundAnalytics'
@@ -28,6 +32,7 @@ import {
   recordParticipantHoleScoreTransaction,
   removeParticipantFromRound,
   subscribeMyRounds,
+  syncSavedRoundHoleParForHole,
   updateFreshRoundHoleMetadata,
 } from '../firebase/rounds'
 import type { RoundDoc, RoundVisibility } from '../firebase/roundTypes'
@@ -351,6 +356,34 @@ export function ScoringPanel({ user, selectedCourseTemplate, favoriteCourseIds }
     return selected.data.ownerId === uid || isAdmin
   }, [isAdmin, selected, uid])
 
+  const canAdjustSavedCourseMetadata = useMemo(() => {
+    if (!selected || selected.data.courseSource !== 'saved') return false
+    return selected.data.ownerId === uid || isAdmin
+  }, [isAdmin, selected, uid])
+
+  const savedCourseMetadataLocked = useMemo(() => {
+    if (!selected || selected.data.courseSource !== 'saved') return false
+    return !canAdjustSavedCourseMetadata
+  }, [canAdjustSavedCourseMetadata, selected])
+
+  const [layoutTemplateDoc, setLayoutTemplateDoc] = useState<CourseTemplateDoc | null>(null)
+
+  useEffect(() => {
+    if (!selected || selected.data.courseSource !== 'saved') {
+      queueMicrotask(() => setLayoutTemplateDoc(null))
+      return
+    }
+    const { courseId, templateId } = selected.data
+    const cref = doc(db, COLLECTIONS.courses, courseId, COLLECTIONS.templates, templateId)
+    return onSnapshot(cref, (snap) => {
+      queueMicrotask(() => {
+        setLayoutTemplateDoc(snap.exists() ? (snap.data() as CourseTemplateDoc) : null)
+      })
+    })
+    // Intentionally depend on layout ids only so we do not re-subscribe on every live round score update.
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- selected is read only for the branch above; deps track layout identity.
+  }, [selected?.data.courseId, selected?.data.courseSource, selected?.data.templateId, selected?.id])
+
   const effectiveStartCourseSelection = useMemo(() => {
     if (startCourseSelection === 'fresh') {
       return 'fresh'
@@ -381,13 +414,10 @@ export function ScoringPanel({ user, selectedCourseTemplate, favoriteCourseIds }
     if (startMode !== 'saved' || !selectedSavedCourse) {
       apply(null)
     } else {
-      void loadRoundSelectionForCourse({
+      void loadRoundSelectionForCourseAndHoleChoice({
         courseId: selectedSavedCourse.id,
         courseName: selectedSavedCourse.name,
-        preferredTemplateId:
-          selectedCourseTemplate?.courseId === selectedSavedCourse.id
-            ? selectedCourseTemplate.templateId
-            : null,
+        holeChoice: savedRoundHoleChoice,
       }).then((selection) => {
         apply(selection ? selection.holeCount : null)
       })
@@ -395,7 +425,14 @@ export function ScoringPanel({ user, selectedCourseTemplate, favoriteCourseIds }
     return () => {
       cancelled = true
     }
-  }, [selectedCourseTemplate, selectedSavedCourse, startMode])
+  }, [savedRoundHoleChoice, selectedSavedCourse, startMode])
+
+  useEffect(() => {
+    const courseId = selectedCourseTemplate?.courseId
+    if (!courseId) return
+    if (!availableCourses.some((course) => course.id === courseId)) return
+    queueMicrotask(() => setStartCourseSelection(courseId))
+  }, [availableCourses, selectedCourseTemplate?.courseId])
 
   const selectedHoleCount = useMemo(
     () => (selected ? inferRoundHoleCount(selected.data) : null),
@@ -629,14 +666,22 @@ export function ScoringPanel({ user, selectedCourseTemplate, favoriteCourseIds }
       .map((participantId) => selectedParticipantScores[participantId]?.[holeKey]?.par)
       .find((value) => typeof value === 'number')
     const freshHole = selectedFreshHoleByNumber[activeHoleNumber]
+    const layoutHole =
+      roundCourseSource === 'saved' && layoutTemplateDoc?.holes
+        ? layoutTemplateDoc.holes[activeHoleNumber - 1]
+        : undefined
     const parValue =
       roundCourseSource === 'fresh'
         ? (typeof freshHole?.par === 'number' ? freshHole.par : (firstScorePar ?? null))
-        : (selectedSavedParByHole[activeHoleNumber] ?? (firstScorePar ?? null))
+        : typeof layoutHole?.par === 'number'
+          ? layoutHole.par
+          : (selectedSavedParByHole[activeHoleNumber] ?? (firstScorePar ?? null))
     const lengthMeters =
       roundCourseSource === 'fresh' && typeof freshHole?.lengthMeters === 'number'
         ? freshHole.lengthMeters
-        : null
+        : roundCourseSource === 'saved' && typeof layoutHole?.lengthMeters === 'number'
+          ? layoutHole.lengthMeters
+          : null
     const participantScores: Record<string, { strokes: number; par: number } | undefined> = {}
     for (const participantId of selected.data.participantIds) {
       participantScores[participantId] = selectedParticipantScores[participantId]?.[holeKey]
@@ -649,6 +694,7 @@ export function ScoringPanel({ user, selectedCourseTemplate, favoriteCourseIds }
   }, [
     activeHoleNumber,
     selected,
+    layoutTemplateDoc,
     selectedFreshHoleByNumber,
     selectedParticipantScores,
     selectedSavedParByHole,
@@ -706,6 +752,7 @@ export function ScoringPanel({ user, selectedCourseTemplate, favoriteCourseIds }
       participantIds: selected.data.participantIds,
       draft: effectiveHoleDraft,
       persisted: persistedHoleState,
+      allowSavedParAdjust: canAdjustSavedCourseMetadata,
     })
 
     if (payload.validationError) {
@@ -728,6 +775,14 @@ export function ScoringPanel({ user, selectedCourseTemplate, favoriteCourseIds }
           actorUid: uid,
           holeNumber: activeHoleNumber,
           metadata: payload.metadata,
+        })
+      }
+      if (payload.savedParSync) {
+        await syncSavedRoundHoleParForHole({
+          roundId: selectedId,
+          actorUid: uid,
+          holeNumber: activeHoleNumber,
+          par: payload.savedParSync.par,
         })
       }
       await Promise.all(
@@ -757,7 +812,16 @@ export function ScoringPanel({ user, selectedCourseTemplate, favoriteCourseIds }
       setSaveState('error')
       return false
     }
-  }, [activeHoleNumber, effectiveHoleDraft, persistedHoleState, selected, selectedId, t, uid])
+  }, [
+    activeHoleNumber,
+    canAdjustSavedCourseMetadata,
+    effectiveHoleDraft,
+    persistedHoleState,
+    selected,
+    selectedId,
+    t,
+    uid,
+  ])
 
   useEffect(() => {
     if (saveState !== 'dirty' || !selected || !effectiveHoleDraft || !persistedHoleState) return
@@ -847,28 +911,21 @@ export function ScoringPanel({ user, selectedCourseTemplate, favoriteCourseIds }
           setError(t('scoring.errors.selectCourseOrFresh'))
           return
         }
-        const resolvedSelection = await loadRoundSelectionForCourse({
+        const resolvedSelection = await loadRoundSelectionForCourseAndHoleChoice({
           courseId: selectedSavedCourse.id,
           courseName: selectedSavedCourse.name,
-          preferredTemplateId:
-            selectedCourseTemplate?.courseId === selectedSavedCourse.id
-              ? selectedCourseTemplate.templateId
-              : null,
+          holeChoice: savedRoundHoleChoice,
         })
         if (!resolvedSelection) {
           setError(t('scoring.errors.selectedCourseHasNoTemplates'))
           return
         }
-        const templateHoles = resolvedSelection.holeCount
-        const capped =
-          savedRoundHoleChoice === 9 ? Math.min(9, templateHoles) : Math.min(18, templateHoles)
-        const safeHoleCount = Math.min(36, Math.max(1, capped))
         id = await createRound({
           ownerId: uid,
           courseSource: 'saved',
           courseId: resolvedSelection.courseId,
           templateId: resolvedSelection.templateId,
-          holeCount: safeHoleCount,
+          holeCount: resolvedSelection.holeCount,
           visibility,
           participantIds,
           anonymousParticipants,
@@ -925,7 +982,6 @@ export function ScoringPanel({ user, selectedCourseTemplate, favoriteCourseIds }
     freshHoleChoice,
     newRoundParticipants,
     newRoundAnonymousParticipants,
-    selectedCourseTemplate,
     savedRoundHoleChoice,
     selectedSavedCourse,
     startMode,
@@ -1018,7 +1074,7 @@ export function ScoringPanel({ user, selectedCourseTemplate, favoriteCourseIds }
 
   const onDeleteRound = useCallback(
     async (roundId: string, ownerId: string) => {
-      if (ownerId !== uid) return
+      if (ownerId !== uid && !isAdmin) return
       const confirmed = window.confirm(t('scoring.confirmations.deleteRound'))
       if (!confirmed) return
       setBusy(true)
@@ -1044,7 +1100,7 @@ export function ScoringPanel({ user, selectedCourseTemplate, favoriteCourseIds }
         setBusy(false)
       }
     },
-    [selectedId, t, uid],
+    [isAdmin, selectedId, t, uid],
   )
 
   const onComplete = useCallback(async () => {
@@ -1208,10 +1264,6 @@ export function ScoringPanel({ user, selectedCourseTemplate, favoriteCourseIds }
                   <p className="scoring-panel__selection">
                     {t('scoring.start.savedSelection', {
                       courseName: selectedSavedCourse.name,
-                      templateLabel:
-                        selectedCourseTemplate?.courseId === selectedSavedCourse.id
-                          ? selectedCourseTemplate.templateLabel
-                          : t('scoring.start.defaultTemplateLabel'),
                     })}
                   </p>
                   {savedTemplateHoleCount !== null && savedTemplateHoleCount > 9 ? (
@@ -1485,7 +1537,10 @@ export function ScoringPanel({ user, selectedCourseTemplate, favoriteCourseIds }
                         <p className="scoring-panel__muted">
                           {data.courseSource === 'fresh'
                             ? t('scoring.rounds.freshDraft', { name: data.courseDraft?.name ?? t('scoring.rounds.unnamed') })
-                            : t('scoring.rounds.savedCourse', { courseId: data.courseId, templateId: data.templateId })}
+                            : t('scoring.rounds.savedCourse', {
+                                courseId: data.courseId,
+                                holeCount: inferRoundHoleCount(data),
+                              })}
                         </p>
                         {summary ? (
                           <p className="scoring-panel__muted">
@@ -1545,7 +1600,7 @@ export function ScoringPanel({ user, selectedCourseTemplate, favoriteCourseIds }
                         >
                           {selectedId === id ? t('scoring.buttons.selected') : t('scoring.buttons.select')}
                         </button>
-                        {data.ownerId === uid ? (
+                        {data.ownerId === uid || isAdmin ? (
                           <button
                             type="button"
                             className="scoring-panel__button scoring-panel__button--inline"
@@ -1609,6 +1664,7 @@ export function ScoringPanel({ user, selectedCourseTemplate, favoriteCourseIds }
                       lengthInput: value,
                     }))
                   }
+                  disablePar={savedCourseMetadataLocked}
                   disableLength={selected.data.courseSource !== 'fresh'}
                   saveStateLabel={saveStateLabel}
                 >
@@ -1638,6 +1694,9 @@ export function ScoringPanel({ user, selectedCourseTemplate, favoriteCourseIds }
               ) : (
                 <p className="scoring-panel__muted">{t('scoring.rounds.selectRoundToLoadHoleForm')}</p>
               )}
+              {savedCourseMetadataLocked ? (
+                <p className="scoring-panel__muted scoring-panel__hint">{t('scoring.form.savedLayoutLockedHint')}</p>
+              ) : null}
               <p className="scoring-panel__legend-footnote">
                 {t('scoring.legend')}
               </p>
