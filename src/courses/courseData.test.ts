@@ -29,4 +29,10 @@ describe('pickCanonicalCourseTemplate', () => {
     const rows = [tpl('first', 12, false), tpl('second', 18, false)]
     expect(pickCanonicalCourseTemplate(rows)?.id).toBe('first')
   })
+
+  it('uses the sole template even when it is not marked default', () => {
+    const rows = [tpl('only', 14, false)]
+    expect(pickCanonicalCourseTemplate(rows)?.id).toBe('only')
+    expect(pickCanonicalCourseTemplate(rows)?.holes.length).toBe(14)
+  })
 })

@@ -60,6 +60,7 @@ import { HoleStepper } from './HoleStepper'
 import { mergeAutosavePayload, type HoleDraftInputs, clampHoleNumber, stepHoleNumber } from './holeAutosave'
 import { PlayerScoreRows } from './PlayerScoreRows'
 import { aggregateScoreProtocol, normalizeScoreProtocol } from './protocol'
+import { inferRoundHoleCount } from './inferRoundHoleCount'
 import { computeGrandTotals, computeParticipantTotals, pickLeadingParticipantIds } from './scorecardTable'
 
 type Props = {
@@ -68,7 +69,6 @@ type Props = {
   favoriteCourseIds: string[]
 }
 
-const DEFAULT_ROUND_HOLE_COUNT = 18
 type NineOrEighteen = 9 | 18
 const AUTOSAVE_DEBOUNCE_MS = 550
 const ANONYMOUS_NAME_MAX_LENGTH = 80
@@ -114,27 +114,6 @@ function formatStartedAt(ts: Timestamp): string {
   } catch {
     return ''
   }
-}
-
-function inferRoundHoleCount(data: RoundDoc): number {
-  if (
-    typeof data.holeCount === 'number' &&
-    Number.isInteger(data.holeCount) &&
-    data.holeCount >= 1
-  ) {
-    return data.holeCount
-  }
-
-  let fromScores = 0
-  for (const key of Object.keys(data.holeScores ?? {})) {
-    const value = Number(key)
-    if (Number.isInteger(value) && value >= 1) {
-      fromScores = Math.max(fromScores, value)
-    }
-  }
-
-  const fromDraftHoles = data.courseDraft?.holes?.length ?? 0
-  return Math.max(DEFAULT_ROUND_HOLE_COUNT, fromScores, fromDraftHoles)
 }
 
 function formatDelta(delta: number): string {
@@ -239,6 +218,7 @@ export function ScoringPanel({ user, selectedCourseTemplate, favoriteCourseIds }
   const [freshHoleChoice, setFreshHoleChoice] = useState<NineOrEighteen>(18)
   const [savedRoundHoleChoice, setSavedRoundHoleChoice] = useState<NineOrEighteen>(18)
   const [savedTemplateHoleCount, setSavedTemplateHoleCount] = useState<number | null>(null)
+  const [savedRoundTemplateCount, setSavedRoundTemplateCount] = useState<number | null>(null)
   const [visibility, setVisibility] = useState<RoundVisibility>('private')
   const [newRoundParticipants, setNewRoundParticipants] = useState<string[]>([uid])
   const [newRoundParticipantQuery, setNewRoundParticipantQuery] = useState('')
@@ -433,22 +413,31 @@ export function ScoringPanel({ user, selectedCourseTemplate, favoriteCourseIds }
 
   useEffect(() => {
     let cancelled = false
-    const apply = (count: number | null) => {
+    const applyHoleCount = (count: number | null) => {
       queueMicrotask(() => {
         if (!cancelled) {
           setSavedTemplateHoleCount(count)
         }
       })
     }
+    const applyTemplateCount = (count: number | null) => {
+      queueMicrotask(() => {
+        if (!cancelled) {
+          setSavedRoundTemplateCount(count)
+        }
+      })
+    }
     if (startMode !== 'saved' || !selectedSavedCourse) {
-      apply(null)
+      applyHoleCount(null)
+      applyTemplateCount(null)
     } else {
       void loadRoundSelectionForCourseAndHoleChoice({
         courseId: selectedSavedCourse.id,
         courseName: selectedSavedCourse.name,
         holeChoice: savedRoundHoleChoice,
-      }).then((selection) => {
-        apply(selection ? selection.holeCount : null)
+      }).then((resolution) => {
+        applyHoleCount(resolution ? resolution.selection.holeCount : null)
+        applyTemplateCount(resolution ? resolution.templateCount : null)
       })
     }
     return () => {
@@ -952,15 +941,16 @@ export function ScoringPanel({ user, selectedCourseTemplate, favoriteCourseIds }
           setError(t('scoring.errors.selectCourseOrFresh'))
           return
         }
-        const resolvedSelection = await loadRoundSelectionForCourseAndHoleChoice({
+        const resolution = await loadRoundSelectionForCourseAndHoleChoice({
           courseId: selectedSavedCourse.id,
           courseName: selectedSavedCourse.name,
           holeChoice: savedRoundHoleChoice,
         })
-        if (!resolvedSelection) {
+        if (!resolution) {
           setError(t('scoring.errors.selectedCourseHasNoTemplates'))
           return
         }
+        const { selection: resolvedSelection } = resolution
         id = await createRound({
           ownerId: uid,
           courseSource: 'saved',
@@ -1308,6 +1298,16 @@ export function ScoringPanel({ user, selectedCourseTemplate, favoriteCourseIds }
                       courseName: selectedSavedCourse.name,
                     })}
                   </p>
+                  {savedRoundTemplateCount === 1 ? (
+                    <p className="scoring-panel__muted scoring-panel__hint" role="status">
+                      {t('courses.hints.singleLayoutAutoUsed')}
+                    </p>
+                  ) : null}
+                  {savedRoundTemplateCount !== null && savedRoundTemplateCount > 1 ? (
+                    <p className="scoring-panel__muted scoring-panel__hint" role="status">
+                      {t('courses.hints.multipleLayoutsUsingDefault')}
+                    </p>
+                  ) : null}
                   {savedTemplateHoleCount !== null && savedTemplateHoleCount > 9 ? (
                     <fieldset className="scoring-panel__field field">
                       <legend className="scoring-panel__label field__label">{t('scoring.start.roundLength')}</legend>

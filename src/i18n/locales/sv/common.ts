@@ -151,6 +151,10 @@ export const commonSv = {
       nonStandardHoleCount:
         'Den här layouten har {{count}} hål. Du kan fortfarande ändra par och längd; byte mellan 9 och 18 erbjuds bara för standardlayouter med 9 eller 18 hål.',
       templateReadOnly: 'Bara den som lade till layouten eller en administratör kan ändra par och längd här.',
+      singleLayoutAutoUsed:
+        'Den här banan har en sparad layout; den används automatiskt. Du behöver inte välja mall.',
+      multipleLayoutsUsingDefault:
+        'Den här banan har flera sparade layouter. Appen använder layouten markerad som standard, annars den första alfabetiskt efter namn om ingen är standard.',
     },
     selection: {
       selected: 'Vald',

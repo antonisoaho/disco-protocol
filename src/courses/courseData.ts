@@ -34,6 +34,13 @@ export type CourseRoundSelection = {
   holeCount: number
 }
 
+/** Result of resolving a saved course + canonical template for starting a round. */
+export type SavedRoundTemplateResolution = {
+  selection: CourseRoundSelection
+  /** Number of template documents under the course (for UX: single vs multi-layout). */
+  templateCount: number
+}
+
 export function subscribeCourses(
   onNext: (rows: CourseWithId[]) => void,
   onError?: (e: Error) => void,
@@ -69,11 +76,12 @@ export function subscribeTemplates(
 export type RoundHoleLengthChoice = 9 | 18
 
 /**
- * One layout per course in the product model: the default template, or the first row if legacy data
- * has no default flag.
+ * Picks the layout used for scoring: `isDefault` template, else first by `orderBy('label')` snapshot order.
+ * With a single template doc, callers should treat that row as the only layout (no template choice).
  */
 export function pickCanonicalCourseTemplate(templates: CourseTemplateWithId[]): CourseTemplateWithId | null {
   if (templates.length === 0) return null
+  if (templates.length === 1) return templates[0] ?? null
   return templates.find((row) => row.isDefault === true) ?? templates[0] ?? null
 }
 
@@ -115,7 +123,7 @@ export async function loadRoundSelectionForCourseAndHoleChoice(params: {
   courseId: string
   courseName: string
   holeChoice: RoundHoleLengthChoice
-}): Promise<CourseRoundSelection | null> {
+}): Promise<SavedRoundTemplateResolution | null> {
   const templatesSnapshot = await getDocs(
     query(collection(db, COLLECTIONS.courses, params.courseId, COLLECTIONS.templates), orderBy('label')),
   )
@@ -123,6 +131,7 @@ export async function loadRoundSelectionForCourseAndHoleChoice(params: {
     id: docSnapshot.id,
     ...(docSnapshot.data() as CourseTemplateDoc),
   }))
+  const templateCount = templates.length
   if (templates.length === 0) {
     return null
   }
@@ -133,11 +142,14 @@ export async function loadRoundSelectionForCourseAndHoleChoice(params: {
   const cap =
     params.holeChoice === 9 ? Math.min(9, picked.holes.length) : Math.min(18, picked.holes.length)
   return {
-    courseId: params.courseId,
-    courseName: params.courseName,
-    templateId: picked.id,
-    templateLabel: picked.label,
-    holeCount: Math.max(1, cap),
+    templateCount,
+    selection: {
+      courseId: params.courseId,
+      courseName: params.courseName,
+      templateId: picked.id,
+      templateLabel: picked.label,
+      holeCount: Math.max(1, cap),
+    },
   }
 }
 
