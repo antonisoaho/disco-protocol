@@ -236,7 +236,9 @@ export function CoursePicker({
       setActiveCourseId((prev) => (prev === deletingCourseId ? null : prev))
       onSelectionChange(null)
     } catch (err) {
-      setDeleteCourseError(err instanceof Error ? err.message : t('courses.deleteCourseError'))
+      setDeleteCourseError(
+        err instanceof Error ? translateUserError(t, err.message) : t('courses.deleteCourseError'),
+      )
     } finally {
       setDeletingCourse(false)
     }

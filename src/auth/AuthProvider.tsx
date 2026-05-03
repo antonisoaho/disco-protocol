@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } fro
 import {
   createUserWithEmailAndPassword,
   onAuthStateChanged,
+  onIdTokenChanged,
   signInWithEmailAndPassword,
   signOut as firebaseSignOut,
   type User,
@@ -12,14 +13,15 @@ import { auth } from '../firebase/auth'
 import { db } from '../firebase/firestore'
 import { COLLECTIONS } from '../firebase/paths'
 import { ensureUserProfile, normalizeDisplayName } from '../firebase/userProfile'
-import { isUserProfileAdmin } from './adminProfile'
+import { isCustomClaimsAdmin, isUserProfileAdmin } from './adminProfile'
 import { AuthContext } from './auth-context'
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const { t } = useTranslation('common')
   const [user, setUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
-  const [isAdmin, setIsAdmin] = useState(false)
+  const [profileAdmin, setProfileAdmin] = useState(false)
+  const [tokenAdmin, setTokenAdmin] = useState(false)
   const [profileDisplayName, setProfileDisplayName] = useState<string | null>(null)
   const [userProfileProvisionError, setUserProfileProvisionError] = useState<string | null>(null)
   const userRef = useRef<User | null>(null)
@@ -59,6 +61,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [runEnsureUserProfile])
 
   useEffect(() => {
+    const unsub = onIdTokenChanged(auth, (firebaseUser) => {
+      if (!firebaseUser) {
+        setTokenAdmin(false)
+        return
+      }
+      void firebaseUser.getIdTokenResult().then(
+        (result) => {
+          setTokenAdmin(isCustomClaimsAdmin(result.claims as Record<string, unknown>))
+        },
+        () => {
+          setTokenAdmin(false)
+        },
+      )
+    })
+    return () => unsub()
+  }, [])
+
+  useEffect(() => {
     let unsubscribeProfile: (() => void) | null = null
     const unsubscribeAuth = onAuthStateChanged(auth, (u) => {
       if (unsubscribeProfile) {
@@ -71,7 +91,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (u) {
         void runEnsureUserProfile(u)
       } else {
-        setIsAdmin(false)
+        setProfileAdmin(false)
+        setTokenAdmin(false)
         setUserProfileProvisionError(null)
         return
       }
@@ -79,7 +100,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       unsubscribeProfile = onSnapshot(
         doc(db, COLLECTIONS.users, u.uid),
         (snapshot) => {
-          setIsAdmin(isUserProfileAdmin((snapshot.data() ?? null) as { admin?: unknown } | null))
+          setProfileAdmin(isUserProfileAdmin((snapshot.data() ?? null) as { admin?: unknown } | null))
           if (!snapshot.exists()) {
             setProfileDisplayName(null)
             return
@@ -94,7 +115,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           }
         },
         () => {
-          setIsAdmin(false)
+          setProfileAdmin(false)
           setProfileDisplayName(null)
         },
       )
@@ -123,7 +144,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     () => ({
       user,
       loading,
-      isAdmin,
+      isAdmin: profileAdmin || tokenAdmin,
       profileDisplayName,
       userProfileProvisionError,
       retryUserProfileProvision,
@@ -134,7 +155,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     [
       user,
       loading,
-      isAdmin,
+      profileAdmin,
+      tokenAdmin,
       profileDisplayName,
       userProfileProvisionError,
       retryUserProfileProvision,

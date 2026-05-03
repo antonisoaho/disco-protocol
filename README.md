@@ -159,7 +159,7 @@ gh secret set VITE_FIREBASE_APP_ID --body "1:123:web:abc"
 
 ### Admin (custom claims)
 
-Course and moderation epics will require **admin** privileges. Grant out-of-band with the Firebase Admin SDK (backend script or Cloud Function), for example: `admin.auth().setCustomUserClaims(uid, { admin: true })`. In Firestore rules, check `request.auth.token.admin == true` for admin-only operations. No admin UI is included in this repo yet.
+Course and moderation epics will require **admin** privileges. Grant out-of-band with the Firebase Admin SDK (backend script or Cloud Function), for example: `admin.auth().setCustomUserClaims(uid, { admin: true })`. Firestore rules treat you as admin when **`request.auth.token.admin`** is true **or** the Firestore profile `users/{uid}.admin` is true (either path works). The app shows the admin badge when either is set. No separate admin console is included in this repo yet.
 
 ## Application commands
 
