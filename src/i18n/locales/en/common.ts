@@ -208,6 +208,9 @@ export const commonEn = {
       markComplete: 'Mark complete',
       retryPromotion: 'Retry promotion',
       removeParticipant: 'Remove from round',
+      replaceParticipant: 'Replace…',
+      confirmReplace: 'Replace player',
+      cancelReplace: 'Cancel',
     },
     labels: {
       addAnonymous: 'Player without account',
@@ -224,6 +227,7 @@ export const commonEn = {
       participantAdded: 'Added 1 participant.',
       participantsAdded: 'Added {{count}} participants.',
       participantRemoved: 'Removed 1 participant from this round.',
+      participantReplaced: 'Replaced one player on this round. Their scores stay on the card.',
     },
     start: {
       courseToPlay: 'Course to play',
@@ -272,6 +276,10 @@ export const commonEn = {
       addParticipants: 'Add participants',
       searchUsersPlaceholder: 'Search players by name',
       addSelectedParticipants: 'Add player',
+      replaceIntro:
+        'Choose a registered account to take this spot. Hole scores already entered move to the new player.',
+      replaceSearchLabel: 'Search replacement player',
+      replaceSearchPlaceholder: 'Search by display name',
     },
     analytics: {
       empty: 'Finish and score at least one round to unlock +/-par analytics.',
@@ -355,6 +363,7 @@ export const commonEn = {
       failedToCreateRound: 'Failed to create round.',
       failedToAddParticipant: 'Failed to add participant.',
       failedToRemoveParticipant: 'Failed to remove participant.',
+      failedToReplaceParticipant: 'Failed to replace participant.',
       failedToDeleteRound: 'Failed to delete round.',
       roundCannotCompleteWithDetails:
         'Round cannot be completed yet. Fill missing hole metadata first. {{details}}',
@@ -365,6 +374,11 @@ export const commonEn = {
       notRoundParticipant: 'You are not a participant in this round.',
       notPermittedToManageRoundRoster: 'You are not allowed to change the player list for this round.',
       cannotRemoveRoundOwner: 'The round host cannot be removed from the player list.',
+      cannotReplaceRoundOwner: 'The round host cannot be replaced on the player list.',
+      replacementAlreadyParticipant: 'That player is already on this round.',
+      replacementMustBeRegistered: 'Replacement must be a registered user, not a guest placeholder.',
+      replaceSourceEqualsTarget: 'Choose a different player than the one you are replacing.',
+      replacementUserRequired: 'Choose a replacement player.',
       targetNotRoundParticipant: 'Selected participant is not in this round.',
       onlyOwnerCanEditParticipant: 'Only the owner can edit another participant score.',
       roundDoesNotSupportFreshMetadataEdits: 'This round does not support fresh hole metadata edits.',
@@ -381,6 +395,8 @@ export const commonEn = {
       workspaceTabs: 'Scoring workspace tabs',
       selectRoundParticipants: 'Select round participants',
       inviteParticipants: 'Invite participants',
+      replaceParticipantPanel: 'Replace round participant',
+      replaceParticipantChoices: 'Choose replacement player',
       totalRoundDelta: 'Total round delta {{delta}}',
     },
     legend: 'Legend: Eagle+ <= -2, Birdie -1, Par 0, Bogey +1, Double+ >= +2.',
