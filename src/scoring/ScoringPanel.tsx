@@ -31,6 +31,7 @@ import {
   deleteRound,
   recordParticipantHoleScoreTransaction,
   removeParticipantFromRound,
+  replaceRoundParticipant,
   subscribeMyRounds,
   syncSavedRoundHoleParForHole,
   updateFreshRoundHoleMetadata,
@@ -250,6 +251,9 @@ export function ScoringPanel({ user, selectedCourseTemplate, favoriteCourseIds }
   const [inviteParticipantQuery, setInviteParticipantQuery] = useState('')
   const [inviteAnonymousName, setInviteAnonymousName] = useState('')
   const [inviteSelections, setInviteSelections] = useState<string[]>([])
+  const [rosterReplaceFromId, setRosterReplaceFromId] = useState<string | null>(null)
+  const [rosterReplaceQuery, setRosterReplaceQuery] = useState('')
+  const [rosterReplaceTargetUid, setRosterReplaceTargetUid] = useState<string | null>(null)
   const [analyticsOpponentUid, setAnalyticsOpponentUid] = useState('')
   const [directoryEntries, setDirectoryEntries] = useState<UserDirectoryEntry[]>([])
   const [followingIds, setFollowingIds] = useState<string[]>([])
@@ -528,6 +532,22 @@ export function ScoringPanel({ user, selectedCourseTemplate, favoriteCourseIds }
     })
     return filtered.filter((entry) => !selected.data.participantIds.includes(entry.uid))
   }, [friendUidSet, inviteParticipantQuery, searchableDirectoryEntries, selected])
+
+  const rosterReplaceCandidateEntries = useMemo(() => {
+    if (!selected || !rosterReplaceFromId) return []
+    const filtered = filterParticipantDirectoryEntries({
+      entries: searchableDirectoryEntries,
+      query: rosterReplaceQuery,
+      friendUidSet,
+    })
+    return filtered.filter((entry) => !selected.data.participantIds.includes(entry.uid))
+  }, [friendUidSet, rosterReplaceFromId, rosterReplaceQuery, searchableDirectoryEntries, selected])
+
+  const clearRosterReplaceFlow = useCallback(() => {
+    setRosterReplaceFromId(null)
+    setRosterReplaceQuery('')
+    setRosterReplaceTargetUid(null)
+  }, [])
 
   const roundDocs = useMemo(() => items.map((item) => item.data), [items])
 
@@ -990,6 +1010,7 @@ export function ScoringPanel({ user, selectedCourseTemplate, favoriteCourseIds }
           anonymousParticipants,
         })
       }
+      clearRosterReplaceFlow()
       setSelectedId(id)
       setHoleNumber(1)
       setHoleDraft(null)
@@ -1020,6 +1041,7 @@ export function ScoringPanel({ user, selectedCourseTemplate, favoriteCourseIds }
       setBusy(false)
     }
   }, [
+    clearRosterReplaceFlow,
     freshCourseName,
     freshHoleChoice,
     newRoundParticipants,
@@ -1114,6 +1136,39 @@ export function ScoringPanel({ user, selectedCourseTemplate, favoriteCourseIds }
     [canManageRoundRoster, selectedId, t, uid],
   )
 
+  const onReplaceRoundParticipant = useCallback(async () => {
+    if (!selectedId || !rosterReplaceFromId || !rosterReplaceTargetUid || !canManageRoundRoster) return
+    setBusy(true)
+    setError(null)
+    setNotice(null)
+    try {
+      await replaceRoundParticipant({
+        roundId: selectedId,
+        actorUid: uid,
+        fromParticipantId: rosterReplaceFromId,
+        toParticipantUid: rosterReplaceTargetUid,
+      })
+      clearRosterReplaceFlow()
+      setNotice(t('scoring.messages.participantReplaced'))
+    } catch (nextError) {
+      setError(
+        nextError instanceof Error
+          ? translateUserError(t, nextError.message)
+          : t('scoring.errors.failedToReplaceParticipant'),
+      )
+    } finally {
+      setBusy(false)
+    }
+  }, [
+    canManageRoundRoster,
+    clearRosterReplaceFlow,
+    rosterReplaceFromId,
+    rosterReplaceTargetUid,
+    selectedId,
+    t,
+    uid,
+  ])
+
   const onDeleteRound = useCallback(
     async (roundId: string, ownerId: string) => {
       if (ownerId !== uid && !isAdmin) return
@@ -1125,6 +1180,7 @@ export function ScoringPanel({ user, selectedCourseTemplate, favoriteCourseIds }
       try {
         await deleteRound(roundId)
         if (selectedId === roundId) {
+          clearRosterReplaceFlow()
           setSelectedId(null)
           setHoleNumber(1)
           setHoleDraft(null)
@@ -1142,7 +1198,7 @@ export function ScoringPanel({ user, selectedCourseTemplate, favoriteCourseIds }
         setBusy(false)
       }
     },
-    [isAdmin, selectedId, t, uid],
+    [clearRosterReplaceFlow, isAdmin, selectedId, t, uid],
   )
 
   const onComplete = useCallback(async () => {
@@ -1623,6 +1679,7 @@ export function ScoringPanel({ user, selectedCourseTemplate, favoriteCourseIds }
                           type="button"
                           className="scoring-panel__button scoring-panel__button--inline"
                           onClick={() => {
+                            clearRosterReplaceFlow()
                             setSelectedId(id)
                             setHoleNumber(1)
                             setHoleDraft(null)
@@ -1780,32 +1837,115 @@ export function ScoringPanel({ user, selectedCourseTemplate, favoriteCourseIds }
                     scoredHoles: 0,
                   }
                   const isAnonymous = isAnonymousParticipantId(participantId)
-                  const canRemove = canManageRoundRoster && participantId !== selected.data.ownerId
+                  const canRosterEditRow = canManageRoundRoster && participantId !== selected.data.ownerId
+                  const replacePanelOpen = rosterReplaceFromId === participantId
                   return (
-                    <li key={participantId} className="scoring-panel__list-item">
-                      <div>
-                        <strong>{selectedParticipantNames[participantId] ?? participantId}</strong>
+                    <li
+                      key={participantId}
+                      className={`scoring-panel__list-item${replacePanelOpen ? ' scoring-panel__list-item--stacked' : ''}`}
+                    >
+                      <div className="scoring-panel__list-item-main">
+                        <div>
+                          <strong>{selectedParticipantNames[participantId] ?? participantId}</strong>
+                          <p className="scoring-panel__muted">
+                            {isAnonymous ? t('scoring.labels.anonymousParticipant') : participantId}
+                          </p>
+                        </div>
                         <p className="scoring-panel__muted">
-                          {isAnonymous ? t('scoring.labels.anonymousParticipant') : participantId}
+                          {t('scoring.participants.playerSummary', {
+                            totalStrokes: totals.totalStrokes,
+                            totalPar: totals.totalPar,
+                            totalDelta: formatDelta(totals.totalDelta),
+                            scoredHoles: totals.scoredHoles,
+                          })}
                         </p>
+                        {canRosterEditRow ? (
+                          <div className="scoring-panel__list-item-actions">
+                            <button
+                              type="button"
+                              className="scoring-panel__button scoring-panel__button--inline"
+                              disabled={busy}
+                              onClick={() => {
+                                setRosterReplaceFromId(participantId)
+                                setRosterReplaceQuery('')
+                                setRosterReplaceTargetUid(null)
+                              }}
+                            >
+                              {t('scoring.buttons.replaceParticipant')}
+                            </button>
+                            <button
+                              type="button"
+                              className="scoring-panel__button scoring-panel__button--inline"
+                              disabled={busy}
+                              onClick={() => void onRemoveRoundParticipant(participantId)}
+                            >
+                              {t('scoring.buttons.removeParticipant')}
+                            </button>
+                          </div>
+                        ) : null}
                       </div>
-                      <p className="scoring-panel__muted">
-                        {t('scoring.participants.playerSummary', {
-                          totalStrokes: totals.totalStrokes,
-                          totalPar: totals.totalPar,
-                          totalDelta: formatDelta(totals.totalDelta),
-                          scoredHoles: totals.scoredHoles,
-                        })}
-                      </p>
-                      {canRemove ? (
-                        <button
-                          type="button"
-                          className="scoring-panel__button scoring-panel__button--inline"
-                          disabled={busy}
-                          onClick={() => void onRemoveRoundParticipant(participantId)}
+                      {replacePanelOpen ? (
+                        <div
+                          className="scoring-panel__list-item-replace"
+                          role="region"
+                          aria-label={t('scoring.aria.replaceParticipantPanel')}
                         >
-                          {t('scoring.buttons.removeParticipant')}
-                        </button>
+                          <p className="scoring-panel__muted">{t('scoring.participants.replaceIntro')}</p>
+                          <div className="scoring-panel__field scoring-panel__field--grow">
+                            <label className="scoring-panel__label" htmlFor="roster-replace-search">
+                              {t('scoring.participants.replaceSearchLabel')}
+                            </label>
+                            <input
+                              id="roster-replace-search"
+                              className="scoring-panel__input"
+                              value={rosterReplaceQuery}
+                              onChange={(event) => setRosterReplaceQuery(event.target.value)}
+                              placeholder={t('scoring.participants.replaceSearchPlaceholder')}
+                              autoComplete="off"
+                            />
+                            <div
+                              className="scoring-panel__participant-list"
+                              role="radiogroup"
+                              aria-label={t('scoring.aria.replaceParticipantChoices')}
+                            >
+                              {rosterReplaceCandidateEntries.map((entry) => (
+                                <label key={entry.uid} className="scoring-panel__participant-option">
+                                  <input
+                                    type="radio"
+                                    name="roster-replace-target"
+                                    value={entry.uid}
+                                    checked={rosterReplaceTargetUid === entry.uid}
+                                    disabled={busy}
+                                    onChange={() => setRosterReplaceTargetUid(entry.uid)}
+                                  />
+                                  <span>{participantDisplayName(entry)}</span>
+                                </label>
+                              ))}
+                            </div>
+                          </div>
+                          <div className="scoring-panel__row scoring-panel__row--compact">
+                            <button
+                              type="button"
+                              className="scoring-panel__button scoring-panel__button--primary"
+                              disabled={busy || !rosterReplaceTargetUid}
+                              onClick={() => void onReplaceRoundParticipant()}
+                            >
+                              {t('scoring.buttons.confirmReplace')}
+                            </button>
+                            <button
+                              type="button"
+                              className="scoring-panel__button"
+                              disabled={busy}
+                              onClick={() => {
+                                setRosterReplaceFromId(null)
+                                setRosterReplaceQuery('')
+                                setRosterReplaceTargetUid(null)
+                              }}
+                            >
+                              {t('scoring.buttons.cancelReplace')}
+                            </button>
+                          </div>
+                        </div>
                       ) : null}
                     </li>
                   )

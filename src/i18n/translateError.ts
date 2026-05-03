@@ -16,6 +16,21 @@ export function translateUserError(t: TFunction<'common'>, message: string): str
   if (trimmed === 'Cannot remove the round owner from the participant list.') {
     return t('scoring.errors.cannotRemoveRoundOwner')
   }
+  if (trimmed === 'Cannot replace the round owner on the roster.') {
+    return t('scoring.errors.cannotReplaceRoundOwner')
+  }
+  if (trimmed === 'Replacement user is already a participant of this round.') {
+    return t('scoring.errors.replacementAlreadyParticipant')
+  }
+  if (trimmed === 'Replacement must be a registered user account.') {
+    return t('scoring.errors.replacementMustBeRegistered')
+  }
+  if (trimmed === 'Replace source and target must differ.') {
+    return t('scoring.errors.replaceSourceEqualsTarget')
+  }
+  if (trimmed === 'Replacement user is required.') {
+    return t('scoring.errors.replacementUserRequired')
+  }
   if (trimmed === 'Round does not support fresh hole metadata edits') {
     return t('scoring.errors.roundDoesNotSupportFreshMetadataEdits')
   }

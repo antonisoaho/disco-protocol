@@ -241,14 +241,39 @@
 
 .scoring-panel__list-item {
   display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: calc(#{$space-unit} * 2);
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0;
   padding: calc(#{$space-unit} * 3);
   border: 1px solid $color-border;
   border-radius: $radius-sm;
   background: $color-bg;
+}
+
+.scoring-panel__list-item--stacked {
+  gap: $space-3;
+}
+
+.scoring-panel__list-item-main {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: calc(#{$space-unit} * 2);
+  width: 100%;
+}
+
+.scoring-panel__list-item-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: $space-2;
+  align-items: center;
+}
+
+.scoring-panel__list-item-replace {
+  width: 100%;
+  padding-top: $space-3;
+  border-top: 1px solid $color-border;
 }
 
 .scoring-panel__hole-stepper {
