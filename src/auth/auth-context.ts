@@ -4,7 +4,7 @@ import type { User } from 'firebase/auth'
 export type AuthContextValue = {
   user: User | null
   loading: boolean
-  /** From Firestore profile flag `users/{uid}.admin`; used for course ops UI hints. */
+  /** True when Firestore `users/{uid}.admin` or Auth custom claim `admin` is set (matches rules). */
   isAdmin: boolean
   /** Normalized `users/{uid}.displayName` when the profile document exists. */
   profileDisplayName: string | null
