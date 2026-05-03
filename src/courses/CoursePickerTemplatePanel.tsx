@@ -52,12 +52,6 @@ export function CoursePickerTemplatePanel({ courseId, template, canEdit }: Props
 
   return (
     <>
-      <p className="course-picker__hint" role="status">
-        {t('courses.hints.canonicalLayout', {
-          label: template.label,
-          holeCount: template.holes.length,
-        })}
-      </p>
       <div className="course-picker__add">
         <label className="course-picker__add-label" htmlFor="course-picker-layout-label">
           {t('courses.forms.layoutName')}

@@ -299,6 +299,28 @@
   flex-wrap: wrap;
   align-items: flex-end;
   gap: $space-3;
+
+  &--radios {
+    align-items: center;
+  }
+}
+
+.course-picker__hole-choice-fieldset {
+  margin: 0;
+  padding: 0;
+  border: none;
+  display: flex;
+  flex-direction: column;
+  gap: $space-2;
+}
+
+.course-picker__radio-label {
+  display: inline-flex;
+  align-items: center;
+  gap: calc(#{$space-unit} * 1.5);
+  font-size: 0.875rem;
+  color: $color-text;
+  cursor: pointer;
 }
 
 .course-picker__input-compact {

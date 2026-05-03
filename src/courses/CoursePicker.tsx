@@ -5,7 +5,7 @@ import { translateUserError } from '../i18n/translateError'
 import {
   createCourseWithDefaultTemplate,
   deleteCourseWithTemplates,
-  pickTemplateForRoundLength,
+  pickCanonicalCourseTemplate,
   subscribeCourses,
   subscribeTemplates,
   updateCourseDetails,
@@ -23,9 +23,6 @@ type Props = {
   favoriteCourseIds: string[]
   onToggleFavoriteCourse: (courseId: string, isFavorite: boolean) => Promise<void>
 }
-
-/** Canonical template for discovery: prefer full 18, else best fit (see `pickTemplateForRoundLength`). */
-const DISCOVERY_HOLE_CHOICE = 18 as const
 
 export function CoursePicker({
   selection,
@@ -55,6 +52,7 @@ export function CoursePicker({
 
   const [newName, setNewName] = useState('')
   const [newCity, setNewCity] = useState('')
+  const [newCourseHoleChoice, setNewCourseHoleChoice] = useState<9 | 18>(9)
   const [creating, setCreating] = useState(false)
   const [createError, setCreateError] = useState<string | null>(null)
   const [renameDraft, setRenameDraft] = useState<{ courseId: string | null; name: string; city: string }>({
@@ -108,15 +106,7 @@ export function CoursePicker({
     return templateState.rows
   }, [activeCourseId, templateState.courseId, templateState.rows])
 
-  const resolvedTemplate = useMemo(() => {
-    if (templates.length === 0) return null
-    return (
-      pickTemplateForRoundLength(templates, DISCOVERY_HOLE_CHOICE) ??
-      templates.find((row) => row.isDefault) ??
-      templates[0] ??
-      null
-    )
-  }, [templates])
+  const resolvedTemplate = useMemo(() => pickCanonicalCourseTemplate(templates), [templates])
 
   const activeCourse = useMemo(
     () => courses.find((course) => course.id === activeCourseId) ?? null,
@@ -192,6 +182,7 @@ export function CoursePicker({
         name: normalizeCourseName(newName),
         city: normalizeCourseCity(newCity),
         uid: user.uid,
+        holeCount: newCourseHoleChoice,
       })
       setNewName('')
       setNewCity('')
@@ -438,6 +429,29 @@ export function CoursePicker({
               <label className="course-picker__add-label" htmlFor="course-picker-new-name">
                 {t('courses.forms.newCourse')}
               </label>
+              <fieldset className="course-picker__hole-choice-fieldset">
+                <legend className="course-picker__add-label">{t('courses.forms.courseHoleCount')}</legend>
+                <div className="course-picker__add-row course-picker__add-row--radios">
+                  <label className="course-picker__radio-label">
+                    <input
+                      type="radio"
+                      name="course-picker-new-holes"
+                      checked={newCourseHoleChoice === 9}
+                      onChange={() => setNewCourseHoleChoice(9)}
+                    />
+                    {t('courses.forms.nineHoles')}
+                  </label>
+                  <label className="course-picker__radio-label">
+                    <input
+                      type="radio"
+                      name="course-picker-new-holes"
+                      checked={newCourseHoleChoice === 18}
+                      onChange={() => setNewCourseHoleChoice(18)}
+                    />
+                    {t('courses.forms.eighteenHoles')}
+                  </label>
+                </div>
+              </fieldset>
               <div className="course-picker__add-row">
                 <input
                   id="course-picker-new-name"
@@ -566,7 +580,6 @@ export function CoursePicker({
             <p className="course-picker__selection">
               {t('courses.selection.active', {
                 courseName: activeCourse.name,
-                layoutLabel: resolvedTemplate.label,
                 holeCount: resolvedTemplate.holes.length,
               })}
             </p>
