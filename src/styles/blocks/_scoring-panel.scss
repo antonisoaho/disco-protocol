@@ -424,6 +424,35 @@
   gap: calc(#{$space-unit} * 1.5);
 }
 
+.scoring-panel__round-leader-chip {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: calc(#{$space-unit} * 0.5);
+  max-width: min(100%, 15rem);
+  padding: $space-2 $space-3;
+  border-radius: $radius-md;
+  border: 1px solid color-mix(in srgb, $color-text 12%, $color-border);
+  background: color-mix(in srgb, $color-text 5%, $color-surface);
+  box-shadow: 0 1px 2px color-mix(in srgb, $color-text 6%, transparent);
+}
+
+.scoring-panel__round-leader-chip-names {
+  font-size: 0.875rem;
+  font-weight: 700;
+  line-height: 1.25;
+  color: $color-text;
+  text-align: right;
+  word-break: break-word;
+}
+
+.scoring-panel__round-leader-chip-delta {
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: $color-text-muted;
+}
+
 .scoring-panel__notation {
   display: inline-flex;
   align-items: center;

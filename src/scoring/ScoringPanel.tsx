@@ -38,12 +38,7 @@ import {
 import type { RoundDoc, RoundVisibility } from '../firebase/roundTypes'
 import { subscribeFollowers, subscribeFollowing } from '../firebase/follows'
 import { subscribeUserDirectory, type UserDirectoryEntry } from '../firebase/userDirectory'
-import {
-  scoreTierToNotationClassName,
-  strokesParDeltaToNotation,
-  type ScoreDecorationShape,
-  type ScoreTier,
-} from '../lib/scoreSemantic'
+import { scoreTierToNotationClassName, strokesParDeltaToNotation } from '../lib/scoreSemantic'
 import { FollowPanel } from '../social/FollowPanel'
 import {
   buildAnonymousParticipantNameMap,
@@ -150,6 +145,29 @@ function participantDisplayName(entry: UserDirectoryEntry): string {
   return entry.displayName.trim().length > 0 ? entry.displayName : entry.uid
 }
 
+function buildParticipantNamesForRound(
+  data: RoundDoc,
+  directoryByUid: Record<string, UserDirectoryEntry>,
+): Record<string, string> {
+  const anonymousMap = buildAnonymousParticipantNameMap(data.anonymousParticipants ?? [])
+  const names: Record<string, string> = {}
+  for (const participantId of data.participantIds) {
+    const anonymous = anonymousMap[participantId]
+    if (anonymous) {
+      names[participantId] = anonymous
+      continue
+    }
+    names[participantId] = participantDisplayName(
+      directoryByUid[participantId] ?? {
+        uid: participantId,
+        displayName: participantId,
+        subtitle: participantId,
+      },
+    )
+  }
+  return names
+}
+
 function readParticipantHoleScores(data: RoundDoc, fallbackUid: string) {
   const next: Record<string, Record<string, { strokes: number; par: number }>> = {}
   const participantIdSet = new Set(data.participantIds)
@@ -184,45 +202,6 @@ function readParticipantHoleScores(data: RoundDoc, fallbackUid: string) {
   }
 
   return next
-}
-
-type ScoreNotationValueProps = {
-  strokes: number
-  decorationShape: ScoreDecorationShape
-  decorationLayers: number
-}
-
-function ScoreNotationValue({ strokes, decorationShape, decorationLayers }: ScoreNotationValueProps) {
-  let content = <span className="scoring-panel__notation-value">{strokes}</span>
-  for (let layer = 0; layer < decorationLayers; layer += 1) {
-    content = (
-      <span className={`scoring-panel__notation-frame scoring-panel__notation-frame--${decorationShape}`}>
-        {content}
-      </span>
-    )
-  }
-  return content
-}
-
-function scoreTierLabel(t: TFunction<'common'>, tier: ScoreTier): string {
-  switch (tier) {
-    case 'albatross-plus':
-      return t('scoring.scoreTier.albatrossPlus')
-    case 'eagle':
-      return t('scoring.scoreTier.eagle')
-    case 'birdie':
-      return t('scoring.scoreTier.birdie')
-    case 'par':
-      return t('scoring.scoreTier.par')
-    case 'bogey':
-      return t('scoring.scoreTier.bogey')
-    case 'double-bogey':
-      return t('scoring.scoreTier.doubleBogey')
-    case 'triple-bogey-plus':
-      return t('scoring.scoreTier.tripleBogeyPlus')
-    default:
-      return ''
-  }
 }
 
 export function ScoringPanel({ user, selectedCourseTemplate, favoriteCourseIds }: Props) {
@@ -1549,12 +1528,15 @@ export function ScoringPanel({ user, selectedCourseTemplate, favoriteCourseIds }
             ) : (
               <ul className="scoring-panel__list">
                 {items.map(({ id, data }) => {
-                  const participantScores = readParticipantHoleScores(data, uid)
-                  const currentParticipantScores = participantScores[uid] ?? {}
-                  const keys = Object.keys(currentParticipantScores).sort((a, b) => Number(a) - Number(b))
-                  const lastKey = keys.length ? keys[keys.length - 1] : null
-                  const last = lastKey ? currentParticipantScores[lastKey] : null
-                  const notation = last ? strokesParDeltaToNotation(last.strokes, last.par) : null
+                  const viewerParticipantScores = readParticipantHoleScores(data, uid)
+                  const currentParticipantScores = viewerParticipantScores[uid] ?? {}
+                  const roundParticipantScores = readParticipantHoleScores(data, data.ownerId)
+                  const roundTotals = computeParticipantTotals(data.participantIds, roundParticipantScores)
+                  const leaderIds = pickLeadingParticipantIds(data.participantIds, roundTotals)
+                  const roundParticipantNames = buildParticipantNamesForRound(data, directoryByUid)
+                  const leaderNamesJoined = leaderIds.map((pid) => roundParticipantNames[pid] ?? pid).join(', ')
+                  const leaderDelta =
+                    leaderIds.length > 0 ? (roundTotals[leaderIds[0]]?.totalDelta ?? 0) : 0
                   const summary = (() => {
                     try {
                       return aggregateScoreProtocol(
@@ -1589,32 +1571,18 @@ export function ScoringPanel({ user, selectedCourseTemplate, favoriteCourseIds }
                         ) : null}
                       </div>
                       <div>
-                        {last && notation ? (
-                          <span className="scoring-panel__score-notation">
-                            {(() => {
-                              const notationLabel = scoreTierLabel(t, notation.tier)
-                              return (
-                                <span
-                                  className={`scoring-panel__notation ${scoreTierToNotationClassName(notation.tier)}`}
-                                  aria-label={t('scoring.rounds.latestScoreAria', {
-                                    label: notationLabel,
-                                    strokes: last.strokes,
-                                    par: last.par,
-                                  })}
-                                  title={t('scoring.rounds.latestScoreTitle', {
-                                    label: notationLabel,
-                                    delta: formatDelta(notation.delta),
-                                  })}
-                                >
-                                  <ScoreNotationValue
-                                    strokes={last.strokes}
-                                    decorationShape={notation.decorationShape}
-                                    decorationLayers={notation.decorationLayers}
-                                  />
-                                </span>
-                              )
-                            })()}
-                            <span className="scoring-panel__notation-par">/{last.par}</span>
+                        {leaderIds.length > 0 ? (
+                          <span
+                            className="scoring-panel__round-leader-chip"
+                            aria-label={t('scoring.rounds.listLeaderAria', {
+                              names: leaderNamesJoined,
+                              delta: formatDelta(leaderDelta),
+                            })}
+                          >
+                            <span className="scoring-panel__round-leader-chip-names">{leaderNamesJoined}</span>
+                            <span className="scoring-panel__round-leader-chip-delta">
+                              {t('scoring.rounds.listLeaderDelta', { delta: formatDelta(leaderDelta) })}
+                            </span>
                           </span>
                         ) : (
                           <span className="scoring-panel__muted">{t('scoring.rounds.noScores')}</span>

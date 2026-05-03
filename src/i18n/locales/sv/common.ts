@@ -255,6 +255,8 @@ export const commonSv = {
       summary: '{{totalStrokes}}/{{totalPar}} ({{totalDelta}}) · {{scoredHoles}}/{{holeCount}} hål',
       latestScoreAria: '{{label}}: {{strokes}} kast på par {{par}}',
       latestScoreTitle: '{{label}} ({{delta}} mot par)',
+      listLeaderAria: 'Rundledare: {{names}}, {{delta}} mot par',
+      listLeaderDelta: '{{delta}} mot par',
       noScores: 'inga poäng',
       roundTotal: 'Rundtotal {{totalStrokes}}/{{totalPar}} ({{totalDelta}}) · {{scoredHoles}}/{{holeCount}} hål poängsatta',
       selectRoundToLoadHoleForm: 'Välj en runda för att ladda hålformuläret.',
