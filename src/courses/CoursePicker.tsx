@@ -15,12 +15,16 @@ import {
   type CourseWithId,
 } from './courseData'
 import { filterCoursesForDiscovery, type LatLng } from './discovery'
+import { TemplateHoleGrid } from './TemplateHoleGrid'
 import {
+  createTemplateDraft,
   normalizeCourseCity,
   normalizeCourseName,
   normalizeHoleCount,
+  resizeTemplateHoles,
   validateCourseName,
 } from './templateDraft'
+import type { CourseHoleTemplate } from '../firebase/models/course'
 
 type Props = {
   selection: CourseRoundSelection | null
@@ -69,17 +73,19 @@ export function CoursePicker({
   const [renameError, setRenameError] = useState<string | null>(null)
   const [createTemplateLabel, setCreateTemplateLabel] = useState('Main')
   const [createTemplateHoleCount, setCreateTemplateHoleCount] = useState(18)
+  const [createTemplateHoles, setCreateTemplateHoles] = useState<CourseHoleTemplate[]>(() =>
+    createTemplateDraft({ label: 'Main', holeCount: 18 }).holes,
+  )
   const [createTemplateError, setCreateTemplateError] = useState<string | null>(null)
   const [creatingTemplate, setCreatingTemplate] = useState(false)
   const [templateEditDraft, setTemplateEditDraft] = useState<{
     templateId: string | null
     label: string
-    holeCount: number
   }>({
     templateId: null,
     label: 'Main',
-    holeCount: 18,
   })
+  const [editTemplateHoles, setEditTemplateHoles] = useState<CourseHoleTemplate[]>([])
   const [editTemplateError, setEditTemplateError] = useState<string | null>(null)
   const [savingTemplate, setSavingTemplate] = useState(false)
   const [deletingCourse, setDeletingCourse] = useState(false)
@@ -138,6 +144,24 @@ export function CoursePicker({
     return templateState.rows
   }, [activeCourseId, templateState.courseId, templateState.rows])
 
+  useEffect(() => {
+    queueMicrotask(() => {
+      setCreateTemplateHoles((prev) => resizeTemplateHoles(prev, createTemplateHoleCount))
+    })
+  }, [createTemplateHoleCount])
+
+  useEffect(() => {
+    const tpl = templates.find((row) => row.id === pickedTemplateId) ?? null
+    queueMicrotask(() => {
+      if (!tpl) {
+        setEditTemplateHoles([])
+        return
+      }
+      setEditTemplateHoles(tpl.holes.map((h) => ({ ...h })))
+      setTemplateEditDraft({ templateId: tpl.id, label: tpl.label })
+    })
+  }, [pickedTemplateId, templates])
+
   const activeCourse = useMemo(
     () => courses.find((course) => course.id === activeCourseId) ?? null,
     [activeCourseId, courses],
@@ -166,10 +190,6 @@ export function CoursePicker({
     pickedTemplate && templateEditDraft.templateId === pickedTemplate.id
       ? templateEditDraft.label
       : (pickedTemplate?.label ?? 'Main')
-  const editTemplateHoleCount =
-    pickedTemplate && templateEditDraft.templateId === pickedTemplate.id
-      ? templateEditDraft.holeCount
-      : (pickedTemplate?.holes.length ?? 18)
   const geolocationSupported = typeof navigator !== 'undefined' && 'geolocation' in navigator
   const geolocationStatusMessage = useMemo(() => {
     if (locationState === 'ready' && userLocation) {
@@ -269,10 +289,12 @@ export function CoursePicker({
         uid: user.uid,
         label: createTemplateLabel,
         holeCount: createTemplateHoleCount,
+        holes: createTemplateHoles,
       })
       setPickedTemplateId(templateId)
       setCreateTemplateLabel('Main')
       setCreateTemplateHoleCount(18)
+      setCreateTemplateHoles(createTemplateDraft({ label: 'Main', holeCount: 18 }).holes)
     } catch (err) {
       setCreateTemplateError(
         err instanceof Error ? translateUserError(t, err.message) : t('courses.errors.createTemplateFailed'),
@@ -292,9 +314,9 @@ export function CoursePicker({
         courseId: activeCourseId,
         templateId: pickedTemplateId,
         label: editTemplateLabel,
-        holeCount: editTemplateHoleCount,
+        holes: editTemplateHoles,
       })
-      setTemplateEditDraft({ templateId: null, label: 'Main', holeCount: 18 })
+      setTemplateEditDraft({ templateId: null, label: 'Main' })
     } catch (err) {
       setEditTemplateError(
         err instanceof Error ? translateUserError(t, err.message) : t('courses.errors.updateTemplateFailed'),
@@ -623,6 +645,12 @@ export function CoursePicker({
                 {creatingTemplate ? t('courses.actions.saving') : t('courses.actions.addTemplate')}
               </button>
             </div>
+            <TemplateHoleGrid
+              idPrefix="course-picker-create"
+              holes={createTemplateHoles}
+              disabled={creatingTemplate}
+              onChange={setCreateTemplateHoles}
+            />
             {createTemplateError ? (
               <p className="course-picker__error" role="alert" data-variant="error">
                 {createTemplateError}
@@ -642,7 +670,6 @@ export function CoursePicker({
                     setTemplateEditDraft({
                       templateId: pickedTemplate.id,
                       label: e.target.value,
-                      holeCount: editTemplateHoleCount,
                     })
                   }
                   autoComplete="off"
@@ -653,19 +680,23 @@ export function CoursePicker({
                   type="number"
                   min={1}
                   max={27}
-                  value={editTemplateHoleCount}
+                  value={editTemplateHoles.length}
                   onChange={(e) =>
-                    setTemplateEditDraft({
-                      templateId: pickedTemplate.id,
-                      label: editTemplateLabel,
-                      holeCount: normalizeHoleCount(Number(e.target.value)),
-                    })
+                    setEditTemplateHoles((prev) =>
+                      resizeTemplateHoles(prev, normalizeHoleCount(Number(e.target.value))),
+                    )
                   }
                 />
                 <button type="submit" disabled={savingTemplate}>
                   {savingTemplate ? t('courses.actions.saving') : t('courses.actions.saveTemplate')}
                 </button>
               </div>
+              <TemplateHoleGrid
+                idPrefix="course-picker-edit"
+                holes={editTemplateHoles}
+                disabled={savingTemplate}
+                onChange={setEditTemplateHoles}
+              />
               {editTemplateError ? (
                 <p className="course-picker__error" role="alert" data-variant="error">
                   {editTemplateError}

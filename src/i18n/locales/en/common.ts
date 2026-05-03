@@ -75,6 +75,8 @@ export const commonEn = {
       locationTools: 'Location tools',
       courseCity: 'Course city',
       newCourseCity: 'New course city',
+      holePar: 'Par for hole {{hole}}',
+      holeLength: 'Length in meters for hole {{hole}}',
     },
     filters: {
       searchByName: 'Search by name',
@@ -113,6 +115,11 @@ export const commonEn = {
       addTemplate: 'Add template',
       editSelectedTemplate: 'Edit selected template',
       newCourse: 'New course',
+      templateHoleDetails: 'Par and length per hole',
+      holeNumber: 'Hole',
+      holePar: 'Par',
+      holeLength: 'Length (m)',
+      holeLengthPlaceholder: 'Optional',
     },
     actions: {
       saving: 'Saving…',

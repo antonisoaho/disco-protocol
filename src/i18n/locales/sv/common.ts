@@ -76,6 +76,8 @@ export const commonSv = {
       locationTools: 'Platsverktyg',
       courseCity: 'Banstad',
       newCourseCity: 'Ny banstad',
+      holePar: 'Par för hål {{hole}}',
+      holeLength: 'Längd i meter för hål {{hole}}',
     },
     filters: {
       searchByName: 'Sök efter namn',
@@ -114,6 +116,11 @@ export const commonSv = {
       addTemplate: 'Lägg till mall',
       editSelectedTemplate: 'Redigera vald mall',
       newCourse: 'Ny bana',
+      templateHoleDetails: 'Par och längd per hål',
+      holeNumber: 'Hål',
+      holePar: 'Par',
+      holeLength: 'Längd (m)',
+      holeLengthPlaceholder: 'Valfritt',
     },
     actions: {
       saving: 'Sparar…',

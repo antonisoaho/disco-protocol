@@ -12,10 +12,17 @@ import {
   type Unsubscribe,
 } from 'firebase/firestore'
 import { db } from '../firebase/firestore'
-import type { CourseDoc, CourseTemplateDoc } from '../firebase/models/course'
+import type { CourseDoc, CourseHoleTemplate, CourseTemplateDoc } from '../firebase/models/course'
 import { COLLECTIONS } from '../firebase/paths'
 import { slugify } from './slug'
-import { createTemplateDraft, normalizeCourseCity, normalizeCourseName } from './templateDraft'
+import {
+  createTemplateDraft,
+  normalizeCourseCity,
+  normalizeCourseName,
+  normalizeHoleCount,
+  normalizeTemplateHolesForSave,
+  normalizeTemplateLabel,
+} from './templateDraft'
 
 export type CourseWithId = CourseDoc & { id: string }
 export type CourseTemplateWithId = CourseTemplateDoc & { id: string }
@@ -136,15 +143,18 @@ export async function createTemplate(params: {
   uid: string
   label: string
   holeCount: number
+  holes?: CourseHoleTemplate[] | null
   isDefault?: boolean
 }): Promise<string> {
-  const draft = createTemplateDraft({
-    label: params.label,
-    holeCount: params.holeCount,
-  })
+  const holeCount = normalizeHoleCount(params.holeCount)
+  const holes =
+    params.holes && params.holes.length === holeCount
+      ? normalizeTemplateHolesForSave(params.holes)
+      : createTemplateDraft({ label: params.label, holeCount }).holes
+  const label = normalizeTemplateLabel(params.label)
   const templateRef = await addDoc(collection(db, COLLECTIONS.courses, params.courseId, COLLECTIONS.templates), {
-    label: draft.label,
-    holes: draft.holes,
+    label,
+    holes,
     source: 'crowd',
     createdBy: params.uid,
     createdAt: serverTimestamp(),
@@ -157,15 +167,13 @@ export async function updateTemplate(params: {
   courseId: string
   templateId: string
   label: string
-  holeCount: number
+  holes: CourseHoleTemplate[]
 }): Promise<void> {
-  const draft = createTemplateDraft({
-    label: params.label,
-    holeCount: params.holeCount,
-  })
+  const holes = normalizeTemplateHolesForSave(params.holes)
+  const label = normalizeTemplateLabel(params.label)
   await updateDoc(doc(db, COLLECTIONS.courses, params.courseId, COLLECTIONS.templates, params.templateId), {
-    label: draft.label,
-    holes: draft.holes,
+    label,
+    holes,
   })
 }
 
