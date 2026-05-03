@@ -384,6 +384,78 @@ export async function removeParticipantFromRound(params: {
   })
 }
 
+export async function replaceRoundParticipant(params: {
+  roundId: string
+  actorUid: string
+  fromParticipantId: string
+  toParticipantUid: string
+}): Promise<void> {
+  const trimmedTo = params.toParticipantUid.trim()
+  if (trimmedTo.length === 0) {
+    throw new Error('Replacement user is required.')
+  }
+  if (params.fromParticipantId === trimmedTo) {
+    throw new Error('Replace source and target must differ.')
+  }
+  if (isAnonymousParticipantId(trimmedTo)) {
+    throw new Error('Replacement must be a registered user account.')
+  }
+
+  const ref = doc(db, ROUNDS, params.roundId)
+  await runTransaction(db, async (tx) => {
+    const snap = await tx.get(ref)
+    if (!snap.exists()) {
+      throw new Error('Round not found')
+    }
+    const data = snap.data() as RoundDoc
+    if (params.fromParticipantId === data.ownerId) {
+      throw new Error('Cannot replace the round owner on the roster.')
+    }
+    if (!data.participantIds.includes(params.fromParticipantId)) {
+      throw new Error('Target participant is not in this round')
+    }
+    if (data.participantIds.includes(trimmedTo)) {
+      throw new Error('Replacement user is already a participant of this round.')
+    }
+    const profileSnap = await tx.get(doc(db, COLLECTIONS.users, params.actorUid))
+    if (!isRoundRosterManager(data, params.actorUid, profileSnap.data() as Record<string, unknown> | undefined)) {
+      throw new Error('Not permitted to manage this round roster.')
+    }
+
+    const nextParticipantIds = data.participantIds.map((id) =>
+      id === params.fromParticipantId ? trimmedTo : id,
+    )
+
+    const nextAnonymousParticipants = mergeAnonymousParticipants(
+      nextParticipantIds,
+      (data.anonymousParticipants ?? []).filter((entry) => entry.id !== params.fromParticipantId),
+    )
+
+    const nextParticipantHoleScores = cloneParticipantHoleScores(data.participantHoleScores)
+    const fromHoleMap = nextParticipantHoleScores[params.fromParticipantId] ?? {}
+    delete nextParticipantHoleScores[params.fromParticipantId]
+    nextParticipantHoleScores[trimmedTo] = {
+      ...(nextParticipantHoleScores[trimmedTo] ?? {}),
+      ...fromHoleMap,
+    }
+
+    const nextHoleScores: Record<string, HoleScoreEntry> = { ...data.holeScores }
+    for (const [holeKey, entry] of Object.entries(nextHoleScores)) {
+      if (entry?.updatedBy === params.fromParticipantId) {
+        nextHoleScores[holeKey] = { ...entry, updatedBy: trimmedTo }
+      }
+    }
+
+    tx.update(ref, {
+      participantIds: nextParticipantIds,
+      anonymousParticipants: nextAnonymousParticipants,
+      participantHoleScores: nextParticipantHoleScores,
+      holeScores: nextHoleScores,
+      updatedAt: serverTimestamp(),
+    })
+  })
+}
+
 /**
  * Updates `par` for one hole across all participants who already have a score cell
  * (saved-layout rounds). Round owner or admin only.
