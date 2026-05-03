@@ -14,6 +14,7 @@ import {
   type CourseWithId,
 } from './courseData'
 import { filterCoursesForDiscovery, type LatLng } from './discovery'
+import { CoursePickerTemplatePanel } from './CoursePickerTemplatePanel'
 import { normalizeCourseCity, normalizeCourseName, validateCourseName } from './templateDraft'
 
 type Props = {
@@ -170,6 +171,11 @@ export function CoursePicker({
       holeCount: resolvedTemplate.holes.length,
     })
   }, [activeCourse, onSelectionChange, resolvedTemplate])
+
+  const canEditActiveTemplate = useMemo(() => {
+    if (!user || !resolvedTemplate) return false
+    return isAdmin || resolvedTemplate.createdBy === user.uid
+  }, [isAdmin, resolvedTemplate, user])
 
   async function handleCreate(e: React.FormEvent) {
     e.preventDefault()
@@ -371,189 +377,202 @@ export function CoursePicker({
         ) : null}
       </div>
 
-      {courses.length === 0 && !listError ? (
-        <p className="course-picker__empty">{t('courses.empty.noCourses')}</p>
-      ) : filteredCourses.length === 0 ? (
-        <p className="course-picker__empty">{t('courses.empty.noMatches')}</p>
-      ) : (
-        <ul className="course-picker__list">
-          {filteredCourses.map((c) => {
-            const isFavorite = favoriteCourseIdSet.has(c.id)
-            return (
-              <li key={c.id} className="course-picker__item">
-                <div className="course-picker__course-row">
-                  <button
-                    type="button"
-                    className={`course-picker__course-btn${c.id === activeCourseId ? ' course-picker__course-btn--active' : ''}`}
-                    onClick={() => setActiveCourseId(c.id)}
-                  >
-                    <span className="course-picker__course-name">{c.name}</span>
-                    <span className="course-picker__course-meta">
-                      {[c.city, c.organization, c.slug].filter(Boolean).join(' · ') ||
-                        t('courses.courseCard.fallbackMeta')}
-                    </span>
-                    {typeof c.distanceKm === 'number' ? (
-                      <span className="course-picker__course-meta">
-                        {t('courses.courseCard.distanceKmAway', { distanceKm: c.distanceKm.toFixed(1) })}
-                      </span>
-                    ) : null}
-                  </button>
-                  <button
-                    type="button"
-                    className={`course-picker__favorite-btn${isFavorite ? ' course-picker__favorite-btn--active' : ''}`}
-                    onClick={() => void onToggleFavoriteCourse(c.id, !isFavorite)}
-                    aria-pressed={isFavorite}
-                    aria-label={
-                      isFavorite
-                        ? t('courses.favourites.removeAria', { courseName: c.name })
-                        : t('courses.favourites.addAria', { courseName: c.name })
-                    }
-                    title={
-                      isFavorite
-                        ? t('courses.favourites.removeAria', { courseName: c.name })
-                        : t('courses.favourites.addAria', { courseName: c.name })
-                    }
-                  >
-                    {isFavorite ? '★' : '☆'}
-                  </button>
-                </div>
-              </li>
-            )
-          })}
-        </ul>
-      )}
+      <div className="course-picker__main">
+        <div className="course-picker__list-column">
+          {courses.length === 0 && !listError ? (
+            <p className="course-picker__empty">{t('courses.empty.noCourses')}</p>
+          ) : filteredCourses.length === 0 ? (
+            <p className="course-picker__empty">{t('courses.empty.noMatches')}</p>
+          ) : (
+            <ul className="course-picker__list">
+              {filteredCourses.map((c) => {
+                const isFavorite = favoriteCourseIdSet.has(c.id)
+                return (
+                  <li key={c.id} className="course-picker__item">
+                    <div className="course-picker__course-row">
+                      <button
+                        type="button"
+                        className={`course-picker__course-btn${c.id === activeCourseId ? ' course-picker__course-btn--active' : ''}`}
+                        onClick={() => setActiveCourseId(c.id)}
+                      >
+                        <span className="course-picker__course-name">{c.name}</span>
+                        <span className="course-picker__course-meta">
+                          {[c.city, c.organization, c.slug].filter(Boolean).join(' · ') ||
+                            t('courses.courseCard.fallbackMeta')}
+                        </span>
+                        {typeof c.distanceKm === 'number' ? (
+                          <span className="course-picker__course-meta">
+                            {t('courses.courseCard.distanceKmAway', { distanceKm: c.distanceKm.toFixed(1) })}
+                          </span>
+                        ) : null}
+                      </button>
+                      <button
+                        type="button"
+                        className={`course-picker__favorite-btn${isFavorite ? ' course-picker__favorite-btn--active' : ''}`}
+                        onClick={() => void onToggleFavoriteCourse(c.id, !isFavorite)}
+                        aria-pressed={isFavorite}
+                        aria-label={
+                          isFavorite
+                            ? t('courses.favourites.removeAria', { courseName: c.name })
+                            : t('courses.favourites.addAria', { courseName: c.name })
+                        }
+                        title={
+                          isFavorite
+                            ? t('courses.favourites.removeAria', { courseName: c.name })
+                            : t('courses.favourites.addAria', { courseName: c.name })
+                        }
+                      >
+                        {isFavorite ? '★' : '☆'}
+                      </button>
+                    </div>
+                  </li>
+                )
+              })}
+            </ul>
+          )}
+        </div>
 
-      {activeCourseId && activeCourse ? (
-        <div className="course-picker__templates">
-          <h3 className="course-picker__templates-title">
-            {t('courses.courseDetailsFor', { courseName: activeCourse.name })}
-          </h3>
-          <form className="course-picker__add" onSubmit={(e) => void handleRenameCourse(e)}>
-            <label className="course-picker__add-label" htmlFor="course-picker-course-name">
-              {t('courses.forms.courseName')}
-            </label>
-            <div className="course-picker__add-row">
-              <input
-                id="course-picker-course-name"
-                value={renameName}
-                onChange={(e) =>
-                  setRenameDraft({
-                    courseId: activeCourse.id,
-                    name: e.target.value,
-                    city: renameCity,
-                  })
-                }
-                autoComplete="off"
-                disabled={renaming || !isAdmin}
-              />
-              <input
-                id="course-picker-course-city"
-                aria-label={t('courses.aria.courseCity')}
-                value={renameCity}
-                onChange={(e) =>
-                  setRenameDraft({
-                    courseId: activeCourse.id,
-                    name: renameName,
-                    city: e.target.value,
-                  })
-                }
-                placeholder={t('courses.forms.cityPlaceholder')}
-                autoComplete="off"
-                disabled={renaming || !isAdmin}
-              />
-              <button
-                type="submit"
-                disabled={renaming || !isAdmin || validateCourseName(renameName) !== null}
-              >
-                {renaming ? t('courses.actions.saving') : t('courses.actions.saveName')}
-              </button>
-            </div>
-            {!isAdmin ? <p className="course-picker__hint">{t('courses.hints.onlyAdminsRename')}</p> : null}
-            {renameError ? (
-              <p className="course-picker__error" role="alert">
-                {renameError}
-              </p>
-            ) : null}
-          </form>
-          {isAdmin ? (
-            <form className="course-picker__add" onSubmit={(e) => e.preventDefault()}>
-              <label className="course-picker__add-label">{t('courses.deleteCourseLabel')}</label>
+        <div className="course-picker__details-column">
+          {user ? (
+            <form className="course-picker__add" onSubmit={(e) => void handleCreate(e)}>
+              <label className="course-picker__add-label" htmlFor="course-picker-new-name">
+                {t('courses.forms.newCourse')}
+              </label>
               <div className="course-picker__add-row">
-                <button
-                  type="button"
-                  className="course-picker__btn--danger"
-                  onClick={() => void handleDeleteCourse()}
-                  disabled={deletingCourse}
-                >
-                  {deletingCourse ? t('courses.deletingCourse') : t('courses.deleteCourse')}
+                <input
+                  id="course-picker-new-name"
+                  placeholder={t('courses.forms.courseNamePlaceholder')}
+                  value={newName}
+                  onChange={(e) => setNewName(e.target.value)}
+                  autoComplete="off"
+                />
+                <input
+                  id="course-picker-new-city"
+                  placeholder={t('courses.forms.cityOptionalPlaceholder')}
+                  value={newCity}
+                  onChange={(e) => setNewCity(e.target.value)}
+                  autoComplete="off"
+                  aria-label={t('courses.aria.newCourseCity')}
+                />
+                <button type="submit" disabled={creating}>
+                  {creating ? t('courses.actions.saving') : t('courses.actions.add')}
                 </button>
               </div>
-              {deleteCourseError ? (
+              {createError ? (
                 <p className="course-picker__error" role="alert">
-                  {deleteCourseError}
+                  {createError}
                 </p>
               ) : null}
             </form>
           ) : null}
 
-          {templatesError ? (
-            <p className="course-picker__error" role="alert">
-              {templatesError}
-            </p>
+          {activeCourseId && activeCourse ? (
+            <div className="course-picker__templates">
+              <h3 className="course-picker__templates-title">
+                {t('courses.courseDetailsFor', { courseName: activeCourse.name })}
+              </h3>
+              <form className="course-picker__add" onSubmit={(e) => void handleRenameCourse(e)}>
+                <label className="course-picker__add-label" htmlFor="course-picker-course-name">
+                  {t('courses.forms.courseName')}
+                </label>
+                <div className="course-picker__add-row">
+                  <input
+                    id="course-picker-course-name"
+                    value={renameName}
+                    onChange={(e) =>
+                      setRenameDraft({
+                        courseId: activeCourse.id,
+                        name: e.target.value,
+                        city: renameCity,
+                      })
+                    }
+                    autoComplete="off"
+                    disabled={renaming || !isAdmin}
+                  />
+                  <input
+                    id="course-picker-course-city"
+                    aria-label={t('courses.aria.courseCity')}
+                    value={renameCity}
+                    onChange={(e) =>
+                      setRenameDraft({
+                        courseId: activeCourse.id,
+                        name: renameName,
+                        city: e.target.value,
+                      })
+                    }
+                    placeholder={t('courses.forms.cityPlaceholder')}
+                    autoComplete="off"
+                    disabled={renaming || !isAdmin}
+                  />
+                  <button
+                    type="submit"
+                    disabled={renaming || !isAdmin || validateCourseName(renameName) !== null}
+                  >
+                    {renaming ? t('courses.actions.saving') : t('courses.actions.saveName')}
+                  </button>
+                </div>
+                {!isAdmin ? <p className="course-picker__hint">{t('courses.hints.onlyAdminsRename')}</p> : null}
+                {renameError ? (
+                  <p className="course-picker__error" role="alert">
+                    {renameError}
+                  </p>
+                ) : null}
+              </form>
+              {isAdmin ? (
+                <form className="course-picker__add" onSubmit={(e) => e.preventDefault()}>
+                  <label className="course-picker__add-label">{t('courses.deleteCourseLabel')}</label>
+                  <div className="course-picker__add-row">
+                    <button
+                      type="button"
+                      className="course-picker__btn--danger"
+                      onClick={() => void handleDeleteCourse()}
+                      disabled={deletingCourse}
+                    >
+                      {deletingCourse ? t('courses.deletingCourse') : t('courses.deleteCourse')}
+                    </button>
+                  </div>
+                  {deleteCourseError ? (
+                    <p className="course-picker__error" role="alert">
+                      {deleteCourseError}
+                    </p>
+                  ) : null}
+                </form>
+              ) : null}
+
+              {templatesError ? (
+                <p className="course-picker__error" role="alert">
+                  {templatesError}
+                </p>
+              ) : null}
+              {resolvedTemplate ? (
+                <CoursePickerTemplatePanel
+                  key={`${activeCourse.id}-${resolvedTemplate.id}`}
+                  courseId={activeCourse.id}
+                  template={resolvedTemplate}
+                  canEdit={canEditActiveTemplate}
+                />
+              ) : templates.length === 0 && !templatesError ? (
+                <p className="course-picker__empty">{t('courses.empty.noLayouts')}</p>
+              ) : null}
+            </div>
+          ) : courses.length === 0 && !listError && user ? (
+            <div className="course-picker__templates">
+              <h3 className="course-picker__templates-title">{t('courses.empty.detailsTitle')}</h3>
+              <p className="course-picker__hint">{t('courses.empty.detailsIntro')}</p>
+            </div>
           ) : null}
-          {resolvedTemplate ? (
-            <p className="course-picker__hint" role="status">
-              {t('courses.hints.canonicalLayout', {
-                label: resolvedTemplate.label,
+
+          {activeCourse && resolvedTemplate ? (
+            <p className="course-picker__selection">
+              {t('courses.selection.active', {
+                courseName: activeCourse.name,
+                layoutLabel: resolvedTemplate.label,
                 holeCount: resolvedTemplate.holes.length,
               })}
             </p>
-          ) : templates.length === 0 && !templatesError ? (
-            <p className="course-picker__empty">{t('courses.empty.noLayouts')}</p>
           ) : null}
         </div>
-      ) : null}
-
-      {activeCourse && resolvedTemplate ? (
-        <p className="course-picker__selection">
-          {t('courses.selection.active', {
-            courseName: activeCourse.name,
-            layoutLabel: resolvedTemplate.label,
-            holeCount: resolvedTemplate.holes.length,
-          })}
-        </p>
-      ) : null}
-
-      <form className="course-picker__add" onSubmit={(e) => void handleCreate(e)}>
-        <label className="course-picker__add-label" htmlFor="course-picker-new-name">
-          {t('courses.forms.newCourse')}
-        </label>
-        <div className="course-picker__add-row">
-          <input
-            id="course-picker-new-name"
-            placeholder={t('courses.forms.courseNamePlaceholder')}
-            value={newName}
-            onChange={(e) => setNewName(e.target.value)}
-            autoComplete="off"
-          />
-          <input
-            id="course-picker-new-city"
-            placeholder={t('courses.forms.cityOptionalPlaceholder')}
-            value={newCity}
-            onChange={(e) => setNewCity(e.target.value)}
-            autoComplete="off"
-            aria-label={t('courses.aria.newCourseCity')}
-          />
-          <button type="submit" disabled={creating}>
-            {creating ? t('courses.actions.saving') : t('courses.actions.add')}
-          </button>
-        </div>
-        {createError ? (
-          <p className="course-picker__error" role="alert">
-            {createError}
-          </p>
-        ) : null}
-      </form>
+      </div>
     </section>
   )
 }

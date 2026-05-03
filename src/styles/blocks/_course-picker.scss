@@ -90,6 +90,20 @@
   border-radius: $radius-md;
 }
 
+.course-picker__main {
+  display: flex;
+  flex-direction: column;
+  gap: $layout-section-gap;
+}
+
+.course-picker__list-column,
+.course-picker__details-column {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: $layout-stack-gap;
+}
+
 .course-picker__list {
   list-style: none;
   margin: 0;
@@ -364,6 +378,13 @@
 @media (min-width: $breakpoint-md) {
   .course-picker {
     gap: $layout-section-gap-lg;
+  }
+
+  .course-picker__main {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr);
+    gap: $layout-section-gap-lg;
+    align-items: start;
   }
 
   .course-picker__filters {
