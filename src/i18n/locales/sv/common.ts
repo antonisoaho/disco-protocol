@@ -146,6 +146,10 @@ export const commonSv = {
     },
     hints: {
       onlyAdminsRename: 'Endast administratörer kan byta namn på kanoniska banor.',
+      wholeCourseDeleteAdminOnly:
+        'Att ta bort en hel bana kräver administratörskonto. Be en administratör om du behöver radera en bana.',
+      nonStandardHoleCount:
+        'Den här layouten har {{count}} hål. Du kan fortfarande ändra par och längd; byte mellan 9 och 18 erbjuds bara för standardlayouter med 9 eller 18 hål.',
       templateReadOnly: 'Bara den som lade till layouten eller en administratör kan ändra par och längd här.',
     },
     selection: {

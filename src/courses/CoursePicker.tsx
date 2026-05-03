@@ -553,7 +553,9 @@ export function CoursePicker({
                     </p>
                   ) : null}
                 </form>
-              ) : null}
+              ) : (
+                <p className="course-picker__hint">{t('courses.hints.wholeCourseDeleteAdminOnly')}</p>
+              )}
 
               {templatesError ? (
                 <p className="course-picker__error" role="alert">

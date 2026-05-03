@@ -4,6 +4,7 @@ import { translateUserError } from '../i18n/translateError'
 import type { CourseHoleTemplate } from '../firebase/models/course'
 import { updateTemplate, type CourseTemplateWithId } from './courseData'
 import { TemplateHoleGrid } from './TemplateHoleGrid'
+import { resizeTemplateHoles } from './templateDraft'
 
 type Props = {
   courseId: string
@@ -49,6 +50,15 @@ export function CoursePickerTemplatePanel({ courseId, template, canEdit }: Props
   }
 
   const gridHoles = canEdit && draft.holes.length > 0 ? draft.holes : template.holes
+  const holeLen = draft.holes.length
+  const isStandardHoleCount = holeLen === 9 || holeLen === 18
+
+  function setLayoutHoleCount(next: 9 | 18) {
+    setDraft((prev) => ({
+      ...prev,
+      holes: resizeTemplateHoles(prev.holes, next),
+    }))
+  }
 
   return (
     <>
@@ -67,6 +77,33 @@ export function CoursePickerTemplatePanel({ courseId, template, canEdit }: Props
           />
         </div>
       </div>
+      {canEdit && isStandardHoleCount ? (
+        <fieldset className="course-picker__hole-choice-fieldset">
+          <legend className="course-picker__add-label">{t('courses.forms.courseHoleCount')}</legend>
+          <div className="course-picker__add-row course-picker__add-row--radios">
+            <label className="course-picker__radio-label">
+              <input
+                type="radio"
+                name="course-picker-existing-holes"
+                checked={holeLen === 9}
+                onChange={() => setLayoutHoleCount(9)}
+              />
+              {t('courses.forms.nineHoles')}
+            </label>
+            <label className="course-picker__radio-label">
+              <input
+                type="radio"
+                name="course-picker-existing-holes"
+                checked={holeLen === 18}
+                onChange={() => setLayoutHoleCount(18)}
+              />
+              {t('courses.forms.eighteenHoles')}
+            </label>
+          </div>
+        </fieldset>
+      ) : canEdit && !isStandardHoleCount ? (
+        <p className="course-picker__hint">{t('courses.hints.nonStandardHoleCount', { count: holeLen })}</p>
+      ) : null}
       {!canEdit ? <p className="course-picker__hint">{t('courses.hints.templateReadOnly')}</p> : null}
       <TemplateHoleGrid
         idPrefix="course-picker-template"

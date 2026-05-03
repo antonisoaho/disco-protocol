@@ -145,6 +145,9 @@ export const commonEn = {
     },
     hints: {
       onlyAdminsRename: 'Only admins can rename canonical courses.',
+      wholeCourseDeleteAdminOnly: 'Removing the entire course is limited to admin accounts. Ask a project admin if you need a course deleted.',
+      nonStandardHoleCount:
+        'This layout has {{count}} holes. You can still edit par and length; switching between 9 and 18 is only offered for standard 9- or 18-hole layouts.',
       templateReadOnly: 'Only the person who added this layout or an admin can change par and length here.',
     },
     selection: {
