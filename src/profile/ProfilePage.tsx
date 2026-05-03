@@ -1,6 +1,7 @@
-import { updateProfile, type User } from 'firebase/auth'
+import { updateProfile } from 'firebase/auth'
 import { type FormEvent, useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { useAuth } from '../auth/useAuth'
 import {
   DISPLAY_NAME_MAX_LENGTH,
   normalizeDisplayName,
@@ -10,20 +11,24 @@ import {
 
 const NON_WHITESPACE_PATTERN = '.*\\S.*'
 
-type Props = {
-  user: User
-}
-
-export function ProfilePage({ user }: Props) {
+export function ProfilePage() {
+  const { user, profileDisplayName } = useAuth()
   const { t } = useTranslation('common')
   const [displayNameError, setDisplayNameError] = useState<string | null>(null)
   const [displayNameNotice, setDisplayNameNotice] = useState<string | null>(null)
   const [isSavingDisplayName, setIsSavingDisplayName] = useState(false)
 
+  if (!user) {
+    return null
+  }
+
+  const sessionUser = user
+
   const currentDisplayName =
-    normalizeDisplayName(user.displayName ?? '') ||
-    user.email?.split('@')[0] ||
-    user.uid
+    profileDisplayName ||
+    normalizeDisplayName(sessionUser.displayName ?? '') ||
+    sessionUser.email?.split('@')[0] ||
+    sessionUser.uid
 
   function resolveDisplayNameError(input: HTMLInputElement): string {
     if (input.validity.valueMissing || input.validity.patternMismatch) {
@@ -68,11 +73,15 @@ export function ProfilePage({ user }: Props) {
     setIsSavingDisplayName(true)
     try {
       const savedDisplayName = await updateUserDisplayName({
-        uid: user.uid,
+        uid: sessionUser.uid,
         displayName: normalized,
       })
-      await updateProfile(user, { displayName: savedDisplayName })
-      setDisplayNameNotice(t('profile.messages.displayNameSaved'))
+      try {
+        await updateProfile(sessionUser, { displayName: savedDisplayName })
+        setDisplayNameNotice(t('profile.messages.displayNameSaved'))
+      } catch {
+        setDisplayNameNotice(t('profile.messages.displayNameSavedLocalOnly'))
+      }
     } catch {
       setDisplayNameError(t('profile.errors.displayNameUpdateFailed'))
     } finally {
@@ -100,7 +109,7 @@ export function ProfilePage({ user }: Props) {
               className="app-shell__profile-input"
               name="displayName"
               defaultValue={currentDisplayName}
-              key={`${user.uid}:${currentDisplayName}`}
+              key={`${sessionUser.uid}:${profileDisplayName ?? ''}:${currentDisplayName}`}
               required
               maxLength={DISPLAY_NAME_MAX_LENGTH}
               pattern={NON_WHITESPACE_PATTERN}

@@ -10,6 +10,12 @@ export function translateUserError(t: TFunction<'common'>, message: string): str
   if (trimmed === 'Only owner can edit another participant score') {
     return t('scoring.errors.onlyOwnerCanEditParticipant')
   }
+  if (trimmed === 'Not permitted to manage this round roster.') {
+    return t('scoring.errors.notPermittedToManageRoundRoster')
+  }
+  if (trimmed === 'Cannot remove the round owner from the participant list.') {
+    return t('scoring.errors.cannotRemoveRoundOwner')
+  }
   if (trimmed === 'Round does not support fresh hole metadata edits') {
     return t('scoring.errors.roundDoesNotSupportFreshMetadataEdits')
   }

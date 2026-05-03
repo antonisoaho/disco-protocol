@@ -27,6 +27,7 @@ import {
   mergeAnonymousParticipants,
   normalizeAnonymousParticipantName,
 } from '../scoring/participantRoster'
+import { isUserProfileAdmin } from '../auth/adminProfile'
 import { COLLECTIONS } from './paths'
 import { db } from './firestore'
 import {
@@ -79,6 +80,15 @@ function buildInitialParticipantHoleScores(participantIds: string[]): Participan
     scores[participantId] = {}
   }
   return scores
+}
+
+function isRoundRosterManager(
+  round: RoundDoc,
+  actorUid: string,
+  actorProfile: Record<string, unknown> | undefined,
+): boolean {
+  if (round.ownerId === actorUid) return true
+  return isUserProfileAdmin(actorProfile ?? null)
 }
 
 function cloneParticipantHoleScores(
@@ -286,7 +296,7 @@ export async function addParticipantToRound(
 
 export async function addAnonymousParticipantToRound(params: {
   roundId: string
-  ownerUid: string
+  actorUid: string
   participant: RoundAnonymousParticipant
 }): Promise<void> {
   const participantId = params.participant.id.trim()
@@ -305,8 +315,9 @@ export async function addAnonymousParticipantToRound(params: {
       throw new Error('Round not found')
     }
     const data = snap.data() as RoundDoc
-    if (data.ownerId !== params.ownerUid) {
-      throw new Error('Only owner can add anonymous participants')
+    const profileSnap = await tx.get(doc(db, COLLECTIONS.users, params.actorUid))
+    if (!isRoundRosterManager(data, params.actorUid, profileSnap.data() as Record<string, unknown> | undefined)) {
+      throw new Error('Not permitted to manage this round roster.')
     }
 
     const nextParticipantIds = Array.from(new Set([...data.participantIds, participantId]))
@@ -316,6 +327,46 @@ export async function addAnonymousParticipantToRound(params: {
     ])
     const nextParticipantHoleScores = cloneParticipantHoleScores(data.participantHoleScores)
     nextParticipantHoleScores[participantId] = nextParticipantHoleScores[participantId] ?? {}
+
+    tx.update(ref, {
+      participantIds: nextParticipantIds,
+      anonymousParticipants: nextAnonymousParticipants,
+      participantHoleScores: nextParticipantHoleScores,
+      updatedAt: serverTimestamp(),
+    })
+  })
+}
+
+export async function removeParticipantFromRound(params: {
+  roundId: string
+  actorUid: string
+  participantId: string
+}): Promise<void> {
+  const ref = doc(db, ROUNDS, params.roundId)
+  await runTransaction(db, async (tx) => {
+    const snap = await tx.get(ref)
+    if (!snap.exists()) {
+      throw new Error('Round not found')
+    }
+    const data = snap.data() as RoundDoc
+    if (params.participantId === data.ownerId) {
+      throw new Error('Cannot remove the round owner from the participant list.')
+    }
+    if (!data.participantIds.includes(params.participantId)) {
+      throw new Error('Target participant is not in this round')
+    }
+    const profileSnap = await tx.get(doc(db, COLLECTIONS.users, params.actorUid))
+    if (!isRoundRosterManager(data, params.actorUid, profileSnap.data() as Record<string, unknown> | undefined)) {
+      throw new Error('Not permitted to manage this round roster.')
+    }
+
+    const nextParticipantIds = data.participantIds.filter((id) => id !== params.participantId)
+    const nextAnonymousParticipants = mergeAnonymousParticipants(
+      nextParticipantIds,
+      (data.anonymousParticipants ?? []).filter((entry) => entry.id !== params.participantId),
+    )
+    const nextParticipantHoleScores = cloneParticipantHoleScores(data.participantHoleScores)
+    delete nextParticipantHoleScores[params.participantId]
 
     tx.update(ref, {
       participantIds: nextParticipantIds,
