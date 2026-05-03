@@ -1561,7 +1561,7 @@ export function ScoringPanel({ user, selectedCourseTemplate, favoriteCourseIds }
                       <div>
                         <strong>{roundDisplayNames.get(id)}</strong>
                         <p className="scoring-panel__muted">
-                          {t('courses.holeCount', { count: inferRoundHoleCount(data) })} · {t(`scoring.visibility.${data.visibility}`)} · {formatStartedAt(data.startedAt)}
+                          {t('courses.templateMeta.holeCount', { count: inferRoundHoleCount(data) })} · {t(`scoring.visibility.${data.visibility}`)} · {formatStartedAt(data.startedAt)}
                           {data.completedAt ? ` · ${t('scoring.rounds.completed')}` : ''}
                         </p>
                         {summary ? (
