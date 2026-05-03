@@ -427,11 +427,15 @@ export function CoursePicker({
 
         <div className="course-picker__details-column">
           {user ? (
-            <form className="course-picker__add" onSubmit={(e) => void handleCreate(e)}>
-              <label className="course-picker__add-label" htmlFor="course-picker-new-name">
+            <section
+              className="course-picker__panel course-picker__panel--create"
+              aria-labelledby="course-picker-create-title"
+            >
+              <h3 id="course-picker-create-title" className="course-picker__panel-title">
                 {t('courses.forms.newCourse')}
-              </label>
-              <fieldset className="course-picker__hole-choice-fieldset">
+              </h3>
+              <form className="course-picker__add course-picker__add--in-panel" onSubmit={(e) => void handleCreate(e)}>
+                <fieldset className="course-picker__hole-choice-fieldset">
                 <legend className="course-picker__add-label">{t('courses.forms.courseHoleCount')}</legend>
                 <div className="course-picker__add-row course-picker__add-row--radios">
                   <label className="course-picker__radio-label">
@@ -454,6 +458,9 @@ export function CoursePicker({
                   </label>
                 </div>
               </fieldset>
+              <label className="course-picker__add-label" htmlFor="course-picker-new-name">
+                {t('courses.forms.courseName')}
+              </label>
               <div className="course-picker__add-row">
                 <input
                   id="course-picker-new-name"
@@ -479,12 +486,16 @@ export function CoursePicker({
                   {createError}
                 </p>
               ) : null}
-            </form>
+              </form>
+            </section>
           ) : null}
 
           {activeCourseId && activeCourse ? (
-            <div className="course-picker__templates">
-              <h3 className="course-picker__templates-title">
+            <section
+              className="course-picker__panel course-picker__panel--details"
+              aria-labelledby="course-picker-details-title"
+            >
+              <h3 id="course-picker-details-title" className="course-picker__panel-title">
                 {t('courses.courseDetailsFor', { courseName: activeCourse.name })}
               </h3>
               <form className="course-picker__add" onSubmit={(e) => void handleRenameCourse(e)}>
@@ -572,12 +583,14 @@ export function CoursePicker({
               ) : templates.length === 0 && !templatesError ? (
                 <p className="course-picker__empty">{t('courses.empty.noLayouts')}</p>
               ) : null}
-            </div>
+            </section>
           ) : courses.length === 0 && !listError && user ? (
-            <div className="course-picker__templates">
-              <h3 className="course-picker__templates-title">{t('courses.empty.detailsTitle')}</h3>
+            <section className="course-picker__panel course-picker__panel--details" aria-labelledby="course-picker-empty-details-title">
+              <h3 id="course-picker-empty-details-title" className="course-picker__panel-title">
+                {t('courses.empty.detailsTitle')}
+              </h3>
               <p className="course-picker__hint">{t('courses.empty.detailsIntro')}</p>
-            </div>
+            </section>
           ) : null}
 
           {activeCourse && resolvedTemplate ? (

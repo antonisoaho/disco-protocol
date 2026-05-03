@@ -96,12 +96,18 @@
   gap: $layout-section-gap;
 }
 
-.course-picker__list-column,
-.course-picker__details-column {
+.course-picker__list-column {
   min-width: 0;
   display: flex;
   flex-direction: column;
   gap: $layout-stack-gap;
+}
+
+.course-picker__details-column {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: $layout-section-gap;
 }
 
 .course-picker__list {
@@ -197,18 +203,27 @@
   color: $color-text-muted;
 }
 
-.course-picker__templates {
-  margin-top: 0;
-  padding: $layout-stack-gap;
-  border: 1px dashed $color-border;
-  border-radius: $radius-md;
-  background: $color-surface;
+.course-picker__panel {
   display: flex;
   flex-direction: column;
   gap: $layout-stack-gap;
+  padding: $layout-stack-gap;
+  border-radius: $radius-md;
+  border: 1px solid $color-border;
+  background: $color-surface;
 }
 
-.course-picker__templates-title {
+.course-picker__panel--create {
+  border-color: color-mix(in srgb, map.get($score-color, birdie) 40%, $color-border);
+  box-shadow: inset 4px 0 0 0 map.get($score-color, birdie);
+}
+
+.course-picker__panel--details {
+  border-style: dashed;
+  border-color: color-mix(in srgb, $color-text-muted 28%, $color-border);
+}
+
+.course-picker__panel-title {
   margin: 0;
   font-size: 0.8125rem;
   font-weight: 600;
@@ -263,6 +278,10 @@
   color: $color-text-muted;
 }
 
+.course-picker__details-column > .course-picker__selection {
+  margin-top: $space-2;
+}
+
 .course-picker__selection {
   margin: 0;
   padding: calc(#{$space-unit} * 3);
@@ -286,6 +305,13 @@
   border: 1px solid $color-border;
   border-radius: $radius-md;
   background: $color-surface;
+
+  &--in-panel {
+    padding: 0;
+    border: none;
+    border-radius: 0;
+    background: transparent;
+  }
 }
 
 .course-picker__add-label {
