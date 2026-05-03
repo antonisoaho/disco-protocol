@@ -70,6 +70,7 @@ export const commonEn = {
       title: 'Firebase custom claim admin',
     },
     aria: {
+      chooseCourse: 'Choose course',
       chooseCourseAndLayout: 'Choose course and layout',
       filterCourses: 'Filter courses',
       locationTools: 'Location tools',
@@ -101,12 +102,14 @@ export const commonEn = {
     empty: {
       noCourses: 'No courses yet. Add one below to get started.',
       noMatches: 'No courses match your filters yet.',
+      noLayouts: 'This course has no saved layout yet.',
     },
     courseCard: {
       fallbackMeta: 'Layout templates inside',
       distanceKmAway: '{{distanceKm}} km away',
     },
     layoutsForCourse: 'Layouts for {{courseName}}',
+    courseDetailsFor: 'Course · {{courseName}}',
     forms: {
       courseName: 'Course name',
       courseNamePlaceholder: 'Course name',
@@ -135,9 +138,12 @@ export const commonEn = {
     },
     hints: {
       onlyAdminsRename: 'Only admins can rename canonical courses.',
+      canonicalLayout:
+        'Par and length follow layout «{{label}}» ({{holeCount}} holes). When you start a round you choose 9 or 18 holes; the app picks the matching layout.',
     },
     selection: {
       selected: 'Selected',
+      active: '{{courseName}} · {{layoutLabel}} · {{holeCount}} holes',
       templateId: '(template id {{templateId}})',
     },
     favourites: {
@@ -208,7 +214,8 @@ export const commonEn = {
     },
     start: {
       courseToPlay: 'Course to play',
-      savedSelection: 'Using {{courseName}} / {{templateLabel}}',
+      savedSelection:
+        'Using {{courseName}}. Par and length come from the saved course layout for the round length you pick.',
       defaultTemplateLabel: 'default template',
       noSavedCourses: 'No saved courses available. Choose Fresh course or add a course first.',
       freshHint: 'Start quickly with name and hole count, then fill par/length as you play.',
@@ -233,7 +240,7 @@ export const commonEn = {
       completed: 'completed',
       freshDraft: 'fresh draft · {{name}}',
       unnamed: 'unnamed',
-      savedCourse: 'saved course {{courseId}} / {{templateId}}',
+      savedCourse: 'Saved layout · {{holeCount}} holes · course {{courseId}}',
       summary: '{{totalStrokes}}/{{totalPar}} ({{totalDelta}}) · {{scoredHoles}}/{{holeCount}} holes',
       latestScoreAria: '{{label}}: {{strokes}} strokes on par {{par}}',
       latestScoreTitle: '{{label}} ({{delta}} vs par)',
@@ -278,6 +285,10 @@ export const commonEn = {
       parAria: 'Hole {{holeNumber}} par',
       lengthMeters: 'Length (m)',
       lengthAria: 'Hole {{holeNumber}} length in meters',
+    },
+    form: {
+      savedLayoutLockedHint:
+        'Par and length are fixed from the course layout. The round owner or an admin can unlock par to correct mistakes after scores exist.',
     },
     playerRows: {
       listAria: 'Player scoring rows',

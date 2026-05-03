@@ -97,6 +97,53 @@ export async function loadRoundSelectionForCourse(params: {
   }
 }
 
+export type RoundHoleLengthChoice = 9 | 18
+
+/** Picks the best stored template for a 9- or 18-hole round (exact length preferred, else smallest fit). */
+export function pickTemplateForRoundLength(
+  templates: CourseTemplateWithId[],
+  holeChoice: RoundHoleLengthChoice,
+): CourseTemplateWithId | null {
+  if (templates.length === 0) return null
+  const exact = templates.find((row) => row.holes.length === holeChoice)
+  if (exact) return exact
+  const sorted = [...templates].sort((a, b) => a.holes.length - b.holes.length)
+  const fits = sorted.find((row) => row.holes.length >= holeChoice)
+  if (fits) return fits
+  return sorted[sorted.length - 1] ?? null
+}
+
+/** Resolves course + template for starting a saved round with a 9/18 hole choice. */
+export async function loadRoundSelectionForCourseAndHoleChoice(params: {
+  courseId: string
+  courseName: string
+  holeChoice: RoundHoleLengthChoice
+}): Promise<CourseRoundSelection | null> {
+  const templatesSnapshot = await getDocs(
+    query(collection(db, COLLECTIONS.courses, params.courseId, COLLECTIONS.templates), orderBy('label')),
+  )
+  const templates = templatesSnapshot.docs.map((docSnapshot) => ({
+    id: docSnapshot.id,
+    ...(docSnapshot.data() as CourseTemplateDoc),
+  }))
+  if (templates.length === 0) {
+    return null
+  }
+  const picked =
+    pickTemplateForRoundLength(templates, params.holeChoice) ??
+    templates.find((row) => row.isDefault) ??
+    templates[0]
+  const cap =
+    params.holeChoice === 9 ? Math.min(9, picked.holes.length) : Math.min(18, picked.holes.length)
+  return {
+    courseId: params.courseId,
+    courseName: params.courseName,
+    templateId: picked.id,
+    templateLabel: picked.label,
+    holeCount: Math.max(1, cap),
+  }
+}
+
 /** Creates a course and a starter “Main” template so the picker always has a layout row. */
 export async function createCourseWithDefaultTemplate(params: {
   name: string

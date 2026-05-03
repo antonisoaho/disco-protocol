@@ -39,6 +39,7 @@ import {
   type FreshRoundDraftIssue,
 } from './freshRoundCourse'
 import type {
+  HoleScoreEntry,
   RoundAnonymousParticipant,
   ParticipantHoleScores,
   RoundCourseDraft,
@@ -222,7 +223,11 @@ export async function recordParticipantHoleScoreTransaction(
       throw new Error('Target participant is not in this round')
     }
     if (actorUid !== participantUid && actorUid !== data.ownerId) {
-      throw new Error('Only owner can edit another participant score')
+      const actorProfileSnap = await tx.get(doc(db, COLLECTIONS.users, actorUid))
+      const actorIsAdmin = isUserProfileAdmin(actorProfileSnap.data() ?? null)
+      if (!actorIsAdmin) {
+        throw new Error('Only owner can edit another participant score')
+      }
     }
     const normalized = normalizeHoleScoreUpdate(
       { holeNumber, strokes, par },
@@ -371,6 +376,62 @@ export async function removeParticipantFromRound(params: {
     tx.update(ref, {
       participantIds: nextParticipantIds,
       anonymousParticipants: nextAnonymousParticipants,
+      participantHoleScores: nextParticipantHoleScores,
+      updatedAt: serverTimestamp(),
+    })
+  })
+}
+
+/**
+ * Updates `par` for one hole across all participants who already have a score cell
+ * (saved-layout rounds). Round owner or admin only.
+ */
+export async function syncSavedRoundHoleParForHole(params: {
+  roundId: string
+  actorUid: string
+  holeNumber: number
+  par: number
+}): Promise<void> {
+  const ref = doc(db, ROUNDS, params.roundId)
+
+  await runTransaction(db, async (tx) => {
+    const snap = await tx.get(ref)
+    if (!snap.exists()) {
+      throw new Error('Round not found')
+    }
+    const data = snap.data() as RoundDoc
+    if ((data.courseSource ?? 'saved') !== 'saved') {
+      throw new Error('Par sync applies only to saved-layout rounds.')
+    }
+    const profileSnap = await tx.get(doc(db, COLLECTIONS.users, params.actorUid))
+    const actorIsAdmin = isUserProfileAdmin(profileSnap.data() ?? null)
+    if (data.ownerId !== params.actorUid && !actorIsAdmin) {
+      throw new Error('Only round owner or admin can adjust layout par on a saved course round.')
+    }
+    const normalized = normalizeHoleScoreUpdate(
+      { holeNumber: params.holeNumber, strokes: 3, par: params.par },
+      { holeCount: data.holeCount ?? null },
+    )
+    const nextParticipantHoleScores = cloneParticipantHoleScores(data.participantHoleScores)
+    let changed = false
+    for (const participantId of data.participantIds) {
+      const cell = nextParticipantHoleScores[participantId]?.[normalized.holeKey] as HoleScoreEntry | undefined
+      if (!cell || cell.par === normalized.par) continue
+      nextParticipantHoleScores[participantId] = {
+        ...(nextParticipantHoleScores[participantId] ?? {}),
+        [normalized.holeKey]: {
+          ...cell,
+          par: normalized.par,
+          updatedAt: serverTimestamp(),
+          updatedBy: params.actorUid,
+        },
+      }
+      changed = true
+    }
+    if (!changed) {
+      return
+    }
+    tx.update(ref, {
       participantHoleScores: nextParticipantHoleScores,
       updatedAt: serverTimestamp(),
     })

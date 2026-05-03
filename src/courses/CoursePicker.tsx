@@ -3,28 +3,18 @@ import { useTranslation } from 'react-i18next'
 import { useAuth } from '../auth/useAuth'
 import { translateUserError } from '../i18n/translateError'
 import {
-  createTemplate,
   createCourseWithDefaultTemplate,
   deleteCourseWithTemplates,
-  updateCourseDetails,
+  pickTemplateForRoundLength,
   subscribeCourses,
   subscribeTemplates,
-  updateTemplate,
+  updateCourseDetails,
   type CourseRoundSelection,
   type CourseTemplateWithId,
   type CourseWithId,
 } from './courseData'
 import { filterCoursesForDiscovery, type LatLng } from './discovery'
-import { TemplateHoleGrid } from './TemplateHoleGrid'
-import {
-  createTemplateDraft,
-  normalizeCourseCity,
-  normalizeCourseName,
-  normalizeHoleCount,
-  resizeTemplateHoles,
-  validateCourseName,
-} from './templateDraft'
-import type { CourseHoleTemplate } from '../firebase/models/course'
+import { normalizeCourseCity, normalizeCourseName, validateCourseName } from './templateDraft'
 
 type Props = {
   selection: CourseRoundSelection | null
@@ -32,6 +22,9 @@ type Props = {
   favoriteCourseIds: string[]
   onToggleFavoriteCourse: (courseId: string, isFavorite: boolean) => Promise<void>
 }
+
+/** Canonical template for discovery: prefer full 18, else best fit (see `pickTemplateForRoundLength`). */
+const DISCOVERY_HOLE_CHOICE = 18 as const
 
 export function CoursePicker({
   selection,
@@ -58,7 +51,6 @@ export function CoursePicker({
     rows: CourseTemplateWithId[]
   }>({ courseId: null, rows: [] })
   const [templatesError, setTemplatesError] = useState<string | null>(null)
-  const [pickedTemplateId, setPickedTemplateId] = useState<string | null>(selection?.templateId ?? null)
 
   const [newName, setNewName] = useState('')
   const [newCity, setNewCity] = useState('')
@@ -71,23 +63,6 @@ export function CoursePicker({
   })
   const [renaming, setRenaming] = useState(false)
   const [renameError, setRenameError] = useState<string | null>(null)
-  const [createTemplateLabel, setCreateTemplateLabel] = useState('Main')
-  const [createTemplateHoleCount, setCreateTemplateHoleCount] = useState(18)
-  const [createTemplateHoles, setCreateTemplateHoles] = useState<CourseHoleTemplate[]>(() =>
-    createTemplateDraft({ label: 'Main', holeCount: 18 }).holes,
-  )
-  const [createTemplateError, setCreateTemplateError] = useState<string | null>(null)
-  const [creatingTemplate, setCreatingTemplate] = useState(false)
-  const [templateEditDraft, setTemplateEditDraft] = useState<{
-    templateId: string | null
-    label: string
-  }>({
-    templateId: null,
-    label: 'Main',
-  })
-  const [editTemplateHoles, setEditTemplateHoles] = useState<CourseHoleTemplate[]>([])
-  const [editTemplateError, setEditTemplateError] = useState<string | null>(null)
-  const [savingTemplate, setSavingTemplate] = useState(false)
   const [deletingCourse, setDeletingCourse] = useState(false)
   const [deleteCourseError, setDeleteCourseError] = useState<string | null>(null)
 
@@ -119,23 +94,11 @@ export function CoursePicker({
       (rows) => {
         setTemplateState({ courseId: id, rows })
         setTemplatesError(null)
-        setPickedTemplateId((prev) => {
-          if (prev && rows.some((r) => r.id === prev)) return prev
-          if (
-            selection?.courseId === id &&
-            selection.templateId &&
-            rows.some((template) => template.id === selection.templateId)
-          ) {
-            return selection.templateId
-          }
-          const def = rows.find((r) => r.isDefault)
-          return def?.id ?? rows[0]?.id ?? null
-        })
       },
       (e) => setTemplatesError(translateUserError(t, e.message)),
     )
     return () => unsub()
-  }, [activeCourseId, selection?.courseId, selection?.templateId, t])
+  }, [activeCourseId, t])
 
   const templates = useMemo(() => {
     if (!activeCourseId || templateState.courseId !== activeCourseId) {
@@ -144,23 +107,15 @@ export function CoursePicker({
     return templateState.rows
   }, [activeCourseId, templateState.courseId, templateState.rows])
 
-  useEffect(() => {
-    queueMicrotask(() => {
-      setCreateTemplateHoles((prev) => resizeTemplateHoles(prev, createTemplateHoleCount))
-    })
-  }, [createTemplateHoleCount])
-
-  useEffect(() => {
-    const tpl = templates.find((row) => row.id === pickedTemplateId) ?? null
-    queueMicrotask(() => {
-      if (!tpl) {
-        setEditTemplateHoles([])
-        return
-      }
-      setEditTemplateHoles(tpl.holes.map((h) => ({ ...h })))
-      setTemplateEditDraft({ templateId: tpl.id, label: tpl.label })
-    })
-  }, [pickedTemplateId, templates])
+  const resolvedTemplate = useMemo(() => {
+    if (templates.length === 0) return null
+    return (
+      pickTemplateForRoundLength(templates, DISCOVERY_HOLE_CHOICE) ??
+      templates.find((row) => row.isDefault) ??
+      templates[0] ??
+      null
+    )
+  }, [templates])
 
   const activeCourse = useMemo(
     () => courses.find((course) => course.id === activeCourseId) ?? null,
@@ -178,18 +133,10 @@ export function CoursePicker({
     [cityQuery, courses, nameQuery, nearMeOnly, sortByDistance, userLocation],
   )
   const favoriteCourseIdSet = useMemo(() => new Set(favoriteCourseIds), [favoriteCourseIds])
-  const pickedTemplate = useMemo(
-    () => templates.find((template) => template.id === pickedTemplateId) ?? null,
-    [pickedTemplateId, templates],
-  )
   const renameName =
     activeCourse && renameDraft.courseId === activeCourse.id ? renameDraft.name : (activeCourse?.name ?? '')
   const renameCity =
     activeCourse && renameDraft.courseId === activeCourse.id ? renameDraft.city : (activeCourse?.city ?? '')
-  const editTemplateLabel =
-    pickedTemplate && templateEditDraft.templateId === pickedTemplate.id
-      ? templateEditDraft.label
-      : (pickedTemplate?.label ?? 'Main')
   const geolocationSupported = typeof navigator !== 'undefined' && 'geolocation' in navigator
   const geolocationStatusMessage = useMemo(() => {
     if (locationState === 'ready' && userLocation) {
@@ -211,18 +158,18 @@ export function CoursePicker({
   }, [locationState, t, userLocation])
 
   useEffect(() => {
-    if (!activeCourse || !pickedTemplate) {
+    if (!activeCourse || !resolvedTemplate) {
       onSelectionChange(null)
       return
     }
     onSelectionChange({
       courseId: activeCourse.id,
       courseName: activeCourse.name,
-      templateId: pickedTemplate.id,
-      templateLabel: pickedTemplate.label,
-      holeCount: pickedTemplate.holes.length,
+      templateId: resolvedTemplate.id,
+      templateLabel: resolvedTemplate.label,
+      holeCount: resolvedTemplate.holes.length,
     })
-  }, [activeCourse, pickedTemplate, onSelectionChange])
+  }, [activeCourse, onSelectionChange, resolvedTemplate])
 
   async function handleCreate(e: React.FormEvent) {
     e.preventDefault()
@@ -278,54 +225,6 @@ export function CoursePicker({
     }
   }
 
-  async function handleCreateTemplate(e: React.FormEvent) {
-    e.preventDefault()
-    if (!user || !activeCourseId) return
-    setCreatingTemplate(true)
-    setCreateTemplateError(null)
-    try {
-      const templateId = await createTemplate({
-        courseId: activeCourseId,
-        uid: user.uid,
-        label: createTemplateLabel,
-        holeCount: createTemplateHoleCount,
-        holes: createTemplateHoles,
-      })
-      setPickedTemplateId(templateId)
-      setCreateTemplateLabel('Main')
-      setCreateTemplateHoleCount(18)
-      setCreateTemplateHoles(createTemplateDraft({ label: 'Main', holeCount: 18 }).holes)
-    } catch (err) {
-      setCreateTemplateError(
-        err instanceof Error ? translateUserError(t, err.message) : t('courses.errors.createTemplateFailed'),
-      )
-    } finally {
-      setCreatingTemplate(false)
-    }
-  }
-
-  async function handleUpdateTemplate(e: React.FormEvent) {
-    e.preventDefault()
-    if (!activeCourseId || !pickedTemplateId) return
-    setSavingTemplate(true)
-    setEditTemplateError(null)
-    try {
-      await updateTemplate({
-        courseId: activeCourseId,
-        templateId: pickedTemplateId,
-        label: editTemplateLabel,
-        holes: editTemplateHoles,
-      })
-      setTemplateEditDraft({ templateId: null, label: 'Main' })
-    } catch (err) {
-      setEditTemplateError(
-        err instanceof Error ? translateUserError(t, err.message) : t('courses.errors.updateTemplateFailed'),
-      )
-    } finally {
-      setSavingTemplate(false)
-    }
-  }
-
   async function handleDeleteCourse() {
     if (!activeCourse || !isAdmin) return
     if (!window.confirm(t('courses.deleteCourseConfirm', { courseName: activeCourse.name }))) {
@@ -337,7 +236,6 @@ export function CoursePicker({
     setDeleteCourseError(null)
     try {
       await deleteCourseWithTemplates(deletingCourseId)
-      setPickedTemplateId(null)
       setActiveCourseId((prev) => (prev === deletingCourseId ? null : prev))
       onSelectionChange(null)
     } catch (err) {
@@ -383,7 +281,7 @@ export function CoursePicker({
   }
 
   return (
-    <section className="course-picker card" aria-label={t('courses.aria.chooseCourseAndLayout')}>
+    <section className="course-picker card" aria-label={t('courses.aria.chooseCourse')}>
       <div className="course-picker__toolbar">
         <h2 className="course-picker__heading">{t('courses.heading')}</h2>
         {isAdmin ? (
@@ -529,7 +427,9 @@ export function CoursePicker({
 
       {activeCourseId && activeCourse ? (
         <div className="course-picker__templates">
-          <h3 className="course-picker__templates-title">{t('courses.layoutsForCourse', { courseName: activeCourse.name })}</h3>
+          <h3 className="course-picker__templates-title">
+            {t('courses.courseDetailsFor', { courseName: activeCourse.name })}
+          </h3>
           <form className="course-picker__add" onSubmit={(e) => void handleRenameCourse(e)}>
             <label className="course-picker__add-label" htmlFor="course-picker-course-name">
               {t('courses.forms.courseName')}
@@ -604,116 +504,26 @@ export function CoursePicker({
               {templatesError}
             </p>
           ) : null}
-          <ul className="course-picker__template-list">
-            {templates.map((template) => (
-              <li key={template.id} className="course-picker__item">
-                <button
-                  type="button"
-                  className={`course-picker__template-btn${template.id === pickedTemplateId ? ' course-picker__template-btn--picked' : ''}`}
-                  onClick={() => setPickedTemplateId(template.id)}
-                >
-                  {template.label}
-                  <span className="course-picker__template-meta">
-                    {t('courses.templateMeta.holeCount', { count: template.holes.length })} · {template.source}
-                    {template.isDefault ? ` · ${t('courses.templateMeta.default')}` : ''}
-                  </span>
-                </button>
-              </li>
-            ))}
-          </ul>
-          <form className="course-picker__add" onSubmit={(e) => void handleCreateTemplate(e)}>
-            <label className="course-picker__add-label" htmlFor="course-picker-template-label">
-              {t('courses.forms.addTemplate')}
-            </label>
-            <div className="course-picker__add-row">
-              <input
-                id="course-picker-template-label"
-                value={createTemplateLabel}
-                onChange={(e) => setCreateTemplateLabel(e.target.value)}
-                autoComplete="off"
-              />
-              <input
-                id="course-picker-template-holes"
-                className="course-picker__input-compact"
-                type="number"
-                min={1}
-                max={27}
-                value={createTemplateHoleCount}
-                onChange={(e) => setCreateTemplateHoleCount(normalizeHoleCount(Number(e.target.value)))}
-              />
-              <button type="submit" disabled={creatingTemplate}>
-                {creatingTemplate ? t('courses.actions.saving') : t('courses.actions.addTemplate')}
-              </button>
-            </div>
-            <TemplateHoleGrid
-              idPrefix="course-picker-create"
-              holes={createTemplateHoles}
-              disabled={creatingTemplate}
-              onChange={setCreateTemplateHoles}
-            />
-            {createTemplateError ? (
-              <p className="course-picker__error" role="alert" data-variant="error">
-                {createTemplateError}
-              </p>
-            ) : null}
-          </form>
-          {pickedTemplate ? (
-            <form className="course-picker__add" onSubmit={(e) => void handleUpdateTemplate(e)}>
-              <label className="course-picker__add-label" htmlFor="course-picker-template-edit-label">
-                {t('courses.forms.editSelectedTemplate')}
-              </label>
-              <div className="course-picker__add-row">
-                <input
-                  id="course-picker-template-edit-label"
-                  value={editTemplateLabel}
-                  onChange={(e) =>
-                    setTemplateEditDraft({
-                      templateId: pickedTemplate.id,
-                      label: e.target.value,
-                    })
-                  }
-                  autoComplete="off"
-                />
-                <input
-                  id="course-picker-template-edit-holes"
-                  className="course-picker__input-compact"
-                  type="number"
-                  min={1}
-                  max={27}
-                  value={editTemplateHoles.length}
-                  onChange={(e) =>
-                    setEditTemplateHoles((prev) =>
-                      resizeTemplateHoles(prev, normalizeHoleCount(Number(e.target.value))),
-                    )
-                  }
-                />
-                <button type="submit" disabled={savingTemplate}>
-                  {savingTemplate ? t('courses.actions.saving') : t('courses.actions.saveTemplate')}
-                </button>
-              </div>
-              <TemplateHoleGrid
-                idPrefix="course-picker-edit"
-                holes={editTemplateHoles}
-                disabled={savingTemplate}
-                onChange={setEditTemplateHoles}
-              />
-              {editTemplateError ? (
-                <p className="course-picker__error" role="alert" data-variant="error">
-                  {editTemplateError}
-                </p>
-              ) : null}
-            </form>
+          {resolvedTemplate ? (
+            <p className="course-picker__hint" role="status">
+              {t('courses.hints.canonicalLayout', {
+                label: resolvedTemplate.label,
+                holeCount: resolvedTemplate.holes.length,
+              })}
+            </p>
+          ) : templates.length === 0 && !templatesError ? (
+            <p className="course-picker__empty">{t('courses.empty.noLayouts')}</p>
           ) : null}
         </div>
       ) : null}
 
-      {activeCourse && pickedTemplate ? (
+      {activeCourse && resolvedTemplate ? (
         <p className="course-picker__selection">
-          {t('courses.selection.selected')}:{' '}
-          <strong>
-            {activeCourse.name} — {pickedTemplate.label}
-          </strong>{' '}
-          <span className="course-picker__course-meta">{t('courses.selection.templateId', { templateId: pickedTemplate.id })}</span>
+          {t('courses.selection.active', {
+            courseName: activeCourse.name,
+            layoutLabel: resolvedTemplate.label,
+            holeCount: resolvedTemplate.holes.length,
+          })}
         </p>
       ) : null}
 

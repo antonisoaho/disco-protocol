@@ -229,7 +229,7 @@ service cloud.firestore {
         && freshDraftPresentWhenNeeded(request.resource.data)
         && validAnonymousParticipantsShape(request.resource.data);
 
-      allow delete: if isRoundOwner(resource.data);
+      allow delete: if isRoundOwner(resource.data) || isAdmin();
     }
 
     match /follows/{edgeId} {

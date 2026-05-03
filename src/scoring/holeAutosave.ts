@@ -17,6 +17,8 @@ export type HoleAutosavePayload = {
   participantScoreUpdates: Array<{ participantUid: string; strokes: number; par: number }>
   hasMeaningfulChange: boolean
   validationError: string | null
+  /** When only par changes on a saved-layout round (owner/admin correction). */
+  savedParSync: { par: number } | null
 }
 
 function parseIntegerInput(value: string): number | null {
@@ -44,6 +46,8 @@ export function mergeAutosavePayload(params: {
   participantIds: string[]
   draft: HoleDraftInputs
   persisted: PersistedHoleState
+  /** When true, saved-layout rounds may sync a new par across scored cells (owner/admin UI). */
+  allowSavedParAdjust?: boolean
 }): HoleAutosavePayload {
   const normalizedParInput = params.draft.parInput.trim()
   const normalizedLengthInput = params.draft.lengthInput.trim()
@@ -82,6 +86,7 @@ export function mergeAutosavePayload(params: {
         participantScoreUpdates: [],
         hasMeaningfulChange: false,
         validationError: `Score for ${participantUid} must be an integer.`,
+        savedParSync: null,
       }
     }
 
@@ -94,6 +99,7 @@ export function mergeAutosavePayload(params: {
         participantScoreUpdates: [],
         hasMeaningfulChange: false,
         validationError: `Set par before saving score for ${participantUid}.`,
+        savedParSync: null,
       }
     }
 
@@ -110,10 +116,29 @@ export function mergeAutosavePayload(params: {
     }
   }
 
+  let savedParSync: { par: number } | null = null
+  if (
+    params.courseSource === 'saved' &&
+    params.allowSavedParAdjust &&
+    explicitParValue !== null &&
+    explicitParValue !== params.persisted.par &&
+    participantScoreUpdates.length === 0
+  ) {
+    const hasAnyScore = params.participantIds.some(
+      (participantUid) => params.persisted.participantScores[participantUid] !== undefined,
+    )
+    if (hasAnyScore) {
+      savedParSync = { par: explicitParValue }
+    }
+  }
+
   return {
     metadata,
     participantScoreUpdates,
-    hasMeaningfulChange: Boolean(metadataChanged || participantScoreUpdates.length > 0),
+    hasMeaningfulChange: Boolean(
+      metadataChanged || participantScoreUpdates.length > 0 || savedParSync !== null,
+    ),
     validationError: null,
+    savedParSync,
   }
 }
