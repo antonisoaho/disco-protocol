@@ -1222,9 +1222,6 @@ export function ScoringPanel({ user, selectedCourseTemplate, favoriteCourseIds }
                 placeholder={t('scoring.start.searchParticipantsPlaceholder')}
                 autoComplete="off"
               />
-              {newRoundParticipantQuery.trim().length === 0 ? (
-                <p className="scoring-panel__muted">{t('scoring.messages.participantDefaultsToFriends')}</p>
-              ) : null}
               <div
                 className="scoring-panel__participant-list"
                 role="group"
@@ -1249,7 +1246,6 @@ export function ScoringPanel({ user, selectedCourseTemplate, favoriteCourseIds }
                       />
                       <span>
                         {participantDisplayName(entry)}
-                        <small className="scoring-panel__participant-subtitle">{entry.subtitle}</small>
                       </span>
                     </label>
                   )
@@ -1291,7 +1287,6 @@ export function ScoringPanel({ user, selectedCourseTemplate, favoriteCourseIds }
                     {newRoundAnonymousNameError}
                   </p>
                 ) : null}
-                <p className="scoring-panel__muted">{t('scoring.messages.addPlayerHelper')}</p>
               </div>
               <button
                 type="button"
@@ -1627,9 +1622,6 @@ export function ScoringPanel({ user, selectedCourseTemplate, favoriteCourseIds }
                       placeholder={t('scoring.participants.searchUsersPlaceholder')}
                       autoComplete="off"
                     />
-                    {inviteParticipantQuery.trim().length === 0 ? (
-                      <p className="scoring-panel__muted">{t('scoring.messages.participantDefaultsToFriends')}</p>
-                    ) : null}
                     <div className="scoring-panel__participant-list" role="group" aria-label={t('scoring.aria.inviteParticipants')}>
                       {inviteCandidateEntries.map((entry) => {
                         const checked = inviteSelections.includes(entry.uid)
@@ -1649,7 +1641,6 @@ export function ScoringPanel({ user, selectedCourseTemplate, favoriteCourseIds }
                             />
                             <span>
                               {participantDisplayName(entry)}
-                              <small className="scoring-panel__participant-subtitle">{entry.subtitle}</small>
                             </span>
                           </label>
                         )
@@ -1690,7 +1681,6 @@ export function ScoringPanel({ user, selectedCourseTemplate, favoriteCourseIds }
                             {inviteAnonymousNameError}
                           </p>
                         ) : null}
-                        <p className="scoring-panel__muted">{t('scoring.messages.addPlayerHelper')}</p>
                       </div>
                     </div>
                   </div>
