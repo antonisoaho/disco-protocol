@@ -11,10 +11,6 @@ export const commonSv = {
     signOut: 'Logga ut',
     signOutError: 'Kunde inte logga ut. Försök igen.',
     profile: 'Profil',
-    homeIntro: 'Starta en runda snabbt och besök sedan Banor när du behöver hitta eller redigera layouter.',
-    selectedCourse: 'Vald bana:',
-    noneYet: 'Ingen ännu',
-    browseCourses: 'Bläddra banor',
     coursesIntro:
       'Sök efter banans namn eller stad och använd sortering nära mig när platsdata är tillgänglig.',
     backToRoundSetup: 'Tillbaka till rundinställning',
