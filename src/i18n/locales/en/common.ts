@@ -11,8 +11,6 @@ export const commonEn = {
     signOut: 'Sign out',
     signOutError: 'Could not sign out. Try again.',
     profile: 'Profile',
-    coursesIntro: 'Search by course name or city, then use near-me sorting when location data is available.',
-    backToRoundSetup: 'Back to round setup',
   },
   profile: {
     title: 'Profile',
@@ -188,10 +186,8 @@ export const commonEn = {
       playerName: 'Enter player name',
     },
     messages: {
-      participantDefaultsToFriends: 'Showing friends by default. Start typing to search everyone.',
       anonymousNameRequired: 'Player name is required.',
       anonymousNameTooLong: 'Player name must be at most {{max}} characters.',
-      addPlayerHelper: 'Optional: add a name for a player without an account.',
       participantAdded: 'Added 1 participant.',
       participantsAdded: 'Added {{count}} participants.',
     },
@@ -205,7 +201,7 @@ export const commonEn = {
       courseNamePlaceholder: 'Enter course name',
       holes: 'Holes',
       participants: 'Participants',
-      searchParticipantsPlaceholder: 'Search players by name or uid',
+      searchParticipantsPlaceholder: 'Search players by name',
       visibility: 'Visibility',
     },
     visibility: {
@@ -235,7 +231,7 @@ export const commonEn = {
       grandTotal_other:
         'Grand total: {{totalStrokes}}/{{totalPar}} ({{totalDelta}}) across {{participantCount}} participants.',
       addParticipants: 'Add participants',
-      searchUsersPlaceholder: 'Search users by name or uid',
+      searchUsersPlaceholder: 'Search players by name',
       addSelectedParticipants: 'Add player',
     },
     analytics: {
@@ -344,17 +340,10 @@ export const commonEn = {
   },
   follow: {
     title: 'Discover players',
-    fallbackSelfLabel: 'You',
     relationshipCounts: 'Following {{followingCount}} · Followers {{followerCount}}',
-    directoryCount: 'Directory players: {{count}}',
-    followingList: 'Following list: {{names}}',
-    moreNamesEllipsis: '…',
-    noFollowingYet: 'You are not following anyone yet.',
     searchLabel: 'Search players to follow',
-    searchPlaceholder: 'Search by display name or uid',
+    searchPlaceholder: 'Search by display name',
     noResults: 'No users match this search yet.',
-    missingSearchIndexNotice:
-      'Search is currently client-filtered from the signed-in user directory snapshot. If the directory grows, move to a dedicated search index.',
     errors: {
       updateRelationshipFallback: 'Could not update follow relationship.',
     },
@@ -376,7 +365,7 @@ export const commonEn = {
     emptyFollowing: 'You are not following anyone yet.',
     search: {
       label: 'Search players to follow',
-      placeholder: 'Search by display name or uid',
+      placeholder: 'Search by display name',
     },
     actions: {
       saving: 'Saving…',

@@ -66,33 +66,10 @@ export function FollowPanel({ user }: Props) {
     () => new Set(relationshipState.followingIds),
     [relationshipState.followingIds],
   )
-  const directoryByUid = useMemo(() => {
-    const map: Record<string, UserDirectoryEntry> = {}
-    for (const entry of directoryEntries) {
-      map[entry.uid] = entry
-    }
-    if (!map[user.uid]) {
-      map[user.uid] = {
-        uid: user.uid,
-        displayName: user.displayName?.trim() || user.email?.split('@')[0] || t('follow.fallbackSelfLabel'),
-        subtitle: user.uid,
-      }
-    }
-    return map
-  }, [directoryEntries, t, user.displayName, user.email, user.uid])
 
   const visibleEntries = useMemo(() => {
     return filterDiscoverableUsers(directoryEntries, user.uid, query)
   }, [directoryEntries, query, user.uid])
-
-  const followingNames = useMemo(() => {
-    if (relationshipState.followingIds.length === 0) {
-      return []
-    }
-    return relationshipState.followingIds
-      .map((uid) => directoryDisplayName(directoryByUid[uid] ?? { uid, displayName: uid, subtitle: uid }))
-      .sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }))
-  }, [directoryByUid, relationshipState.followingIds])
 
   async function onToggleFollow(targetUid: string) {
     setActionState({ pendingUid: targetUid, error: null })
@@ -123,17 +100,6 @@ export function FollowPanel({ user }: Props) {
           followerCount: relationshipState.followerIds.length,
         })}
       </p>
-      <p className="follow-panel__meta">
-        {t('follow.directoryCount', { count: directoryEntries.length })}
-      </p>
-      {followingNames.length > 0 ? (
-        <p className="follow-panel__meta">
-          {t('follow.followingList', { names: followingNames.slice(0, 8).join(', ') })}
-          {followingNames.length > 8 ? t('follow.moreNamesEllipsis') : ''}
-        </p>
-      ) : (
-        <p className="follow-panel__meta">{t('follow.noFollowingYet')}</p>
-      )}
       {actionState.error ? (
         <p className="follow-panel__error" role="alert">
           {actionState.error}
@@ -159,7 +125,6 @@ export function FollowPanel({ user }: Props) {
             <li key={entry.uid} className="follow-panel__item">
               <div>
                 <strong>{directoryDisplayName(entry)}</strong>
-                <p className="follow-panel__uid">{entry.uid}</p>
               </div>
               <button
                 type="button"
@@ -178,7 +143,6 @@ export function FollowPanel({ user }: Props) {
           )
         })}
       </ul>
-      <p className="follow-panel__meta">{t('follow.missingSearchIndexNotice')}</p>
     </section>
   )
 }

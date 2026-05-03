@@ -11,9 +11,6 @@ export const commonSv = {
     signOut: 'Logga ut',
     signOutError: 'Kunde inte logga ut. Försök igen.',
     profile: 'Profil',
-    coursesIntro:
-      'Sök efter banans namn eller stad och använd sortering nära mig när platsdata är tillgänglig.',
-    backToRoundSetup: 'Tillbaka till rundinställning',
   },
   profile: {
     title: 'Profil',
@@ -189,10 +186,8 @@ export const commonSv = {
       playerName: 'Ange spelarens namn',
     },
     messages: {
-      participantDefaultsToFriends: 'Visar vänner som standard. Börja skriva för att söka alla.',
       anonymousNameRequired: 'Spelarnamn krävs.',
       anonymousNameTooLong: 'Spelarnamn får vara högst {{max}} tecken.',
-      addPlayerHelper: 'Valfritt: lägg till namn för spelare utan konto.',
       participantAdded: 'Lade till 1 deltagare.',
       participantsAdded: 'Lade till {{count}} deltagare.',
     },
@@ -206,7 +201,7 @@ export const commonSv = {
       courseNamePlaceholder: 'Ange bannamn',
       holes: 'Hål',
       participants: 'Deltagare',
-      searchParticipantsPlaceholder: 'Sök spelare via namn eller uid',
+      searchParticipantsPlaceholder: 'Sök spelare via namn',
       visibility: 'Synlighet',
     },
     visibility: {
@@ -235,7 +230,7 @@ export const commonSv = {
       grandTotal_other:
         'Totalsumma: {{totalStrokes}}/{{totalPar}} ({{totalDelta}}) över {{participantCount}} deltagare.',
       addParticipants: 'Lägg till deltagare',
-      searchUsersPlaceholder: 'Sök användare via namn eller uid',
+      searchUsersPlaceholder: 'Sök spelare via namn',
       addSelectedParticipants: 'Lägg till spelare',
     },
     analytics: {
@@ -344,17 +339,10 @@ export const commonSv = {
   },
   follow: {
     title: 'Upptäck spelare',
-    fallbackSelfLabel: 'Du',
     relationshipCounts: 'Följer {{followingCount}} · Följare {{followerCount}}',
-    directoryCount: 'Spelare i katalogen: {{count}}',
-    followingList: 'Följer: {{names}}',
-    moreNamesEllipsis: '…',
-    noFollowingYet: 'Du följer ingen ännu.',
     searchLabel: 'Sök spelare att följa',
-    searchPlaceholder: 'Sök på visningsnamn eller uid',
+    searchPlaceholder: 'Sök på visningsnamn',
     noResults: 'Inga användare matchar sökningen ännu.',
-    missingSearchIndexNotice:
-      'Sökningen filtreras just nu lokalt från katalogsnapshoten för inloggade användare. Om katalogen växer bör en dedikerad sökindexering användas.',
     errors: {
       updateRelationshipFallback: 'Kunde inte uppdatera följer-relationen.',
     },
@@ -376,7 +364,7 @@ export const commonSv = {
     emptyFollowing: 'Du följer ingen ännu.',
     search: {
       label: 'Sök spelare att följa',
-      placeholder: 'Sök via visningsnamn eller uid',
+      placeholder: 'Sök via visningsnamn',
     },
     actions: {
       saving: 'Sparar…',

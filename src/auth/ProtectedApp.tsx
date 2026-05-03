@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Link, NavLink, Navigate, Route, Routes } from 'react-router-dom'
+import { NavLink, Navigate, Route, Routes } from 'react-router-dom'
 import { CoursePicker } from '../courses/CoursePicker'
 import type { CourseRoundSelection } from '../courses/courseData'
 import { AuthPanel } from './AuthPanel'
@@ -164,14 +164,6 @@ export function ProtectedApp() {
               path="/courses"
               element={
                 <div className="app-shell__flow">
-                  <section className="app-shell__intro card">
-                    <p className="app-shell__placeholder">
-                      {t('shell.coursesIntro')}
-                    </p>
-                    <Link className="app-shell__link" to="/">
-                      {t('shell.backToRoundSetup')}
-                    </Link>
-                  </section>
                   <CoursePicker
                     selection={selectedCourseTemplate}
                     onSelectionChange={setSelectedCourseTemplate}
