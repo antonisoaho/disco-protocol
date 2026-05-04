@@ -13,11 +13,36 @@ import {
 } from '../firebase/userProfile'
 import { ProfilePage } from '../profile/ProfilePage'
 import { useNavigatorOnline } from '../shell/useNavigatorOnline'
+import { useTheme } from '../theme/useTheme'
+
+function ThemeToggleButton({ theme, onToggle }: { theme: 'dark' | 'light'; onToggle: () => void }) {
+  return (
+    <button
+      type="button"
+      className="app-shell__theme-toggle"
+      onClick={onToggle}
+      aria-label={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+      aria-pressed={theme === 'light'}
+    >
+      {theme === 'dark' ? (
+        <svg aria-hidden="true" focusable="false" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <circle cx="12" cy="12" r="4" />
+          <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41" />
+        </svg>
+      ) : (
+        <svg aria-hidden="true" focusable="false" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
+        </svg>
+      )}
+    </button>
+  )
+}
 
 /** Protected shell: signed-in users can navigate between home and course discovery. */
 export function ProtectedApp() {
   const { t } = useTranslation('common')
   const online = useNavigatorOnline()
+  const { theme, toggleTheme } = useTheme()
   const { user, loading, signOut, profileDisplayName, userProfileProvisionError, retryUserProfileProvision } =
     useAuth()
   const [signOutError, setSignOutError] = useState<string | null>(null)
@@ -73,9 +98,12 @@ export function ProtectedApp() {
     return (
       <div className="app-shell">
         <header className="app-shell__header">
-          <div className="app-shell__container app-shell__header-inner">
-            <h1 className="app-shell__title">{t('shell.appTitle')}</h1>
-            <p className="app-shell__tagline">{t('shell.signInPrompt')}</p>
+          <div className="app-shell__container app-shell__header-inner app-shell__header--row">
+            <div className="app-shell__header-main">
+              <h1 className="app-shell__title">{t('shell.appTitle')}</h1>
+              <p className="app-shell__tagline">{t('shell.signInPrompt')}</p>
+            </div>
+            <ThemeToggleButton theme={theme} onToggle={toggleTheme} />
           </div>
         </header>
         <main className="app-shell__main">
@@ -120,18 +148,21 @@ export function ProtectedApp() {
               </NavLink>
             </nav>
           </div>
-          <button
-            type="button"
-            className="app-shell__sign-out"
-            onClick={() => {
-              setSignOutError(null)
-              void signOut().catch(() => {
-                setSignOutError(t('shell.signOutError'))
-              })
-            }}
-          >
-            {t('shell.signOut')}
-          </button>
+          <div className="app-shell__header-actions">
+            <ThemeToggleButton theme={theme} onToggle={toggleTheme} />
+            <button
+              type="button"
+              className="app-shell__sign-out"
+              onClick={() => {
+                setSignOutError(null)
+                void signOut().catch(() => {
+                  setSignOutError(t('shell.signOutError'))
+                })
+              }}
+            >
+              {t('shell.signOut')}
+            </button>
+          </div>
         </div>
       </header>
       {signOutError ? (

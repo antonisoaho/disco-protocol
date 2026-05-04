@@ -275,3 +275,89 @@
     gap: $layout-section-gap-lg;
   }
 }
+
+.app-shell__header-actions {
+  display: flex;
+  align-items: center;
+  gap: $space-2;
+  flex-shrink: 0;
+  align-self: center;
+}
+
+.app-shell__theme-toggle {
+  flex-shrink: 0;
+  align-self: center;
+  padding: $space-2;
+  background: transparent;
+  color: $color-text-muted;
+  border-color: transparent;
+
+  &:hover:not(:disabled) {
+    color: $color-text;
+    border-color: $color-border;
+    background: transparent;
+  }
+}
+
+[data-theme='light'] {
+  .app-shell__header {
+    background: #f4f6fa;
+    border-bottom-color: #d1d5db;
+  }
+
+  .app-shell__title { color: #111827; }
+
+  .app-shell__tagline { color: #6b7280; }
+
+  .app-shell__nav-link {
+    color: #6b7280;
+
+    &--active { color: #111827; }
+  }
+
+  .app-shell__profile {
+    background: #ffffff;
+    border-color: #d1d5db;
+  }
+
+  .app-shell__placeholder { color: #6b7280; }
+
+  .app-shell__sign-out,
+  .app-shell__theme-toggle {
+    color: #6b7280;
+    background: transparent;
+    border-color: transparent;
+
+    &:hover:not(:disabled) {
+      color: #111827;
+      border-color: #d1d5db;
+      background: transparent;
+    }
+  }
+
+  .app-shell__retry-btn {
+    color: #6b7280;
+    background: transparent;
+    border-color: #d1d5db;
+
+    &:hover:not(:disabled) {
+      color: #111827;
+      background: transparent;
+    }
+  }
+
+  .app-shell__section-title,
+  .app-shell__profile-label,
+  .app-shell__code { color: #111827; }
+
+  .app-shell__profile-actions button {
+    color: #6b7280;
+    background: transparent;
+    border-color: #d1d5db;
+
+    &:hover:not(:disabled) {
+      color: #111827;
+      background: transparent;
+    }
+  }
+}
