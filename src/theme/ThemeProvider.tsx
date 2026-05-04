@@ -7,7 +7,7 @@ function resolveInitialTheme(): Theme {
   try {
     const stored = localStorage.getItem(STORAGE_KEY)
     if (stored === 'light' || stored === 'dark') return stored
-  } catch {}
+  } catch { /* ignore */ }
   return window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark'
 }
 
@@ -21,7 +21,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     root.style.colorScheme = theme
     try {
       localStorage.setItem(STORAGE_KEY, theme)
-    } catch {}
+    } catch { /* ignore */ }
   }, [theme])
 
   const toggleTheme = useCallback(() => setTheme((p) => (p === 'dark' ? 'light' : 'dark')), [])
