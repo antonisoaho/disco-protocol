@@ -1584,8 +1584,6 @@ export function ScoringPanel({ user, selectedCourseTemplate, favoriteCourseIds }
             ) : (
               <ul className="scoring-panel__list">
                 {items.map(({ id, data }) => {
-                  const viewerParticipantScores = readParticipantHoleScores(data, uid)
-                  const currentParticipantScores = viewerParticipantScores[uid] ?? {}
                   const roundParticipantScores = readParticipantHoleScores(data, data.ownerId)
                   const roundTotals = computeParticipantTotals(data.participantIds, roundParticipantScores)
                   const leaderIds = pickLeadingParticipantIds(data.participantIds, roundTotals)
@@ -1593,82 +1591,49 @@ export function ScoringPanel({ user, selectedCourseTemplate, favoriteCourseIds }
                   const leaderNamesJoined = leaderIds.map((pid) => roundParticipantNames[pid] ?? pid).join(', ')
                   const leaderDelta =
                     leaderIds.length > 0 ? (roundTotals[leaderIds[0]]?.totalDelta ?? 0) : 0
-                  const summary = (() => {
-                    try {
-                      return aggregateScoreProtocol(
-                        normalizeScoreProtocol({
-                          version: data.scoreProtocolVersion,
-                          holeCount: inferRoundHoleCount(data),
-                          holeScores: currentParticipantScores,
-                        }),
-                      )
-                    } catch {
-                      return null
-                    }
-                  })()
                   return (
                     <li key={id} className="scoring-panel__list-item">
-                      <div>
+                      <div className="scoring-panel__list-item-main">
                         <strong>{roundDisplayNames.get(id)}</strong>
-                        <p className="scoring-panel__muted">
-                          {t('courses.templateMeta.holeCount', { count: inferRoundHoleCount(data) })} · {t(`scoring.visibility.${data.visibility}`)} · {formatStartedAt(data.startedAt)}
-                          {data.completedAt ? ` · ${t('scoring.rounds.completed')}` : ''}
-                        </p>
-                        {summary ? (
-                          <p className="scoring-panel__muted">
-                            {t('scoring.rounds.summary', {
-                              totalStrokes: summary.totalStrokes,
-                              totalPar: summary.totalPar,
-                              totalDelta: formatDelta(summary.totalDelta),
-                              scoredHoles: summary.scoredHoles,
-                              holeCount: inferRoundHoleCount(data),
-                            })}
-                          </p>
-                        ) : null}
-                      </div>
-                      <div>
-                        {leaderIds.length > 0 ? (
-                          <span
-                            className="scoring-panel__round-leader-chip"
-                            aria-label={t('scoring.rounds.listLeaderAria', {
-                              names: leaderNamesJoined,
-                              delta: formatDelta(leaderDelta),
-                            })}
-                          >
-                            <span className="scoring-panel__round-leader-chip-names">{leaderNamesJoined}</span>
-                            <span className="scoring-panel__round-leader-chip-delta">
-                              {t('scoring.rounds.listLeaderDelta', { delta: formatDelta(leaderDelta) })}
-                            </span>
-                          </span>
-                        ) : (
-                          <span className="scoring-panel__muted">{t('scoring.rounds.noScores')}</span>
-                        )}
-                        <button
-                          type="button"
-                          className="scoring-panel__button scoring-panel__button--inline"
-                          onClick={() => {
-                            clearRosterReplaceFlow()
-                            setSelectedId(id)
-                            setHoleNumber(1)
-                            setHoleDraft(null)
-                            setSaveState('saved')
-                            setExpandedPlayers({})
-                            setActiveTab('scorecard')
-                          }}
-                          disabled={busy}
-                        >
-                          {selectedId === id ? t('scoring.buttons.selected') : t('scoring.buttons.select')}
-                        </button>
-                        {data.ownerId === uid || isAdmin ? (
+                        <div className="scoring-panel__list-item-actions">
                           <button
                             type="button"
                             className="scoring-panel__button scoring-panel__button--inline"
-                            onClick={() => void onDeleteRound(id, data.ownerId)}
+                            onClick={() => {
+                              clearRosterReplaceFlow()
+                              setSelectedId(id)
+                              setHoleNumber(1)
+                              setHoleDraft(null)
+                              setSaveState('saved')
+                              setExpandedPlayers({})
+                              setActiveTab('scorecard')
+                            }}
                             disabled={busy}
                           >
-                            {t('scoring.buttons.delete')}
+                            {selectedId === id ? t('scoring.buttons.selected') : t('scoring.buttons.select')}
                           </button>
-                        ) : null}
+                          {data.ownerId === uid || isAdmin ? (
+                            <button
+                              type="button"
+                              className="scoring-panel__button scoring-panel__button--inline"
+                              onClick={() => void onDeleteRound(id, data.ownerId)}
+                              disabled={busy}
+                            >
+                              {t('scoring.buttons.delete')}
+                            </button>
+                          ) : null}
+                        </div>
+                      </div>
+                      <div className="scoring-panel__list-item-meta">
+                        <span className="scoring-panel__muted">
+                          {formatStartedAt(data.startedAt)}
+                          {data.completedAt ? ` · ${t('scoring.rounds.completed')}` : ''}
+                        </span>
+                        <span className="scoring-panel__muted">
+                          {leaderIds.length > 0
+                            ? `${leaderNamesJoined} ${formatDelta(leaderDelta)}`
+                            : t('scoring.rounds.noScores')}
+                        </span>
                       </div>
                     </li>
                   )
