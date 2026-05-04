@@ -57,3 +57,17 @@
   font-size: 0.85rem;
   color: map.get($score-color, double-bogey-plus);
 }
+
+[data-theme='light'] {
+  .field__label { color: #6b7280; }
+
+  .field__control {
+    background: #f4f6fa;
+    border-color: #d1d5db;
+    color: #111827;
+
+    &:disabled {
+      background: color-mix(in srgb, #ffffff 82%, #f4f6fa);
+    }
+  }
+}

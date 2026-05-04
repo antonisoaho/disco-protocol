@@ -445,3 +445,110 @@
     grid-column: 1 / -1;
   }
 }
+
+[data-theme='light'] {
+  .course-picker__heading { color: #111827; }
+
+  .course-picker__filters {
+    background: #ffffff;
+    border-color: #d1d5db;
+  }
+
+  .course-picker__checkbox { color: #6b7280; }
+
+  .course-picker__course-btn {
+    background: #f4f6fa;
+    border-color: #d1d5db;
+    color: #111827;
+
+    &:hover { background: #ffffff; }
+
+    &--active {
+      background: color-mix(in srgb, #4ade80 6%, #f4f6fa);
+    }
+  }
+
+  .course-picker__favorite-btn {
+    background: #f4f6fa;
+    border-color: #d1d5db;
+    color: #6b7280;
+
+    &--active {
+      background: color-mix(in srgb, #4ade80 8%, #f4f6fa);
+    }
+  }
+
+  .course-picker__panel {
+    background: #ffffff;
+    border-color: #d1d5db;
+  }
+
+  .course-picker__panel--details {
+    border-color: color-mix(in srgb, #6b7280 28%, #d1d5db);
+  }
+
+  .course-picker__panel-title { color: #6b7280; }
+
+  .course-picker__template-btn {
+    background: #f4f6fa;
+    border-color: #d1d5db;
+    color: #111827;
+  }
+
+  .course-picker__template-meta { color: #6b7280; }
+
+  .course-picker__selection {
+    background: #ffffff;
+    border-color: #d1d5db;
+    color: #6b7280;
+
+    strong { color: #111827; }
+  }
+
+  .course-picker__add {
+    background: #ffffff;
+    border-color: #d1d5db;
+  }
+
+  .course-picker__add-label { color: #6b7280; }
+
+  .course-picker__radio-label { color: #111827; }
+
+  .course-picker__hole-grid {
+    background: #ffffff;
+    border-color: #d1d5db;
+  }
+
+  .course-picker__hole-table {
+    th,
+    td { border-bottom-color: #d1d5db; }
+
+    th {
+      background: #ffffff;
+      color: #6b7280;
+    }
+  }
+
+  .course-picker__hole-num { color: #6b7280; }
+
+  .course-picker__hole-input {
+    background: #f4f6fa;
+    border-color: #d1d5db;
+    color: #111827;
+  }
+
+  .course-picker__error {
+    background: color-mix(in srgb, #ef4444 8%, #ffffff);
+    border-color: #d1d5db;
+  }
+
+  .course-picker__badge {
+    background: color-mix(in srgb, #4ade80 10%, #ffffff);
+  }
+
+  .course-picker__btn--danger {
+    &:hover:not(:disabled) {
+      background: color-mix(in srgb, #ef4444 8%, #ffffff);
+    }
+  }
+}

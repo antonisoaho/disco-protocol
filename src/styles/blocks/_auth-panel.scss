@@ -69,3 +69,28 @@
     background: transparent;
   }
 }
+
+[data-theme='light'] {
+  .auth-panel {
+    background: #ffffff;
+    border-color: #d1d5db;
+  }
+
+  .auth-panel__title { color: #111827; }
+
+  .auth-panel__hint { color: #6b7280; }
+
+  .auth-panel__label { color: #111827; }
+
+  .auth-panel__toggle {
+    background: transparent;
+    color: #6b7280;
+    border-color: transparent;
+
+    &:hover:not(:disabled) {
+      color: #111827;
+      border-color: #d1d5db;
+      background: transparent;
+    }
+  }
+}

@@ -72,3 +72,25 @@
     }
   }
 }
+
+[data-theme='light'] {
+  .follow-panel {
+    background: #ffffff;
+    border-color: #d1d5db;
+  }
+
+  .follow-panel__meta { color: #6b7280; }
+
+  .follow-panel__label { color: #6b7280; }
+
+  .follow-panel__item {
+    background: #f4f6fa;
+    border-color: #d1d5db;
+  }
+
+  .follow-panel__follow-btn--following {
+    background: transparent;
+    color: #6b7280;
+    border-color: #d1d5db;
+  }
+}
