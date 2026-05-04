@@ -254,6 +254,15 @@
   gap: $space-3;
 }
 
+.scoring-panel__list-item-meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: $space-2;
+  margin-top: $space-1;
+  font-size: 0.8rem;
+}
+
 .scoring-panel__list-item-main {
   display: flex;
   flex-wrap: wrap;
@@ -606,5 +615,105 @@
   .scoring-panel__button--field-submit {
     width: auto;
     align-self: flex-end;
+  }
+}
+
+[data-theme='light'] {
+  .scoring-panel {
+    background: #ffffff;
+    border-color: #d1d5db;
+    box-shadow: 0 0.5rem 1.25rem color-mix(in srgb, #111827 6%, transparent);
+  }
+
+  .scoring-panel__tab {
+    background: #f4f6fa;
+    border-color: #d1d5db;
+    color: #111827;
+
+    &--active {
+      background: color-mix(in srgb, #22c55e 9%, #ffffff);
+    }
+  }
+
+  .scoring-panel__selection {
+    background: #f4f6fa;
+    border-color: #d1d5db;
+    color: #6b7280;
+
+    strong { color: #111827; }
+  }
+
+  .scoring-panel__participant-list {
+    background: #f4f6fa;
+    border-color: #d1d5db;
+  }
+
+  .scoring-panel__participant-option {
+    color: #111827;
+
+    &:has(input[type='radio']) {
+      background: #f4f6fa;
+      border-color: #d1d5db;
+      color: #6b7280;
+
+      &:hover {
+        border-color: #6b7280;
+        color: #111827;
+      }
+
+      &:has(input:checked) {
+        background: color-mix(in srgb, #22c55e 10%, #f4f6fa);
+        color: #111827;
+      }
+    }
+  }
+
+  .scoring-panel__list-item {
+    background: #f4f6fa;
+    border-color: #d1d5db;
+  }
+
+  .scoring-panel__list-item-replace {
+    border-top-color: #d1d5db;
+  }
+
+  .scoring-panel__hole-stepper {
+    background: color-mix(in srgb, #ffffff 95%, #f4f6fa);
+    border-color: #d1d5db;
+  }
+
+  .scoring-panel__hole-dot {
+    background: #f4f6fa;
+    border-color: #d1d5db;
+    color: #111827;
+  }
+
+  .scoring-panel__hole-form {
+    background: #f4f6fa;
+    border-color: #d1d5db;
+  }
+
+  .scoring-panel__player-row {
+    background: #ffffff;
+    border-color: #d1d5db;
+  }
+
+  .scoring-panel__player-row-toggle {
+    background: color-mix(in srgb, #f4f6fa 85%, #ffffff);
+    color: #111827;
+  }
+
+  .scoring-panel__player-row-body {
+    border-top-color: #d1d5db;
+  }
+
+  .scoring-panel__round-leader-chip {
+    border-color: color-mix(in srgb, #111827 12%, #d1d5db);
+    background: color-mix(in srgb, #111827 5%, #ffffff);
+  }
+
+  .scoring-panel__scorecard-participants {
+    background: color-mix(in srgb, #f4f6fa 70%, #ffffff);
+    border-color: #d1d5db;
   }
 }
