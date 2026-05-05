@@ -279,6 +279,97 @@
   align-items: center;
 }
 
+.scoring-panel__section--your-rounds {
+  gap: $layout-stack-gap;
+}
+
+.scoring-panel__disclosure {
+  margin: 0;
+  border: 1px solid $color-border;
+  border-radius: $radius-sm;
+  background: $color-bg;
+  padding: 0;
+}
+
+.scoring-panel__disclosure-summary {
+  list-style: none;
+  margin: 0;
+  padding: calc(#{$space-unit} * 2.5) calc(#{$space-unit} * 3);
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: $color-text-muted;
+  cursor: pointer;
+  user-select: none;
+
+  &::-webkit-details-marker {
+    display: none;
+  }
+
+  &::before {
+    content: '';
+    display: inline-block;
+    width: 0.45em;
+    height: 0.45em;
+    margin-right: $space-2;
+    border-right: 2px solid $color-text-muted;
+    border-bottom: 2px solid $color-text-muted;
+    transform: rotate(-45deg);
+    vertical-align: 0.15em;
+    transition: transform 0.15s ease;
+  }
+}
+
+.scoring-panel__disclosure[open] > .scoring-panel__disclosure-summary::before {
+  transform: rotate(45deg);
+}
+
+.scoring-panel__disclosure-summary:focus-visible {
+  outline: 2px solid map.get($score-color, eagle);
+  outline-offset: 2px;
+  border-radius: $radius-sm;
+}
+
+.scoring-panel__disclosure .scoring-panel__list--your-rounds {
+  margin: 0;
+  padding: 0 calc(#{$space-unit} * 3) calc(#{$space-unit} * 2);
+  gap: $space-2;
+}
+
+.scoring-panel__list-item--round-compact {
+  padding: $space-2 $space-3;
+}
+
+.scoring-panel__list-item-meta--compact {
+  margin-top: $space-1;
+  margin-bottom: 0;
+  line-height: 1.35;
+}
+
+.scoring-panel__your-rounds-toggle {
+  margin: 0;
+  padding: 0 calc(#{$space-unit} * 3) calc(#{$space-unit} * 3);
+}
+
+.scoring-panel__button--linkish {
+  min-height: $touch-target-min;
+  padding: $space-1 $space-2;
+  border: none;
+  background: transparent;
+  color: map.get($score-color, eagle);
+  font-size: 0.85rem;
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+
+  &:hover:not(:disabled) {
+    color: $color-text;
+  }
+
+  &:disabled {
+    opacity: 0.55;
+  }
+}
+
 .scoring-panel__list-item-replace {
   width: 100%;
   padding-top: $space-3;

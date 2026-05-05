@@ -268,6 +268,9 @@ export const commonEn = {
       roundTotal: 'Round total {{totalStrokes}}/{{totalPar}} ({{totalDelta}}) · {{scoredHoles}}/{{holeCount}} holes scored',
       selectRoundToLoadHoleForm: 'Select a round to load hole form.',
       selectRoundToRecordScores: 'Select a round to record hole scores.',
+      disclosureSummary: 'Your rounds ({{count}})',
+      showAllRounds: 'Show all {{count}} rounds',
+      showFewerRounds: 'Show fewer rounds',
     },
     participants: {
       selectRoundFirst: 'Select a round first.',
