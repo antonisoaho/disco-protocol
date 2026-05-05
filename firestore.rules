@@ -120,17 +120,6 @@ service cloud.firestore {
       return signedIn() && data.followerUid == request.auth.uid;
     }
 
-    function validPublicUserProfile(data) {
-      return data.keys().hasOnly(['displayName', 'photoUrl', 'favoriteCourseIds', 'admin', 'createdAt'])
-        && data.displayName is string
-        && data.displayName.size() > 0
-        && data.displayName.size() <= 80
-        && (data.photoUrl == null || data.photoUrl is string)
-        && (!data.keys().hasAny(['favoriteCourseIds']) || data.favoriteCourseIds is list)
-        && (!data.keys().hasAny(['admin']) || data.admin is bool)
-        && data.createdAt is timestamp;
-    }
-
     /** Field-type checks for known profile keys; allows extra legacy keys on the document. */
     function userProfileKnownFieldTypes(data) {
       return (!data.keys().hasAny(['displayName'])
@@ -144,6 +133,14 @@ service cloud.firestore {
         && (!data.keys().hasAny(['admin']) || data.admin is bool);
     }
 
+    /** Self profile create requires canonical keys but tolerates extra legacy fields. */
+    function userProfileSelfCreateAllowed(data) {
+      return data.keys().hasAll(['displayName', 'photoUrl', 'createdAt'])
+        && userProfileKnownFieldTypes(data)
+        && data.createdAt is timestamp
+        && data.admin != true;
+    }
+
     /** Self-serve updates may only change display name or favorite courses (not admin/photo/timestamps). */
     function userProfileSelfUpdateAffectedKeysOk() {
       return request.resource.data.diff(resource.data).affectedKeys()
@@ -155,8 +152,7 @@ service cloud.firestore {
 
       allow create: if signedIn()
         && request.auth.uid == userId
-        && validPublicUserProfile(request.resource.data)
-        && request.resource.data.admin != true;
+        && userProfileSelfCreateAllowed(request.resource.data);
 
       allow update: if signedIn()
         && request.auth.uid == userId
