@@ -285,9 +285,9 @@
 
 .scoring-panel__disclosure {
   margin: 0;
-  border: 1px solid $color-border;
+  border: 1px solid var(--color-border);
   border-radius: $radius-sm;
-  background: $color-bg;
+  background: var(--color-surface);
   padding: 0;
 }
 
@@ -297,9 +297,10 @@
   padding: calc(#{$space-unit} * 2.5) calc(#{$space-unit} * 3);
   font-size: 0.85rem;
   font-weight: 600;
-  color: $color-text-muted;
+  color: var(--color-text-muted);
   cursor: pointer;
   user-select: none;
+  transition: background 0.15s ease, color 0.15s ease;
 
   &::-webkit-details-marker {
     display: none;
@@ -311,11 +312,16 @@
     width: 0.45em;
     height: 0.45em;
     margin-right: $space-2;
-    border-right: 2px solid $color-text-muted;
-    border-bottom: 2px solid $color-text-muted;
+    border-right: 2px solid var(--color-text-muted);
+    border-bottom: 2px solid var(--color-text-muted);
     transform: rotate(-45deg);
     vertical-align: 0.15em;
     transition: transform 0.15s ease;
+  }
+
+  &:hover {
+    background: color-mix(in srgb, var(--color-surface) 82%, var(--color-bg));
+    color: var(--color-text);
   }
 }
 
@@ -337,12 +343,15 @@
 
 .scoring-panel__list-item--round-compact {
   padding: $space-2 $space-3;
+  border-color: var(--color-border);
+  background: var(--color-bg);
 }
 
 .scoring-panel__list-item-meta--compact {
   margin-top: $space-1;
   margin-bottom: 0;
   line-height: 1.35;
+  color: var(--color-text-muted);
 }
 
 .scoring-panel__your-rounds-toggle {
@@ -362,7 +371,7 @@
   text-underline-offset: 3px;
 
   &:hover:not(:disabled) {
-    color: $color-text;
+    color: var(--color-text);
   }
 
   &:disabled {
