@@ -69,6 +69,7 @@ type NineOrEighteen = 9 | 18
 const AUTOSAVE_DEBOUNCE_MS = 550
 const ANONYMOUS_NAME_MAX_LENGTH = 80
 const NON_WHITESPACE_PATTERN = '.*\\S.*'
+const YOUR_ROUNDS_PREVIEW_LIMIT = 4
 
 type AppTabId = 'scorecard' | 'participants' | 'analytics' | 'follow'
 type SaveState = 'saved' | 'dirty' | 'saving' | 'error'
@@ -189,6 +190,7 @@ export function ScoringPanel({ user, selectedCourseTemplate, favoriteCourseIds }
   const { isAdmin } = useAuth()
   const uid = user.uid
   const [activeTab, setActiveTab] = useState<AppTabId>('scorecard')
+  const [yourRoundsShowAll, setYourRoundsShowAll] = useState(false)
   const [items, setItems] = useState<{ id: string; data: RoundDoc }[]>([])
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [startCourseSelection, setStartCourseSelection] = useState('fresh')
@@ -314,6 +316,13 @@ export function ScoringPanel({ user, selectedCourseTemplate, favoriteCourseIds }
   }, [uid])
 
   const selected = useMemo(() => items.find((round) => round.id === selectedId) ?? null, [items, selectedId])
+
+  const yourRoundsVisibleItems = useMemo(() => {
+    if (items.length <= YOUR_ROUNDS_PREVIEW_LIMIT || yourRoundsShowAll) {
+      return items
+    }
+    return items.slice(0, YOUR_ROUNDS_PREVIEW_LIMIT)
+  }, [items, yourRoundsShowAll])
 
   const roundDisplayNames = useMemo(() => {
     const baseName = (data: RoundDoc) =>
@@ -1577,68 +1586,87 @@ export function ScoringPanel({ user, selectedCourseTemplate, favoriteCourseIds }
             </div>
           </div>
 
-          <div className="scoring-panel__section">
-            <span className="scoring-panel__label">{t('scoring.sections.yourRounds')}</span>
+          <div className="scoring-panel__section scoring-panel__section--your-rounds">
             {items.length === 0 ? (
-              <p className="scoring-panel__muted">{t('scoring.rounds.none')}</p>
+              <>
+                <span className="scoring-panel__label">{t('scoring.sections.yourRounds')}</span>
+                <p className="scoring-panel__muted">{t('scoring.rounds.none')}</p>
+              </>
             ) : (
-              <ul className="scoring-panel__list">
-                {items.map(({ id, data }) => {
-                  const roundParticipantScores = readParticipantHoleScores(data, data.ownerId)
-                  const roundTotals = computeParticipantTotals(data.participantIds, roundParticipantScores)
-                  const leaderIds = pickLeadingParticipantIds(data.participantIds, roundTotals)
-                  const roundParticipantNames = buildParticipantNamesForRound(data, directoryByUid)
-                  const leaderNamesJoined = leaderIds.map((pid) => roundParticipantNames[pid] ?? pid).join(', ')
-                  const leaderDelta =
-                    leaderIds.length > 0 ? (roundTotals[leaderIds[0]]?.totalDelta ?? 0) : 0
-                  return (
-                    <li key={id} className="scoring-panel__list-item">
-                      <div className="scoring-panel__list-item-main">
-                        <strong>{roundDisplayNames.get(id)}</strong>
-                        <div className="scoring-panel__list-item-actions">
-                          <button
-                            type="button"
-                            className="scoring-panel__button scoring-panel__button--inline"
-                            onClick={() => {
-                              clearRosterReplaceFlow()
-                              setSelectedId(id)
-                              setHoleNumber(1)
-                              setHoleDraft(null)
-                              setSaveState('saved')
-                              setExpandedPlayers({})
-                              setActiveTab('scorecard')
-                            }}
-                            disabled={busy}
-                          >
-                            {selectedId === id ? t('scoring.buttons.selected') : t('scoring.buttons.select')}
-                          </button>
-                          {data.ownerId === uid || isAdmin ? (
+              <details className="scoring-panel__disclosure" open>
+                <summary className="scoring-panel__disclosure-summary">
+                  {t('scoring.rounds.disclosureSummary', { count: items.length })}
+                </summary>
+                <ul className="scoring-panel__list scoring-panel__list--your-rounds">
+                  {yourRoundsVisibleItems.map(({ id, data }) => {
+                    const roundParticipantScores = readParticipantHoleScores(data, data.ownerId)
+                    const roundTotals = computeParticipantTotals(data.participantIds, roundParticipantScores)
+                    const leaderIds = pickLeadingParticipantIds(data.participantIds, roundTotals)
+                    const roundParticipantNames = buildParticipantNamesForRound(data, directoryByUid)
+                    const leaderNamesJoined = leaderIds.map((pid) => roundParticipantNames[pid] ?? pid).join(', ')
+                    const leaderDelta =
+                      leaderIds.length > 0 ? (roundTotals[leaderIds[0]]?.totalDelta ?? 0) : 0
+                    const startedAndStatus = `${formatStartedAt(data.startedAt)}${
+                      data.completedAt ? ` · ${t('scoring.rounds.completed')}` : ''
+                    }`
+                    const leaderSummary =
+                      leaderIds.length > 0
+                        ? `${leaderNamesJoined} ${formatDelta(leaderDelta)}`
+                        : t('scoring.rounds.noScores')
+                    return (
+                      <li key={id} className="scoring-panel__list-item scoring-panel__list-item--round-compact">
+                        <div className="scoring-panel__list-item-main">
+                          <strong>{roundDisplayNames.get(id)}</strong>
+                          <div className="scoring-panel__list-item-actions">
                             <button
                               type="button"
                               className="scoring-panel__button scoring-panel__button--inline"
-                              onClick={() => void onDeleteRound(id, data.ownerId)}
+                              onClick={() => {
+                                clearRosterReplaceFlow()
+                                setSelectedId(id)
+                                setHoleNumber(1)
+                                setHoleDraft(null)
+                                setSaveState('saved')
+                                setExpandedPlayers({})
+                                setActiveTab('scorecard')
+                              }}
                               disabled={busy}
                             >
-                              {t('scoring.buttons.delete')}
+                              {selectedId === id ? t('scoring.buttons.selected') : t('scoring.buttons.select')}
                             </button>
-                          ) : null}
+                            {data.ownerId === uid || isAdmin ? (
+                              <button
+                                type="button"
+                                className="scoring-panel__button scoring-panel__button--inline"
+                                onClick={() => void onDeleteRound(id, data.ownerId)}
+                                disabled={busy}
+                              >
+                                {t('scoring.buttons.delete')}
+                              </button>
+                            ) : null}
+                          </div>
                         </div>
-                      </div>
-                      <div className="scoring-panel__list-item-meta">
-                        <span className="scoring-panel__muted">
-                          {formatStartedAt(data.startedAt)}
-                          {data.completedAt ? ` · ${t('scoring.rounds.completed')}` : ''}
-                        </span>
-                        <span className="scoring-panel__muted">
-                          {leaderIds.length > 0
-                            ? `${leaderNamesJoined} ${formatDelta(leaderDelta)}`
-                            : t('scoring.rounds.noScores')}
-                        </span>
-                      </div>
-                    </li>
-                  )
-                })}
-              </ul>
+                        <p className="scoring-panel__list-item-meta scoring-panel__list-item-meta--compact scoring-panel__muted">
+                          {startedAndStatus} · {leaderSummary}
+                        </p>
+                      </li>
+                    )
+                  })}
+                </ul>
+                {items.length > YOUR_ROUNDS_PREVIEW_LIMIT ? (
+                  <div className="scoring-panel__your-rounds-toggle">
+                    <button
+                      type="button"
+                      className="scoring-panel__button scoring-panel__button--linkish"
+                      onClick={() => setYourRoundsShowAll((current) => !current)}
+                    >
+                      {yourRoundsShowAll
+                        ? t('scoring.rounds.showFewerRounds')
+                        : t('scoring.rounds.showAllRounds', { count: items.length })}
+                    </button>
+                  </div>
+                ) : null}
+              </details>
             )}
           </div>
 
