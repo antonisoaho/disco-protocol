@@ -2,17 +2,7 @@ import type { RoundDoc } from '../firebase/roundTypes'
 
 const DEFAULT_FULL_ROUND_HOLES = 18
 
-/**
- * Effective layout length for UI and score protocol.
- * Prefer persisted `holeCount`; otherwise infer from scored holes or fresh draft length.
- * Does not inflate toward 18 when scores/draft already imply a shorter round (partial layouts).
- */
-export function inferRoundHoleCount(data: RoundDoc): number {
-  const explicit = data.holeCount
-  if (typeof explicit === 'number' && Number.isInteger(explicit) && explicit >= 1) {
-    return explicit
-  }
-
+export function inferMaxScoredHoleNumber(data: RoundDoc): number {
   let fromScores = 0
   for (const key of Object.keys(data.holeScores ?? {})) {
     const value = Number(key)
@@ -32,6 +22,22 @@ export function inferRoundHoleCount(data: RoundDoc): number {
       }
     }
   }
+
+  return fromScores
+}
+
+/**
+ * Effective layout length for UI and score protocol.
+ * Prefer persisted `holeCount`; otherwise infer from scored holes or fresh draft length.
+ * Does not inflate toward 18 when scores/draft already imply a shorter round (partial layouts).
+ */
+export function inferRoundHoleCount(data: RoundDoc): number {
+  const explicit = data.holeCount
+  if (typeof explicit === 'number' && Number.isInteger(explicit) && explicit >= 1) {
+    return explicit
+  }
+
+  const fromScores = inferMaxScoredHoleNumber(data)
 
   const fromDraftHoles = data.courseDraft?.holes?.length ?? 0
   const inferred = Math.max(fromScores, fromDraftHoles)

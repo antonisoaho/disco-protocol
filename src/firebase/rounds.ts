@@ -22,6 +22,7 @@ import {
   SCORE_PROTOCOL_V1,
   normalizeHoleScoreUpdate,
 } from '../scoring/protocol'
+import { inferMaxScoredHoleNumber } from '../scoring/inferRoundHoleCount'
 import {
   isAnonymousParticipantId,
   mergeAnonymousParticipants,
@@ -548,9 +549,17 @@ export async function completeRoundAndPromote(
       }
 
       if (data.courseSource !== 'fresh') {
+        const scoredHoleCount = inferMaxScoredHoleNumber(data)
+        const completedHoleCount =
+          scoredHoleCount >= 1
+            ? scoredHoleCount
+            : typeof data.holeCount === 'number' && Number.isInteger(data.holeCount) && data.holeCount >= 1
+              ? data.holeCount
+              : null
         tx.update(ref, {
           completedAt: serverTimestamp(),
           updatedAt: serverTimestamp(),
+          holeCount: completedHoleCount,
         })
         return { promotionStatus: 'not_needed' as const }
       }

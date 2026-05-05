@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { HoleScoreEntry, RoundDoc } from '../firebase/roundTypes'
-import { inferRoundHoleCount } from './inferRoundHoleCount'
+import { inferMaxScoredHoleNumber, inferRoundHoleCount } from './inferRoundHoleCount'
 
 const ts = { seconds: 0, nanoseconds: 0 } as RoundDoc['startedAt']
 
@@ -72,5 +72,24 @@ describe('inferRoundHoleCount', () => {
 
   it('defaults to 18 when there is no holeCount, scores, or draft holes', () => {
     expect(inferRoundHoleCount(baseRound({ holeCount: null }))).toBe(18)
+  })
+})
+
+describe('inferMaxScoredHoleNumber', () => {
+  it('returns max scored hole across participant score maps', () => {
+    expect(
+      inferMaxScoredHoleNumber(
+        baseRound({
+          participantHoleScores: {
+            o: { '2': holeScore(4, 4), '14': holeScore(4, 4) },
+            p: { '9': holeScore(3, 3) },
+          },
+        }),
+      ),
+    ).toBe(14)
+  })
+
+  it('returns 0 when no hole scores exist', () => {
+    expect(inferMaxScoredHoleNumber(baseRound())).toBe(0)
   })
 })
