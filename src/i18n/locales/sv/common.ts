@@ -61,6 +61,8 @@ export const commonSv = {
       invalidEmail: 'Ange en giltig e-postadress.',
       tooManyRequests: 'För många försök. Vänta en stund och prova igen.',
       network: 'Nätverksfel. Kontrollera anslutningen och försök igen.',
+      profileSetupFailed:
+        'Ditt konto skapades, men vi kunde inte slutföra spelarprofilen. Försök igen.',
       generic: 'Något gick fel.',
     },
   },
