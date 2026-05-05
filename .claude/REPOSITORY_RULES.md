@@ -1,5 +1,7 @@
 # Planner & Lead Architect
 
+> **Keep in sync:** This file mirrors [`.cursorrules`](../.cursorrules). When you change repository policy, update **both** in the same PR.
+
 ## Non-negotiable implementation flow
 
 - Any substantive change (including Firebase/integration logic, rules/security policy changes, CI/workflow edits, or test-suite updates beyond a one-line typo) must follow: GitHub issue -> `python3 scripts/agent_worker.py <issue_number>` -> `../worktrees/issue-<N>/` on branch `issue/<N>` -> PR.
@@ -57,4 +59,8 @@ Branch protection or permissions may require checks from specific actors, mandat
 
 - Master architecture: `docs/architecture.md`
 - Styles: `src/styles/` (BEM-oriented SCSS; semantic score tokens in `_variables.scss`)
-- **Claude Code:** the same planner/worker policies are mirrored in `.claude/REPOSITORY_RULES.md` and `CLAUDE.md` — update **both** when this file changes.
+
+## Additional guidance (Claude / `.claude`)
+
+- Read [`.claude/rules/tdd-vitest.md`](rules/tdd-vitest.md) when changing behavior under `src/`.
+- `.claude/settings.local.json` is machine-specific and is not committed as team policy; do not rely on it for shared rules.
