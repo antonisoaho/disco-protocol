@@ -8,7 +8,7 @@ import {
   initializeTestEnvironment,
   type RulesTestEnvironment,
 } from '@firebase/rules-unit-testing'
-import { doc, serverTimestamp, setDoc, updateDoc } from 'firebase/firestore'
+import { doc, getDoc, serverTimestamp, setDoc, updateDoc } from 'firebase/firestore'
 import { afterAll, beforeAll, beforeEach, describe, it } from 'vitest'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
@@ -86,6 +86,23 @@ describeIfEmulator('firestore users rules (emulator)', () => {
         createdAt: serverTimestamp(),
       }),
     )
+  })
+
+  it('allows unauthenticated get when user doc is missing, but denies existing profile reads', async () => {
+    const anonDb = testEnv.unauthenticatedContext().firestore()
+
+    await assertSucceeds(getDoc(doc(anonDb, 'users/missing-user')))
+
+    await testEnv.withSecurityRulesDisabled(async (context) => {
+      const adminDb = context.firestore()
+      await setDoc(doc(adminDb, 'users/existing-user'), {
+        displayName: 'existing',
+        createdAt: new Date(),
+        admin: false,
+      })
+    })
+
+    await assertFails(getDoc(doc(anonDb, 'users/existing-user')))
   })
 
   it('denies admin escalation on create and update', async () => {

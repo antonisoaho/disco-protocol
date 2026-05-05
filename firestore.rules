@@ -148,7 +148,10 @@ service cloud.firestore {
     }
 
     match /users/{userId} {
-      allow get, list: if signedIn();
+      // Bootstrap exception: allow reading a missing user doc without auth so
+      // initial profile provisioning does not fail during auth propagation.
+      allow get: if signedIn() || resource == null;
+      allow list: if signedIn();
 
       allow create: if signedIn()
         && request.auth.uid == userId
