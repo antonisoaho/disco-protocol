@@ -132,9 +132,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await signInWithEmailAndPassword(auth, email.trim(), password)
   }, [])
 
-  const signUpWithEmail = useCallback(async (email: string, password: string) => {
-    await createUserWithEmailAndPassword(auth, email.trim(), password)
-  }, [])
+  const signUpWithEmail = useCallback(
+    async (email: string, password: string) => {
+      const credential = await createUserWithEmailAndPassword(auth, email.trim(), password)
+      try {
+        await runEnsureUserProfile(credential.user)
+      } catch {
+        throw new Error(t('auth.errors.profileSetupFailed'))
+      }
+    },
+    [runEnsureUserProfile, t],
+  )
 
   const signOut = useCallback(async () => {
     await firebaseSignOut(auth)

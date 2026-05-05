@@ -60,6 +60,8 @@ export const commonEn = {
       invalidEmail: 'Enter a valid email address.',
       tooManyRequests: 'Too many attempts. Wait a bit and try again.',
       network: 'Network error. Check your connection and try again.',
+      profileSetupFailed:
+        'Your account was created, but we could not finish setting up your player profile. Please try again.',
       generic: 'Something went wrong.',
     },
   },
