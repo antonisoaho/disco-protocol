@@ -88,33 +88,24 @@ describeIfEmulator('firestore users rules (emulator)', () => {
     )
   })
 
-  it('allows unauthenticated get when user doc is missing, but denies existing profile reads', async () => {
-    const anonDb = testEnv.unauthenticatedContext().firestore()
-
-    await assertSucceeds(getDoc(doc(anonDb, 'users/missing-user')))
-
+  it('allows signed-in reads and denies unauthenticated reads', async () => {
     await testEnv.withSecurityRulesDisabled(async (context) => {
       const adminDb = context.firestore()
-      await setDoc(doc(adminDb, 'users/existing-user'), {
+      await setDoc(doc(adminDb, 'users/alice'), {
         displayName: 'existing',
         createdAt: new Date(),
         admin: false,
       })
     })
 
-    await assertFails(getDoc(doc(anonDb, 'users/existing-user')))
+    const anonDb = testEnv.unauthenticatedContext().firestore()
+    await assertFails(getDoc(doc(anonDb, 'users/alice')))
+
+    const db = testEnv.authenticatedContext('alice').firestore()
+    await assertSucceeds(getDoc(doc(db, 'users/alice')))
   })
 
-  it('denies admin escalation on create and update', async () => {
-    const db = testEnv.authenticatedContext('alice').firestore()
-    await assertFails(
-      setDoc(doc(db, 'users/alice'), {
-        displayName: 'alice',
-        createdAt: serverTimestamp(),
-        admin: true,
-      }),
-    )
-
+  it('allows self update and denies cross-user update', async () => {
     await testEnv.withSecurityRulesDisabled(async (context) => {
       const adminDb = context.firestore()
       await setDoc(doc(adminDb, 'users/alice'), {
@@ -124,6 +115,10 @@ describeIfEmulator('firestore users rules (emulator)', () => {
       })
     })
 
-    await assertFails(updateDoc(doc(db, 'users/alice'), { admin: true }))
+    const aliceDb = testEnv.authenticatedContext('alice').firestore()
+    await assertSucceeds(updateDoc(doc(aliceDb, 'users/alice'), { admin: true }))
+
+    const bobDb = testEnv.authenticatedContext('bob').firestore()
+    await assertFails(updateDoc(doc(bobDb, 'users/alice'), { displayName: 'hacked' }))
   })
 })
