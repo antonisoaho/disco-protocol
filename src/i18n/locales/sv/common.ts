@@ -270,6 +270,9 @@ export const commonSv = {
       roundTotal: 'Rundtotal {{totalStrokes}}/{{totalPar}} ({{totalDelta}}) · {{scoredHoles}}/{{holeCount}} hål poängsatta',
       selectRoundToLoadHoleForm: 'Välj en runda för att ladda hålformuläret.',
       selectRoundToRecordScores: 'Välj en runda för att registrera hålpoäng.',
+      disclosureSummary: 'Dina rundor ({{count}})',
+      showAllRounds: 'Visa alla {{count}} rundor',
+      showFewerRounds: 'Visa färre rundor',
     },
     participants: {
       selectRoundFirst: 'Välj en runda först.',
