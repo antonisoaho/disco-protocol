@@ -9,13 +9,13 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: 'autoUpdate',
-      includeAssets: ['favicon.svg', 'pwa-192.png', 'pwa-512.png'],
+      includeAssets: ['favicon.svg', 'logo.svg', 'pwa-192.png', 'pwa-512.png'],
       manifest: {
         name: 'Disc Golf Social',
         short_name: 'Disco',
         description: 'Mobile-first disc golf social PWA',
         theme_color: '#1f8a4d',
-        background_color: '#ffffff',
+        background_color: '#13161e',
         display: 'standalone',
         orientation: 'portrait-primary',
         start_url: '/',
@@ -23,6 +23,18 @@ export default defineConfig({
           {
             src: '/pwa-192.png',
             sizes: '192x192',
+            type: 'image/png',
+            purpose: 'any',
+          },
+          {
+            src: '/pwa-192.png',
+            sizes: '192x192',
+            type: 'image/png',
+            purpose: 'maskable',
+          },
+          {
+            src: '/pwa-512.png',
+            sizes: '512x512',
             type: 'image/png',
             purpose: 'any',
           },
