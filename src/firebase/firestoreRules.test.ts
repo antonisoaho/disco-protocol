@@ -14,6 +14,11 @@ describe('firestore users rules contract', () => {
     expect(firestoreRules).toContain('userProfileSelfCreateAllowed(request.resource.data)')
   })
 
+  it('allows bootstrap read for missing user docs without broadening list access', () => {
+    expect(firestoreRules).toContain('allow get: if signedIn() || resource == null;')
+    expect(firestoreRules).toContain('allow list: if signedIn();')
+  })
+
   it('allows provisioning create payloads without requiring photoUrl key', () => {
     expect(firestoreRules).toContain("data.keys().hasAll(['displayName', 'createdAt'])")
   })
