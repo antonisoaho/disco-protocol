@@ -1,0 +1,43 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 560 160" fill="none">
+  <title>Disco  Disc Golf Social</title>
+  <defs>
+    <linearGradient id="logo-rim" x1="18%" y1="12%" x2="82%" y2="88%">
+      <stop offset="0%" stop-color="#3ecf7a"/>
+      <stop offset="45%" stop-color="#1f8a4d"/>
+      <stop offset="100%" stop-color="#126b3a"/>
+    </linearGradient>
+    <linearGradient id="logo-shine" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity="0.28"/>
+      <stop offset="40%" stop-color="#ffffff" stop-opacity="0"/>
+      <stop offset="100%" stop-color="#ffffff" stop-opacity="0"/>
+    </linearGradient>
+  </defs>
+  <g transform="translate(12 16)">
+    <rect width="128" height="128" rx="28" fill="#13161e" stroke="#252a38" stroke-width="2"/>
+    <g transform="translate(64 72) rotate(-9)">
+      <ellipse cx="0" cy="0" rx="44" ry="20" fill="url(#logo-rim)"/>
+      <ellipse cx="0" cy="-2" rx="44" ry="20" fill="url(#logo-shine)"/>
+      <ellipse cx="0" cy="0" rx="28" ry="12" stroke="#dfe3ec" stroke-opacity="0.35" stroke-width="1.5"/>
+      <ellipse cx="0" cy="0" rx="16" ry="7" stroke="#dfe3ec" stroke-opacity="0.4" stroke-width="1.2"/>
+      <ellipse cx="0" cy="0" rx="8" ry="3.5" fill="#0b0d12" fill-opacity="0.45"/>
+    </g>
+  </g>
+  <text
+    x="168"
+    y="92"
+    fill="#dfe3ec"
+    font-family="system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif"
+    font-size="52"
+    font-weight="700"
+    letter-spacing="-0.02em"
+  >Disco</text>
+  <text
+    x="168"
+    y="124"
+    fill="#1f8a4d"
+    font-family="system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif"
+    font-size="15"
+    font-weight="600"
+    letter-spacing="0.28em"
+  >DISC GOLF</text>
+</svg>
