@@ -11,14 +11,14 @@
       <stop offset="40%" stop-color="#ffffff" stop-opacity="0"/>
       <stop offset="100%" stop-color="#ffffff" stop-opacity="0"/>
     </linearGradient>
-    <filter id="favicon-drop" x="-25%" y="-25%" width="150%" height="150%">
-      <feDropShadow dx="0" dy="10" stdDeviation="14" flood-color="#000000" flood-opacity="0.35"/>
-    </filter>
   </defs>
   <!-- Safe padding for maskable / squircle crops -->
   <rect width="512" height="512" rx="108" fill="#13161e"/>
   <rect width="512" height="512" rx="108" stroke="#252a38" stroke-width="3"/>
-  <g filter="url(#favicon-drop)" transform="translate(256 262) rotate(-9)">
+  <!-- Vector-only shadow (no SVG filters) so PNG / PWA raster matches the favicon -->
+  <g transform="translate(256 250) rotate(-9)">
+    <ellipse cx="12" cy="26" rx="168" ry="70" fill="#020305" opacity="0.14"/>
+    <ellipse cx="6" cy="16" rx="172" ry="74" fill="#020305" opacity="0.22"/>
     <ellipse cx="0" cy="0" rx="178" ry="82" fill="url(#favicon-rim)"/>
     <ellipse cx="0" cy="-6" rx="178" ry="82" fill="url(#favicon-shine)"/>
     <ellipse cx="0" cy="0" rx="118" ry="50" stroke="#dfe3ec" stroke-opacity="0.33" stroke-width="5"/>
