@@ -58,7 +58,6 @@ describe('ensureUserProfile', () => {
   })
 
   it('creates users/{uid} with required schema fields for a new sign-up', async () => {
-    mocks.getDocMock.mockResolvedValueOnce(snapshot(false)) // initial exists check
     mocks.getDocMock.mockResolvedValueOnce(snapshot(false)) // loop preexisting check
     mocks.setDocMock.mockResolvedValueOnce(undefined)
     mocks.getDocFromServerMock.mockResolvedValueOnce(snapshot(true))
@@ -90,7 +89,8 @@ describe('ensureUserProfile', () => {
   it('throws when profile creation fails after retries', async () => {
     vi.useFakeTimers()
     mocks.getDocMock.mockResolvedValue(snapshot(false))
-    mocks.setDocMock.mockRejectedValue(new Error('permission-denied'))
+    const permissionDenied = Object.assign(new Error('permission-denied'), { code: 'permission-denied' })
+    mocks.setDocMock.mockRejectedValue(permissionDenied)
     mocks.getDocFromServerMock.mockResolvedValue(snapshot(false))
 
     const result = ensureUserProfile(fakeUser())
@@ -99,6 +99,28 @@ describe('ensureUserProfile', () => {
 
     await expectedFailure
     expect(mocks.setDocMock).toHaveBeenCalledTimes(5)
+    vi.useRealTimers()
+  })
+
+  it('retries when initial getDoc is permission-denied before auth propagation completes', async () => {
+    vi.useFakeTimers()
+    const permissionDenied = Object.assign(new Error('missing or insufficient permissions'), {
+      code: 'permission-denied',
+    })
+
+    mocks.getDocMock
+      .mockRejectedValueOnce(permissionDenied)
+      .mockResolvedValueOnce(snapshot(false))
+    mocks.setDocMock.mockResolvedValueOnce(undefined)
+    mocks.getDocFromServerMock.mockResolvedValueOnce(snapshot(true))
+    mocks.updateProfileMock.mockResolvedValueOnce(undefined)
+
+    const result = ensureUserProfile(fakeUser())
+    await vi.advanceTimersByTimeAsync(500)
+    await result
+
+    expect(mocks.getDocMock).toHaveBeenCalledTimes(2)
+    expect(mocks.setDocMock).toHaveBeenCalledTimes(1)
     vi.useRealTimers()
   })
 })

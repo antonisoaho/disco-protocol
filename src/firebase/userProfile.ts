@@ -39,6 +39,10 @@ const USERS = 'users'
 const PROFILE_WRITE_ATTEMPTS = 5
 const PROFILE_WRITE_BASE_DELAY_MS = 450
 
+function isPermissionDenied(error: unknown): boolean {
+  return (error as { code?: string } | null)?.code === 'permission-denied'
+}
+
 function delay(ms: number): Promise<void> {
   return new Promise((resolve) => {
     setTimeout(resolve, ms)
@@ -71,20 +75,6 @@ export async function trySyncAuthDisplayName(authUser: User, displayName: string
 /** Ensures `users/{uid}` exists after sign-in. Idempotent for existing profiles. */
 export async function ensureUserProfile(authUser: User): Promise<void> {
   const ref = doc(db, USERS, authUser.uid)
-  const initial = await getDoc(ref)
-  if (initial.exists()) {
-    const data = initial.data() as { displayName?: unknown } | undefined
-    const fromDoc =
-      typeof data?.displayName === 'string' ? normalizeDisplayName(data.displayName) : ''
-    const seed =
-      fromDoc ||
-      normalizeDisplayName(authUser.displayName ?? '') ||
-      authUser.email?.split('@')[0] ||
-      'Player'
-    await trySyncAuthDisplayName(authUser, seed.slice(0, DISPLAY_NAME_MAX_LENGTH) || 'Player')
-    return
-  }
-
   const seedDisplayName =
     authUser.displayName ||
     authUser.email?.split('@')[0] ||
@@ -100,10 +90,27 @@ export async function ensureUserProfile(authUser: User): Promise<void> {
 
   let lastError: unknown
   for (let attempt = 0; attempt < PROFILE_WRITE_ATTEMPTS; attempt += 1) {
-    const preexisting = await getDoc(ref)
-    if (preexisting.exists()) {
-      await trySyncAuthDisplayName(authUser, displayName)
-      return
+    try {
+      const preexisting = await getDoc(ref)
+      if (preexisting.exists()) {
+        const data = preexisting.data() as { displayName?: unknown } | undefined
+        const fromDoc =
+          typeof data?.displayName === 'string' ? normalizeDisplayName(data.displayName) : ''
+        const seed =
+          fromDoc ||
+          normalizeDisplayName(authUser.displayName ?? '') ||
+          authUser.email?.split('@')[0] ||
+          'Player'
+        await trySyncAuthDisplayName(authUser, seed.slice(0, DISPLAY_NAME_MAX_LENGTH) || 'Player')
+        return
+      }
+    } catch (error) {
+      if (!isPermissionDenied(error) || attempt === PROFILE_WRITE_ATTEMPTS - 1) {
+        throw error
+      }
+      lastError = error
+      await delay(PROFILE_WRITE_BASE_DELAY_MS * (attempt + 1))
+      continue
     }
     try {
       await setDoc(ref, payload)
@@ -119,6 +126,9 @@ export async function ensureUserProfile(authUser: User): Promise<void> {
       }
     } catch (error) {
       lastError = error
+      if (!isPermissionDenied(error) || attempt === PROFILE_WRITE_ATTEMPTS - 1) {
+        throw error
+      }
     }
     await delay(PROFILE_WRITE_BASE_DELAY_MS * (attempt + 1))
   }
