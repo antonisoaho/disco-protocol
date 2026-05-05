@@ -48,6 +48,26 @@
   font-weight: 500;
   color: $color-text;
   letter-spacing: -0.01em;
+
+  &--brand {
+    line-height: 0;
+
+    .app-shell__brand-logo {
+      display: block;
+      height: 2.375rem;
+      width: auto;
+      max-width: min(100%, 14rem);
+    }
+  }
+}
+
+.app-shell__loading-logo {
+  display: block;
+  height: 2rem;
+  width: auto;
+  margin-inline: auto;
+  margin-bottom: $space-4;
+  opacity: 0.9;
 }
 
 .app-shell__tagline {

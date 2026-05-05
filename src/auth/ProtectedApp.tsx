@@ -87,6 +87,14 @@ export function ProtectedApp() {
       <div className="app-shell">
         <main className="app-shell__main">
           <div className="app-shell__container app-shell__main--centered">
+            <img
+              className="app-shell__loading-logo"
+              src="/logo.svg"
+              alt={t('shell.logoAlt')}
+              width={176}
+              height={50}
+              decoding="async"
+            />
             <p className="app-shell__placeholder">{t('shell.loadingSession')}</p>
           </div>
         </main>
@@ -100,7 +108,16 @@ export function ProtectedApp() {
         <header className="app-shell__header">
           <div className="app-shell__container app-shell__header-inner app-shell__header--row">
             <div className="app-shell__header-main">
-              <h1 className="app-shell__title">{t('shell.appTitle')}</h1>
+              <h1 className="app-shell__title app-shell__title--brand">
+                <img
+                  className="app-shell__brand-logo"
+                  src="/logo.svg"
+                  alt={t('shell.logoAlt')}
+                  width={176}
+                  height={50}
+                  decoding="async"
+                />
+              </h1>
               <p className="app-shell__tagline">{t('shell.signInPrompt')}</p>
             </div>
             <ThemeToggleButton theme={theme} onToggle={toggleTheme} />
@@ -126,7 +143,16 @@ export function ProtectedApp() {
       <header className="app-shell__header">
         <div className="app-shell__container app-shell__header-inner app-shell__header--row">
           <div className="app-shell__header-main">
-            <h1 className="app-shell__title">{t('shell.appTitle')}</h1>
+            <h1 className="app-shell__title app-shell__title--brand">
+              <img
+                className="app-shell__brand-logo"
+                src="/logo.svg"
+                alt={t('shell.logoAlt')}
+                width={176}
+                height={50}
+                decoding="async"
+              />
+            </h1>
             <p className="app-shell__tagline app-shell__tagline--compact">
               {currentDisplayName || user.email}
             </p>

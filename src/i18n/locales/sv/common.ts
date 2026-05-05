@@ -1,6 +1,7 @@
 export const commonSv = {
   shell: {
     loadingSession: 'Laddar session…',
+    logoAlt: 'Disc Golf Social — Disco',
     appTitle: 'Disc Golf Social',
     signInPrompt: 'Logga in för att fortsätta.',
     nav: {

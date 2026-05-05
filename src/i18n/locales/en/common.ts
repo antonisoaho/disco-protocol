@@ -1,6 +1,7 @@
 export const commonEn = {
   shell: {
     loadingSession: 'Loading session…',
+    logoAlt: 'Disc Golf Social — Disco',
     appTitle: 'Disc Golf Social',
     signInPrompt: 'Sign in to continue.',
     nav: {
