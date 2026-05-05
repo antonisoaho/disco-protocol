@@ -10,6 +10,7 @@
     "cleanup:issue": "python3 scripts/cleanup.py",
     "lint": "eslint .",
     "verify:doctor": "node scripts/verify-react-doctor-score.mjs",
+    "icons": "node scripts/render-pwa-icons.mjs",
     "test": "vitest run",
     "preview": "vite preview"
   },
@@ -34,6 +35,7 @@
     "globals": "^17.5.0",
     "react-doctor": "^0.0.47",
     "sass": "^1.99.0",
+    "sharp": "^0.34.5",
     "typescript": "~6.0.2",
     "typescript-eslint": "^8.58.2",
     "vite": "^8.0.10",
