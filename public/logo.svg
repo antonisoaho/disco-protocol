@@ -11,16 +11,15 @@
       <stop offset="40%" stop-color="#ffffff" stop-opacity="0"/>
       <stop offset="100%" stop-color="#ffffff" stop-opacity="0"/>
     </linearGradient>
-    <filter id="logo-drop" x="-25%" y="-25%" width="150%" height="150%">
-      <feDropShadow dx="0" dy="10" stdDeviation="14" flood-color="#000000" flood-opacity="0.35"/>
-    </filter>
   </defs>
-  <!-- Left mark: exact favicon artwork scaled 128/512 so it matches the PWA icon -->
+  <!-- Left mark: same artwork as favicon.svg at 0.25× -->
   <g transform="translate(12 16)">
     <g transform="scale(0.25)">
       <rect width="512" height="512" rx="108" fill="#13161e"/>
       <rect width="512" height="512" rx="108" stroke="#252a38" stroke-width="3"/>
-      <g filter="url(#logo-drop)" transform="translate(256 262) rotate(-9)">
+      <g transform="translate(256 250) rotate(-9)">
+        <ellipse cx="12" cy="26" rx="168" ry="70" fill="#020305" opacity="0.14"/>
+        <ellipse cx="6" cy="16" rx="172" ry="74" fill="#020305" opacity="0.22"/>
         <ellipse cx="0" cy="0" rx="178" ry="82" fill="url(#logo-rim)"/>
         <ellipse cx="0" cy="-6" rx="178" ry="82" fill="url(#logo-shine)"/>
         <ellipse cx="0" cy="0" rx="118" ry="50" stroke="#dfe3ec" stroke-opacity="0.33" stroke-width="5"/>
