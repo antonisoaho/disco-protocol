@@ -14,6 +14,14 @@ describe('firestore users rules contract', () => {
     expect(firestoreRules).toContain('userProfileSelfCreateAllowed(request.resource.data)')
   })
 
+  it('allows provisioning create payloads without requiring photoUrl key', () => {
+    expect(firestoreRules).toContain("data.keys().hasAll(['displayName', 'createdAt'])")
+  })
+
+  it('accepts server-time createdAt on create while preserving type checks', () => {
+    expect(firestoreRules).toContain('(data.createdAt is timestamp || data.createdAt == request.time)')
+  })
+
   it('prevents self-escalation to admin on create and update', () => {
     expect(firestoreRules).toContain('data.admin != true')
     expect(firestoreRules).toContain('request.resource.data.admin == resource.data.admin')

@@ -135,9 +135,9 @@ service cloud.firestore {
 
     /** Self profile create requires canonical keys but tolerates extra legacy fields. */
     function userProfileSelfCreateAllowed(data) {
-      return data.keys().hasAll(['displayName', 'photoUrl', 'createdAt'])
+      return data.keys().hasAll(['displayName', 'createdAt'])
         && userProfileKnownFieldTypes(data)
-        && data.createdAt is timestamp
+        && (data.createdAt is timestamp || data.createdAt == request.time)
         && data.admin != true;
     }
 
