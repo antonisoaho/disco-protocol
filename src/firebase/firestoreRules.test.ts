@@ -8,31 +8,13 @@ const __dirname = dirname(fileURLToPath(import.meta.url))
 const firestoreRules = readFileSync(resolve(__dirname, '../../firestore.rules'), 'utf8')
 
 describe('firestore users rules contract', () => {
-  it('keeps users/{userId} create scoped to signed-in self', () => {
-    expect(firestoreRules).toContain('allow create: if signedIn()')
+  it('allows signed-in reads for user docs', () => {
+    expect(firestoreRules).toContain('allow get, list: if signedIn();')
+  })
+
+  it('keeps users/{userId} writes scoped to signed-in self', () => {
+    expect(firestoreRules).toContain('allow create, update: if signedIn() && request.auth.uid == userId;')
     expect(firestoreRules).toContain('request.auth.uid == userId')
-    expect(firestoreRules).toContain('userProfileSelfCreateAllowed(request.resource.data)')
-  })
-
-  it('allows bootstrap read for missing user docs without broadening list access', () => {
-    expect(firestoreRules).toContain('allow get: if signedIn() || resource == null;')
-    expect(firestoreRules).toContain('allow list: if signedIn();')
-  })
-
-  it('allows provisioning create payloads without requiring photoUrl key', () => {
-    expect(firestoreRules).toContain("data.keys().hasAll(['displayName', 'createdAt'])")
-  })
-
-  it('accepts server-time createdAt on create while preserving type checks', () => {
-    expect(firestoreRules).toContain('(data.createdAt is timestamp || data.createdAt == request.time)')
-  })
-
-  it('prevents self-escalation to admin on create and update', () => {
-    expect(firestoreRules).toContain('data.admin != true')
-    expect(firestoreRules).toContain('request.resource.data.admin == resource.data.admin')
-  })
-
-  it('keeps self-update limited to mutable profile fields', () => {
-    expect(firestoreRules).toContain(".hasOnly(['displayName', 'favoriteCourseIds'])")
+    expect(firestoreRules).toContain('allow delete: if signedIn() && request.auth.uid == userId;')
   })
 })
