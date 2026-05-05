@@ -1,5 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 560 160" fill="none">
-  <title>Disco  Disc Golf Social</title>
+  <title>Disco — Disc Golf Social</title>
   <defs>
     <linearGradient id="logo-rim" x1="18%" y1="12%" x2="82%" y2="88%">
       <stop offset="0%" stop-color="#3ecf7a"/>
@@ -11,15 +11,22 @@
       <stop offset="40%" stop-color="#ffffff" stop-opacity="0"/>
       <stop offset="100%" stop-color="#ffffff" stop-opacity="0"/>
     </linearGradient>
+    <filter id="logo-drop" x="-25%" y="-25%" width="150%" height="150%">
+      <feDropShadow dx="0" dy="10" stdDeviation="14" flood-color="#000000" flood-opacity="0.35"/>
+    </filter>
   </defs>
+  <!-- Left mark: exact favicon artwork scaled 128/512 so it matches the PWA icon -->
   <g transform="translate(12 16)">
-    <rect width="128" height="128" rx="28" fill="#13161e" stroke="#252a38" stroke-width="2"/>
-    <g transform="translate(64 72) rotate(-9)">
-      <ellipse cx="0" cy="0" rx="44" ry="20" fill="url(#logo-rim)"/>
-      <ellipse cx="0" cy="-2" rx="44" ry="20" fill="url(#logo-shine)"/>
-      <ellipse cx="0" cy="0" rx="28" ry="12" stroke="#dfe3ec" stroke-opacity="0.35" stroke-width="1.5"/>
-      <ellipse cx="0" cy="0" rx="16" ry="7" stroke="#dfe3ec" stroke-opacity="0.4" stroke-width="1.2"/>
-      <ellipse cx="0" cy="0" rx="8" ry="3.5" fill="#0b0d12" fill-opacity="0.45"/>
+    <g transform="scale(0.25)">
+      <rect width="512" height="512" rx="108" fill="#13161e"/>
+      <rect width="512" height="512" rx="108" stroke="#252a38" stroke-width="3"/>
+      <g filter="url(#logo-drop)" transform="translate(256 262) rotate(-9)">
+        <ellipse cx="0" cy="0" rx="178" ry="82" fill="url(#logo-rim)"/>
+        <ellipse cx="0" cy="-6" rx="178" ry="82" fill="url(#logo-shine)"/>
+        <ellipse cx="0" cy="0" rx="118" ry="50" stroke="#dfe3ec" stroke-opacity="0.33" stroke-width="5"/>
+        <ellipse cx="0" cy="0" rx="68" ry="28" stroke="#dfe3ec" stroke-opacity="0.4" stroke-width="4"/>
+        <ellipse cx="0" cy="0" rx="32" ry="13" fill="#0b0d12" fill-opacity="0.45"/>
+      </g>
     </g>
   </g>
   <text
