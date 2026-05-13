@@ -1,4 +1,6 @@
+import { useCallback, useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { clampHoleNumber } from './holeAutosave'
 
 type Props = {
   holeCount: number
@@ -7,9 +9,8 @@ type Props = {
   onPrevious: () => void
   onNext: () => void
   disabled?: boolean
-  statusLabel?: string
-  /** Shown above the hole title (e.g. leading player vs par). */
-  leaderHint?: string | null
+  /** Who throws first on this hole (lowest score on previous hole). */
+  honorHint?: string | null
 }
 
 export function HoleStepper({
@@ -19,64 +20,72 @@ export function HoleStepper({
   onPrevious,
   onNext,
   disabled = false,
-  statusLabel,
-  leaderHint,
+  honorHint,
 }: Props) {
   const { t } = useTranslation('common')
   const safeHoleCount = Number.isFinite(holeCount) && holeCount > 0 ? Math.floor(holeCount) : 1
+  const [holeField, setHoleField] = useState(() => String(currentHole))
+  const commitHoleField = useCallback(() => {
+    const parsed = Number.parseInt(holeField.trim(), 10)
+    if (!Number.isFinite(parsed)) {
+      setHoleField(String(currentHole))
+      return
+    }
+    const next = clampHoleNumber(parsed, safeHoleCount)
+    setHoleField(String(next))
+    if (next !== currentHole) {
+      onSelectHole(next)
+    }
+  }, [holeField, currentHole, onSelectHole, safeHoleCount])
 
   return (
     <div className="scoring-panel__hole-stepper">
-      <div className="scoring-panel__hole-stepper-header">
-        <div>
-          {leaderHint ? <p className="scoring-panel__hole-stepper-leader">{leaderHint}</p> : null}
-          <p className="scoring-panel__hole-stepper-title">
-            {t('scoring.stepper.holeTitle', { holeNumber: currentHole })}
-          </p>
-          <p className="scoring-panel__hole-stepper-meta">
-            {currentHole} / {safeHoleCount}
-            {statusLabel ? ` · ${statusLabel}` : ''}
-          </p>
-        </div>
-        <div className="scoring-panel__hole-stepper-actions">
-          <button
-            type="button"
-            className="scoring-panel__button"
-            onClick={onPrevious}
-            disabled={disabled || currentHole <= 1}
-          >
-            {t('scoring.stepper.previous')}
-          </button>
-          <button
-            type="button"
-            className="scoring-panel__button scoring-panel__button--primary"
-            onClick={onNext}
-            disabled={disabled || currentHole >= safeHoleCount}
-          >
-            {t('scoring.stepper.next')}
-          </button>
-        </div>
+      <div className="scoring-panel__hole-nav" role="group" aria-label={t('scoring.stepper.navigateHoleGroupAria')}>
+        <button
+          type="button"
+          className="scoring-panel__hole-nav-arrow scoring-panel__hole-nav-arrow--prev"
+          onClick={onPrevious}
+          disabled={disabled || currentHole <= 1}
+          aria-label={t('scoring.stepper.previousHoleAria')}
+        >
+          <span aria-hidden="true">‹</span>
+        </button>
+        <label className="scoring-panel__hole-nav-input-label">
+          <span className="scoring-panel__hole-nav-input-caption">{t('scoring.stepper.currentHoleCaption')}</span>
+          <input
+            className="scoring-panel__hole-nav-input"
+            type="text"
+            inputMode="numeric"
+            pattern="[0-9]*"
+            maxLength={2}
+            autoComplete="off"
+            disabled={disabled}
+            value={holeField}
+            onChange={(event) => setHoleField(event.target.value.replace(/\D/g, '').slice(0, 2))}
+            onBlur={() => commitHoleField()}
+            onKeyDown={(event) => {
+              if (event.key === 'Enter') {
+                event.preventDefault()
+                commitHoleField()
+              }
+            }}
+            aria-label={t('scoring.stepper.currentHoleInputAria', { total: safeHoleCount })}
+          />
+        </label>
+        <button
+          type="button"
+          className="scoring-panel__hole-nav-arrow scoring-panel__hole-nav-arrow--next"
+          onClick={onNext}
+          disabled={disabled || currentHole >= safeHoleCount}
+          aria-label={t('scoring.stepper.nextHoleAria')}
+        >
+          <span aria-hidden="true">›</span>
+        </button>
       </div>
-      <div className="scoring-panel__hole-dots" role="tablist" aria-label={t('scoring.stepper.selectHoleAria')}>
-        {Array.from({ length: safeHoleCount }, (_, index) => {
-          const holeNumber = index + 1
-          const isActive = holeNumber === currentHole
-          return (
-            <button
-              key={holeNumber}
-              type="button"
-              role="tab"
-              aria-selected={isActive}
-              aria-label={t('scoring.stepper.goToHoleAria', { holeNumber })}
-              className={`scoring-panel__hole-dot${isActive ? ' scoring-panel__hole-dot--active' : ''}`}
-              onClick={() => onSelectHole(holeNumber)}
-              disabled={disabled}
-            >
-              {holeNumber}
-            </button>
-          )
-        })}
-      </div>
+      <p className="scoring-panel__hole-nav-meta">
+        {t('scoring.stepper.holeOfTotal', { current: currentHole, total: safeHoleCount })}
+      </p>
+      {honorHint ? <p className="scoring-panel__hole-honor">{honorHint}</p> : null}
     </div>
   )
 }
