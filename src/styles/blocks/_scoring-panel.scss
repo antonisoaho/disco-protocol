@@ -95,7 +95,8 @@
 .scoring-panel__button:focus-visible,
 .scoring-panel__tab:focus-visible,
 .scoring-panel__player-score-input:focus-visible,
-.scoring-panel__hole-dot:focus-visible {
+.scoring-panel__hole-nav-input:focus-visible,
+.scoring-panel__hole-nav-arrow:focus-visible {
   outline: 2px solid map.get($score-color, eagle);
   outline-offset: 2px;
   border-color: map.get($score-color, eagle);
@@ -396,73 +397,104 @@
   background: color-mix(in srgb, var(--surface-bg) 95%, var(--body-bg));
   display: flex;
   flex-direction: column;
-  gap: $space-3;
-}
-
-.scoring-panel__hole-stepper-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  gap: $space-3;
-  margin: 0;
-}
-
-.scoring-panel__hole-stepper-leader {
-  margin: 0 0 $space-1;
-  font-size: 0.8rem;
-  font-weight: 600;
-  color: var(--text-muted);
-}
-
-.scoring-panel__hole-stepper-title {
-  margin: 0;
-  font-weight: 700;
-}
-
-.scoring-panel__hole-stepper-meta {
-  margin: 0;
-  color: var(--text-muted);
-  font-size: 0.8rem;
-}
-
-.scoring-panel__hole-stepper-actions {
-  display: flex;
-  flex-wrap: wrap;
   gap: $space-2;
+}
+
+.scoring-panel__hole-nav {
+  display: flex;
+  flex-direction: row;
+  align-items: stretch;
+  justify-content: center;
+  gap: $space-2;
+}
+
+.scoring-panel__hole-nav-arrow {
+  flex: 0 0 auto;
+  min-width: $touch-target-min;
+  min-height: $touch-target-min;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: $radius-sm;
+  background: var(--body-bg);
+  color: var(--text);
+  font-size: 1.75rem;
+  font-weight: 700;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  &:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+  }
+
+  &:not(:disabled):hover {
+    border-color: color-mix(in srgb, map.get($score-color, birdie) 55%, var(--border));
+  }
+}
+
+.scoring-panel__hole-nav-input-label {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: $space-1;
+  min-width: 0;
+}
+
+.scoring-panel__hole-nav-input-caption {
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.scoring-panel__hole-nav-input {
+  width: 100%;
+  max-width: 5.5rem;
+  min-height: $touch-target-min;
+  margin: 0;
+  border: 1px solid var(--border);
+  border-radius: $radius-sm;
+  text-align: center;
+  font-size: 1.35rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  color: var(--text);
+  background: var(--surface-bg);
+
+  &:disabled {
+    opacity: 0.55;
+  }
+}
+
+.scoring-panel__hole-nav-meta {
+  margin: 0;
+  text-align: center;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+.scoring-panel__hole-honor {
+  margin: 0;
+  text-align: center;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.scoring-panel__complete-round-hint {
+  margin: 0 0 $space-2;
+  font-size: 0.85rem;
+  max-width: 36rem;
 }
 
 .scoring-panel__button--danger {
   border-color: color-mix(in srgb, map.get($score-color, double-bogey-plus) 55%, var(--border));
   color: map.get($score-color, double-bogey-plus);
   background: color-mix(in srgb, map.get($score-color, double-bogey-plus) 8%, var(--body-bg));
-}
-
-.scoring-panel__hole-dots {
-  display: flex;
-  flex-wrap: wrap;
-  gap: $space-2;
-  padding: $space-2 0;
-}
-
-.scoring-panel__hole-dot {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  border: 2px solid var(--border);
-  border-radius: $radius-sm;
-  background: var(--body-bg);
-  color: var(--text);
-  min-width: 2.5rem;
-  min-height: 2.5rem;
-  font-size: 0.95rem;
-  font-weight: 700;
-
-  &--active {
-    border-color: map.get($score-color, birdie);
-    background: map.get($score-color, birdie);
-    color: #fff;
-    box-shadow: 0 0.15rem 0.5rem color-mix(in srgb, map.get($score-color, birdie) 45%, transparent);
-  }
 }
 
 .scoring-panel__hole-form {
@@ -515,16 +547,38 @@
 
 .scoring-panel__player-score-control {
   flex: 0 0 auto;
-  width: min(11rem, 46vw);
+  width: min(12.75rem, 56vw);
 }
 
 .scoring-panel__player-score-input-shell {
   display: flex;
   align-items: stretch;
-  border: 1px solid var(--border);
+  border: 2px solid var(--border);
   border-radius: $radius-sm;
   overflow: hidden;
   background: var(--body-bg);
+}
+
+.scoring-panel__player-score-input-shell.scoring-panel__notation--albatross-plus,
+.scoring-panel__player-score-input-shell.scoring-panel__notation--eagle {
+  border-color: map.get($score-color, eagle);
+}
+
+.scoring-panel__player-score-input-shell.scoring-panel__notation--birdie {
+  border-color: map.get($score-color, birdie);
+}
+
+.scoring-panel__player-score-input-shell.scoring-panel__notation--par {
+  border-color: map.get($score-color, par);
+}
+
+.scoring-panel__player-score-input-shell.scoring-panel__notation--bogey {
+  border-color: map.get($score-color, bogey);
+}
+
+.scoring-panel__player-score-input-shell.scoring-panel__notation--double-bogey,
+.scoring-panel__player-score-input-shell.scoring-panel__notation--triple-bogey-plus {
+  border-color: map.get($score-color, double-bogey-plus);
 }
 
 .scoring-panel__player-score-input {
@@ -564,6 +618,12 @@
   border-left: 1px solid var(--border);
   color: var(--text-muted);
   background: color-mix(in srgb, var(--surface-bg) 40%, var(--body-bg));
+}
+
+.scoring-panel__player-score-chip-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
 }
 
 .scoring-panel__player-score-chip-placeholder {
@@ -965,8 +1025,9 @@
     border-color: #d1d5db;
   }
 
-  .scoring-panel__hole-dot {
-    background: #f4f6fa;
+  .scoring-panel__hole-nav-input,
+  .scoring-panel__hole-nav-arrow {
+    background: #ffffff;
     border-color: #d1d5db;
     color: #111827;
   }

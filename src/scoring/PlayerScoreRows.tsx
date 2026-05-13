@@ -1,6 +1,6 @@
 import { scoreTierToNotationClassName, strokesParDeltaToNotation } from '../lib/scoreSemantic'
 import { useTranslation } from 'react-i18next'
-import { scoreTierLabel } from './scoreTierI18n'
+import { scoreTierChipLabel, scoreTierLabel } from './scoreTierI18n'
 
 type Props = {
   participantIds: string[]
@@ -28,7 +28,10 @@ export function PlayerScoreRows({ participantIds, participantNames, scoreInputs,
           parsedScore !== null && typeof parValue === 'number'
             ? strokesParDeltaToNotation(parsedScore, parValue)
             : null
-        const notationLabel = notation ? scoreTierLabel(t, notation.tier) : null
+        const notationLabel = notation ? scoreTierChipLabel(t, notation.tier) : null
+        const notationTitleLabel = notation ? scoreTierLabel(t, notation.tier) : null
+        const shellTierClass =
+          notation && parsedScore !== null ? scoreTierToNotationClassName(notation.tier) : ''
         const chipClass = notation ? scoreTierToNotationClassName(notation.tier) : 'scoring-panel__player-score-chip--muted'
         const deltaText =
           notation && parsedScore !== null
@@ -41,7 +44,7 @@ export function PlayerScoreRows({ participantIds, participantNames, scoreInputs,
           <div key={participantUid} className="scoring-panel__player-row scoring-panel__player-row--compact" role="listitem">
             <span className="scoring-panel__player-row-name scoring-panel__player-row-name--compact">{displayName}</span>
             <div className="scoring-panel__player-score-control">
-              <div className="scoring-panel__player-score-input-shell">
+              <div className={`scoring-panel__player-score-input-shell ${shellTierClass}`.trim()}>
                 <input
                   className="scoring-panel__player-score-input"
                   type="text"
@@ -57,8 +60,8 @@ export function PlayerScoreRows({ participantIds, participantNames, scoreInputs,
                   className={`scoring-panel__player-score-chip ${chipClass}`}
                   aria-hidden={notation ? undefined : true}
                   title={
-                    notation && notationLabel && deltaText !== null
-                      ? `${notationLabel} (${deltaText})`
+                    notation && notationTitleLabel && deltaText !== null
+                      ? `${notationTitleLabel} (${deltaText})`
                       : typeof parValue !== 'number'
                         ? t('scoring.playerRows.needParForResult')
                         : undefined
