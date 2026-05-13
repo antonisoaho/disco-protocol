@@ -68,12 +68,44 @@
 .dashboard-home__actions {
   display: flex;
   flex-wrap: wrap;
-  align-items: center;
+  align-items: stretch;
   gap: $space-3;
 }
 
-.dashboard-home__secondary-link {
-  font-size: 0.9rem;
+// Secondary control next to primary CTA — reads as a button, not a default hyperlink.
+.dashboard-home__secondary-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: $touch-target-comfortable;
+  padding: $space-2 $space-4;
+  border-radius: $radius-md;
+  font-size: 0.875rem;
+  font-weight: 600;
+  text-decoration: none;
+  color: var(--color-text);
+  background: color-mix(in srgb, var(--color-surface) 70%, var(--color-bg));
+  border: 1px solid var(--color-border);
+  transition: border-color 0.15s ease, color 0.15s ease, background 0.15s ease;
+
+  &:hover {
+    border-color: color-mix(in srgb, map.get($score-color, birdie) 55%, var(--color-border));
+    color: map.get($score-color, birdie);
+    background: color-mix(in srgb, map.get($score-color, birdie) 10%, var(--color-surface));
+  }
+
+  &:focus-visible {
+    outline: 2px solid map.get($score-color, eagle);
+    outline-offset: 2px;
+  }
+
+  &:visited {
+    color: var(--color-text);
+  }
+
+  &:hover:visited {
+    color: map.get($score-color, birdie);
+  }
 }
 
 .dashboard-home__cta {
@@ -93,14 +125,50 @@
 .dashboard-home__rounds-head {
   display: flex;
   flex-wrap: wrap;
-  align-items: baseline;
+  align-items: center;
   justify-content: space-between;
-  gap: $space-3;
+  gap: $space-2 $space-3;
 }
 
 .dashboard-home__subheading {
   margin: 0;
   font-size: 0.95rem;
+}
+
+// Section “see all” — compact control aligned with heading row (no browser default link color).
+.dashboard-home__rounds-all-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: $touch-target-min;
+  padding: $space-1 $space-3;
+  border-radius: $radius-sm;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  text-decoration: none;
+  color: var(--color-text-muted);
+  background: transparent;
+  border: 1px solid var(--color-border);
+  transition: border-color 0.15s ease, color 0.15s ease, background 0.15s ease;
+
+  &:hover {
+    color: map.get($score-color, birdie);
+    border-color: color-mix(in srgb, map.get($score-color, birdie) 45%, var(--color-border));
+    background: color-mix(in srgb, map.get($score-color, birdie) 8%, transparent);
+  }
+
+  &:focus-visible {
+    outline: 2px solid map.get($score-color, eagle);
+    outline-offset: 2px;
+  }
+
+  &:visited {
+    color: var(--color-text-muted);
+  }
+
+  &:hover:visited {
+    color: map.get($score-color, birdie);
+  }
 }
 
 .dashboard-home__round-list {
