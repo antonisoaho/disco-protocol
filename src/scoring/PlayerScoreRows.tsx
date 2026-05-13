@@ -45,17 +45,6 @@ export function PlayerScoreRows({ participantIds, participantNames, scoreInputs,
             <span className="scoring-panel__player-row-name scoring-panel__player-row-name--compact">{displayName}</span>
             <div className="scoring-panel__player-score-control">
               <div className={`scoring-panel__player-score-input-shell ${shellTierClass}`.trim()}>
-                <input
-                  className="scoring-panel__player-score-input"
-                  type="text"
-                  inputMode="numeric"
-                  pattern="[0-9]*"
-                  maxLength={2}
-                  autoComplete="off"
-                  value={inputValue}
-                  onChange={(event) => onScoreChange(participantUid, event.target.value.replace(/\D/g, '').slice(0, 2))}
-                  aria-label={t('scoring.playerRows.strokesForPlayerAria', { displayName })}
-                />
                 <span
                   className={`scoring-panel__player-score-chip ${chipClass}`}
                   aria-hidden={notation ? undefined : true}
@@ -80,6 +69,17 @@ export function PlayerScoreRows({ participantIds, participantNames, scoreInputs,
                     <span className="scoring-panel__player-score-chip-placeholder">…</span>
                   )}
                 </span>
+                <input
+                  className="scoring-panel__player-score-input"
+                  type="text"
+                  inputMode="numeric"
+                  pattern="[0-9]*"
+                  maxLength={2}
+                  autoComplete="off"
+                  value={inputValue}
+                  onChange={(event) => onScoreChange(participantUid, event.target.value.replace(/\D/g, '').slice(0, 2))}
+                  aria-label={t('scoring.playerRows.strokesForPlayerAria', { displayName })}
+                />
               </div>
             </div>
           </div>

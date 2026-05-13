@@ -525,11 +525,10 @@
 }
 
 .scoring-panel__player-row--compact {
-  display: flex;
-  flex-direction: row;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(7.25rem, 10rem);
   align-items: center;
-  justify-content: space-between;
-  gap: $space-3;
+  column-gap: $space-3;
   padding: $space-2 $space-3;
   border: 1px solid var(--border);
   border-radius: $radius-sm;
@@ -539,15 +538,15 @@
 .scoring-panel__player-row-name--compact {
   font-weight: 600;
   min-width: 0;
-  flex: 1 1 auto;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
 .scoring-panel__player-score-control {
-  flex: 0 0 auto;
-  width: min(12.75rem, 56vw);
+  width: 100%;
+  max-width: 10rem;
+  justify-self: end;
 }
 
 .scoring-panel__player-score-input-shell {
@@ -582,8 +581,8 @@
 }
 
 .scoring-panel__player-score-input {
-  width: 3.25rem;
-  flex: 0 0 auto;
+  width: 3rem;
+  flex: 0 0 3rem;
   min-height: $touch-target-min;
   margin: 0;
   border: none;
@@ -606,6 +605,7 @@
 
 .scoring-panel__player-score-chip {
   flex: 1 1 auto;
+  min-width: 0;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -615,7 +615,7 @@
   font-weight: 700;
   line-height: 1.2;
   white-space: nowrap;
-  border-left: 1px solid var(--border);
+  border-right: 1px solid var(--border);
   color: var(--text-muted);
   background: color-mix(in srgb, var(--surface-bg) 40%, var(--body-bg));
 }
@@ -1048,7 +1048,7 @@
   }
 
   .scoring-panel__player-score-chip {
-    border-left-color: #d1d5db;
+    border-right-color: #d1d5db;
     background: color-mix(in srgb, #ffffff 35%, #f4f6fa);
   }
 

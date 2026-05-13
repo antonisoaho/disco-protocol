@@ -47,6 +47,7 @@ import { ScorecardSummaryGrid } from './ScorecardSummaryGrid'
 import { aggregateScoreProtocol, normalizeScoreProtocol } from './protocol'
 import { inferRoundHoleCount } from './inferRoundHoleCount'
 import { computeGrandTotals, computeParticipantTotals } from './scorecardTable'
+import { resolveHonorThrowerUid } from './resolveHonorThrowerUid'
 
 type Props = {
   user: User
@@ -110,17 +111,8 @@ function readParticipantHoleScores(data: RoundDoc, fallbackUid: string) {
   return next
 }
 
-function joinHonorNames(names: string[], lang: string): string {
-  if (names.length === 0) return ''
-  if (names.length === 1) return names[0]!
-  const lower = lang.toLowerCase()
-  const conj = lower.startsWith('sv') ? ' och ' : ' and '
-  if (names.length === 2) return `${names[0]}${conj}${names[1]}`
-  return `${names.slice(0, -1).join(', ')}${conj}${names[names.length - 1]!}`
-}
-
 export function ScoringPanel({ user, roundId, onAfterRoundDeleted }: Props) {
-  const { t, i18n } = useTranslation('common')
+  const { t } = useTranslation('common')
   const { isAdmin } = useAuth()
   const uid = user.uid
   const [activeTab, setActiveTab] = useState<AppTabId>('scorecard')
@@ -446,33 +438,15 @@ export function ScoringPanel({ user, roundId, onAfterRoundDeleted }: Props) {
 
   const honorHint = useMemo(() => {
     if (!selected || !selectedParticipantScores) return null
-    if (activeHoleNumber <= 1) return null
-    const prev = activeHoleNumber - 1
-    const key = String(prev)
-    let best = Infinity
-    for (const participantId of selected.data.participantIds) {
-      const s = selectedParticipantScores[participantId]?.[key]
-      if (s && typeof s.strokes === 'number') {
-        best = Math.min(best, s.strokes)
-      }
-    }
-    if (!Number.isFinite(best)) return null
-    const winnerIds = selected.data.participantIds.filter((participantId) => {
-      const s = selectedParticipantScores[participantId]?.[key]
-      return s && typeof s.strokes === 'number' && s.strokes === best
-    })
-    const names = winnerIds.map((id) => selectedParticipantNames[id] ?? id)
-    const joined = joinHonorNames(names, i18n.resolvedLanguage ?? i18n.language)
-    return t('scoring.stepper.honorThrowFirst', { names: joined })
-  }, [
-    activeHoleNumber,
-    i18n.language,
-    i18n.resolvedLanguage,
-    selected,
-    selectedParticipantNames,
-    selectedParticipantScores,
-    t,
-  ])
+    const honorUid = resolveHonorThrowerUid(
+      selected.data.participantIds,
+      selectedParticipantScores,
+      activeHoleNumber,
+    )
+    if (!honorUid) return null
+    const name = selectedParticipantNames[honorUid] ?? honorUid
+    return t('scoring.stepper.honorThrowFirst', { names: name })
+  }, [activeHoleNumber, selected, selectedParticipantNames, selectedParticipantScores, t])
 
   const selectedGrandTotals = useMemo(
     () => computeGrandTotals(selectedParticipantTotals),
