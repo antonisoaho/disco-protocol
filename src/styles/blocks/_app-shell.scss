@@ -211,6 +211,13 @@
   background: var(--surface-bg);
 }
 
+.app-shell__profile--unboxed {
+  padding: 0;
+  border: none;
+  border-radius: 0;
+  background: transparent;
+}
+
 .app-shell__profile-actions button {
   background: transparent;
   color: var(--text-muted);

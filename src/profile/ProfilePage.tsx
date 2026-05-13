@@ -91,7 +91,7 @@ export function ProfilePage() {
 
   return (
     <div className="app-shell__flow">
-      <section className="app-shell__profile">
+      <section className="app-shell__profile app-shell__profile--unboxed">
         <h2 className="app-shell__section-title">{t('profile.title')}</h2>
         <p className="app-shell__placeholder">
           {t('profile.currentDisplayName', { displayName: currentDisplayName })}

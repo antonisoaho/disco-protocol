@@ -1,7 +1,7 @@
 @use '../variables' as *;
 
 .players-page__intro {
-  margin: 0 0 $space-4;
+  margin: 0;
   font-size: 0.9rem;
   color: var(--text-muted);
 }
