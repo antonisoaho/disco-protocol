@@ -156,7 +156,7 @@ export function DashboardHome({ viewer, profileUid, readOnly }: Props) {
           <Link to="/rounds/new" className="dashboard-home__cta">
             {t('dashboard.startNewRound')}
           </Link>
-          <Link to="/courses" className="app-shell__link dashboard-home__secondary-link">
+          <Link to="/courses" className="dashboard-home__secondary-action">
             {t('dashboard.browseCourses')}
           </Link>
         </div>
@@ -164,7 +164,7 @@ export function DashboardHome({ viewer, profileUid, readOnly }: Props) {
 
       <div className="dashboard-home__rounds-head">
         <h3 className="dashboard-home__subheading">{t('dashboard.recentRounds')}</h3>
-        <Link to="/rounds" className="app-shell__link">
+        <Link to="/rounds" className="dashboard-home__rounds-all-link">
           {t('dashboard.viewAllRounds')}
         </Link>
       </div>
