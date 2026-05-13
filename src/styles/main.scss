@@ -34,6 +34,13 @@
   --color-text: #{$color-text};
   --color-text-muted: #{$color-text-muted};
   --color-border: #{$color-border};
+
+  // Spacer for fixed bottom nav (must match `.bottom-nav` vertical rhythm).
+  --app-bottom-nav-link-min-height: #{$touch-target-comfortable};
+  --app-bottom-nav-padding-y: #{$space-2};
+  --app-bottom-nav-height: calc(
+    var(--app-bottom-nav-padding-y) * 2 + var(--app-bottom-nav-link-min-height) + 1px
+  );
 }
 
 [data-theme='light'] {
