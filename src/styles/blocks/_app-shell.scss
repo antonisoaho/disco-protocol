@@ -42,6 +42,14 @@
   gap: $layout-stack-gap;
 }
 
+// Single top row: brand left, actions top-right (no wrapping on narrow phones).
+.app-shell__header--toolbar {
+  flex-wrap: nowrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  column-gap: $space-3;
+}
+
 .app-shell__title {
   margin: 0;
   font-size: 1rem;
@@ -116,9 +124,9 @@
   padding-block: $layout-section-gap;
 
   &--with-bottom-nav {
-    // Fixed `.bottom-nav` sits outside document flow; keep scrollable tail clear of bar + home indicator.
+    // Fixed `.bottom-nav` is out of flow; pad by measured bar height + safe area + buffer for wrapped tab labels.
     padding-bottom: calc(
-      #{$layout-section-gap} + var(--app-bottom-nav-height) + #{$space-3} + env(safe-area-inset-bottom, 0)
+      #{$layout-section-gap} + var(--app-bottom-nav-block-height) + #{$space-6} + env(safe-area-inset-bottom, 0)
     );
   }
 
@@ -162,6 +170,7 @@
   align-self: center;
   min-height: $touch-target-comfortable;
   padding-inline: $space-3;
+  white-space: nowrap;
   background: transparent;
   color: var(--color-text-muted);
   border-color: transparent;
@@ -293,7 +302,7 @@
 
 @media (min-width: $breakpoint-md) {
   .app-shell__container {
-    padding-inline: $space-6;
+    padding-inline: $space-8;
   }
 
   .app-shell__main {
@@ -303,7 +312,7 @@
 
   .app-shell__main--with-bottom-nav {
     padding-bottom: calc(
-      #{$layout-section-gap-lg} + var(--app-bottom-nav-height) + #{$space-3} +
+      #{$layout-section-gap-lg} + var(--app-bottom-nav-block-height) + #{$space-6} +
         env(safe-area-inset-bottom, 0)
     );
   }
@@ -315,10 +324,22 @@
 
 .app-shell__header-actions {
   display: inline-flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   align-items: center;
   gap: $space-2;
   flex-shrink: 0;
+  align-self: flex-start;
+}
+
+.app-shell__header--toolbar .app-shell__header-main {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.app-shell__header--toolbar > .app-shell__title {
+  flex: 0 1 auto;
+  min-width: 0;
+  margin: 0;
 }
 
 .app-shell__theme-toggle {

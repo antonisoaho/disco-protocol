@@ -11,8 +11,9 @@
   justify-content: space-around;
   align-items: stretch;
   gap: $space-1;
-  padding: var(--app-bottom-nav-padding-y, #{$space-2})
-    calc(#{$app-shell-inline-padding} + env(safe-area-inset-right, 0))
+  box-sizing: border-box;
+  min-height: var(--app-bottom-nav-block-height);
+  padding: $space-2 calc(#{$app-shell-inline-padding} + env(safe-area-inset-right, 0))
     calc(#{$space-3} + env(safe-area-inset-bottom, 0))
     calc(#{$app-shell-inline-padding} + env(safe-area-inset-left, 0));
   border-top: 1px solid var(--color-border);
@@ -25,7 +26,7 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-height: var(--app-bottom-nav-link-min-height, #{$touch-target-comfortable});
+  min-height: $touch-target-comfortable;
   padding: $space-2 $space-1;
   border-radius: $radius-sm;
   text-decoration: none;

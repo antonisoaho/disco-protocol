@@ -7,11 +7,7 @@ import { DashboardHome } from '../dashboard/DashboardHome'
 import { PublicPlayerDashboard } from '../dashboard/PublicPlayerDashboard'
 import { AuthPanel } from './AuthPanel'
 import { useAuth } from './useAuth'
-import {
-  normalizeDisplayName,
-  setCourseFavorite,
-  subscribeFavoriteCourseIds,
-} from '../firebase/userProfile'
+import { setCourseFavorite, subscribeFavoriteCourseIds } from '../firebase/userProfile'
 import { ProfilePage } from '../profile/ProfilePage'
 import { PlayersPage } from '../players/PlayersPage'
 import { NewRoundPage } from '../rounds/NewRoundPage'
@@ -77,8 +73,7 @@ export function ProtectedApp() {
   const { t } = useTranslation('common')
   const online = useNavigatorOnline()
   const { theme, toggleTheme } = useTheme()
-  const { user, loading, signOut, profileDisplayName, userProfileProvisionError, retryUserProfileProvision } =
-    useAuth()
+  const { user, loading, signOut, userProfileProvisionError, retryUserProfileProvision } = useAuth()
   const [signOutError, setSignOutError] = useState<string | null>(null)
   const [selectedCourseTemplate, setSelectedCourseTemplate] = useState<CourseRoundSelection | null>(null)
   const [favoriteState, dispatchFavorite] = useReducer(favoriteReducer, initialFavoriteState)
@@ -138,7 +133,7 @@ export function ProtectedApp() {
     return (
       <div className="app-shell">
         <header className="app-shell__header">
-          <div className="app-shell__container app-shell__header-inner app-shell__header--row">
+          <div className="app-shell__container app-shell__header-inner app-shell__header--row app-shell__header--toolbar">
             <div className="app-shell__header-main">
               <h1 className="app-shell__title app-shell__title--brand">
                 <img
@@ -152,7 +147,9 @@ export function ProtectedApp() {
               </h1>
               <p className="app-shell__tagline">{t('shell.signInPrompt')}</p>
             </div>
-            <ThemeToggleButton theme={theme} onToggle={toggleTheme} />
+            <div className="app-shell__header-actions">
+              <ThemeToggleButton theme={theme} onToggle={toggleTheme} />
+            </div>
           </div>
         </header>
         <main className="app-shell__main">
@@ -164,31 +161,20 @@ export function ProtectedApp() {
     )
   }
 
-  const currentDisplayName =
-    profileDisplayName ||
-    normalizeDisplayName(user.displayName ?? '') ||
-    user.email?.split('@')[0] ||
-    user.uid
-
   return (
     <div className="app-shell">
       <header className="app-shell__header">
-        <div className="app-shell__container app-shell__header-inner app-shell__header--row">
-          <div className="app-shell__header-main">
-            <h1 className="app-shell__title app-shell__title--brand">
-              <img
-                className="app-shell__brand-logo"
-                src="/logo.svg"
-                alt={t('shell.logoAlt')}
-                width={176}
-                height={50}
-                decoding="async"
-              />
-            </h1>
-            <p className="app-shell__tagline app-shell__tagline--compact">
-              {currentDisplayName || user.email}
-            </p>
-          </div>
+        <div className="app-shell__container app-shell__header-inner app-shell__header--row app-shell__header--toolbar">
+          <h1 className="app-shell__title app-shell__title--brand">
+            <img
+              className="app-shell__brand-logo"
+              src="/logo.svg"
+              alt={t('shell.logoAlt')}
+              width={176}
+              height={50}
+              decoding="async"
+            />
+          </h1>
           <div className="app-shell__header-actions">
             <ThemeToggleButton theme={theme} onToggle={toggleTheme} />
             <button
