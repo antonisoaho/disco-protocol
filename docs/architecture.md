@@ -28,7 +28,7 @@ A **mobile-first** social web application for disc golf: users log **hole-by-hol
 
 - A **round** belongs to one **course template** snapshot (see courses) and one **layout** instance (hole count, order, tees if modeled).
 - **Hole-by-hole** data: per hole store strokes, par at time of play (denormalized from template), optional lie/notes; **timestamps** per hole update or round-level `startedAt` / `completedAt`.
-- **Visibility**: public to followers, private, or unlisted (exact enum is a Worker deliverable; must support timeline queries).
+- **Visibility (v1 product)**: completed rounds (and round history used for stats) are **listed on the player’s dashboard** for anyone who can view that profile; richer private/unlisted modes stay a later deliverable unless security review requires a minimum gate sooner.
 
 ### 3.3 Shared rounds
 
@@ -39,6 +39,7 @@ A **mobile-first** social web application for disc golf: users log **hole-by-hol
 ### 3.4 Courses and templates
 
 - **Course** is a logical entity (name, location, organization). **Template** holds normalized holes: number, par, length (optional), notes.
+- **v1 product constraint — one layout per course**: each course has a **single** canonical template (fixed `holeCount` and hole sequence). There is no separate 9- vs 18-hole template pair for the same course id; if a real venue needs both lengths later, model them as **two courses** or bump schema in a later version. *Rationale*: simpler round setup (“existing course” never re-asks hole count) and simpler queries; trade-off is less fidelity to multi-layout venues until explicitly extended.
 - If official data is missing, users may enter **par/length** during play; on **completion**, the system proposes or saves a **normalized template** (Planner-approved rules for deduplication and moderation).
 - **Admin-only**: delete course, rename canonical course fields, or merge duplicates. Enforce via **Custom Claims** + Security Rules.
 
@@ -64,7 +65,7 @@ Names are indicative; Workers normalize to consistent `camelCase` and collection
 
 **`follows/{followerId_followeeId}`** or subcollection — `followerId`, `followeeId`, `createdAt`.
 
-**`courses/{courseId}`** — canonical name, slug, geo, `createdBy`, `adminMetadata`. Subcollection **`templates/{templateId}`** — holes array or `holes/{holeNumber}` docs.
+**`courses/{courseId}`** — canonical name, slug, geo, `createdBy`, `adminMetadata`, and **one** normalized layout (holes array or subcollection `holes/{holeNumber}`). Workers may keep a lone `templates/default` doc or embed holes on the course doc—planner constraint is **one active template per course** for v1.
 
 **`rounds/{roundId}`** — `ownerId`, `courseId`, `templateId`, `participantIds[]` (registered UIDs + stable `anon:*` ids), optional `anonymousParticipants[]` (`id`, `displayName`), `visibility`, `startedAt`, `completedAt`, `holeScores` map or subcollection `holes/{n}`.
 
