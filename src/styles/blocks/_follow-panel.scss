@@ -3,9 +3,9 @@
 
 .follow-panel {
   padding: $layout-section-gap;
-  border: 1px solid $color-border;
+  border: 1px solid var(--border);
   border-radius: $radius-md;
-  background: $color-surface;
+  background: var(--surface-bg);
 }
 
 .follow-panel__title {
@@ -16,7 +16,7 @@
 .follow-panel__meta {
   margin: 0 0 calc(#{$space-unit} * 2);
   font-size: 0.875rem;
-  color: $color-text-muted;
+  color: var(--text-muted);
 }
 
 .follow-panel__error {
@@ -29,7 +29,7 @@
   margin-bottom: calc(#{$space-unit} * 1.5);
   font-size: 0.8125rem;
   font-weight: 600;
-  color: $color-text-muted;
+  color: var(--text-muted);
 }
 
 .follow-panel__search {
@@ -52,9 +52,9 @@
   justify-content: space-between;
   gap: calc(#{$space-unit} * 2);
   padding: calc(#{$space-unit} * 2.5) calc(#{$space-unit} * 3);
-  border: 1px solid $color-border;
+  border: 1px solid var(--border);
   border-radius: $radius-sm;
-  background: $color-bg;
+  background: var(--body-bg);
 }
 
 .follow-panel__profile-link {
@@ -72,8 +72,8 @@
 
   &--following {
     background: transparent;
-    color: $color-text-muted;
-    border-color: $color-border;
+    color: var(--text-muted);
+    border-color: var(--border);
 
     &:hover:not(:disabled) {
       color: map.get($score-color, double-bogey-plus);

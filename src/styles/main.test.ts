@@ -8,4 +8,12 @@ describe('global style entrypoint', () => {
   it('loads the app shell layout styles used by header, main, and bottom navigation', () => {
     expect(mainStyles).toMatch(/@use ['"]blocks\/app-shell['"];/)
   })
+
+  it('defines semantic theme tokens as CSS custom properties on :root', () => {
+    expect(mainStyles).toMatch(/--body-bg:/)
+    expect(mainStyles).toMatch(/--surface-bg:/)
+    expect(mainStyles).toMatch(/--text:/)
+    expect(mainStyles).toMatch(/--text-muted:/)
+    expect(mainStyles).toMatch(/--border:/)
+  })
 })

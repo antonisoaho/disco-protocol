@@ -11,6 +11,7 @@
 .dashboard-home__title {
   margin: 0;
   font-size: 1.1rem;
+  color: var(--text);
 }
 
 .dashboard-home__error {
@@ -27,9 +28,9 @@
 
 .dashboard-home__stat {
   padding: $space-3;
-  border: 1px solid $color-border;
+  border: 1px solid var(--border);
   border-radius: $radius-md;
-  background: $color-surface;
+  background: var(--surface-bg);
   display: flex;
   flex-direction: column;
   gap: $space-1;
@@ -37,32 +38,33 @@
 
 .dashboard-home__stat-label {
   font-size: 0.75rem;
-  color: $color-text-muted;
+  color: var(--text-muted);
 }
 
 .dashboard-home__stat-value {
   font-size: 1.25rem;
   font-weight: 700;
+  color: var(--text);
 }
 
 .dashboard-home__chart-wrap {
-  border: 1px solid $color-border;
+  border: 1px solid var(--border);
   border-radius: $radius-md;
   padding: $space-3;
-  background: $color-surface;
+  background: var(--surface-bg);
   color: map.get($score-color, eagle);
 }
 
 .dashboard-home__chart-caption {
   margin: 0 0 $space-2;
   font-size: 0.8rem;
-  color: $color-text-muted;
+  color: var(--text-muted);
 }
 
 .dashboard-home__muted {
   margin: 0;
   font-size: 0.875rem;
-  color: $color-text-muted;
+  color: var(--text-muted);
 }
 
 .dashboard-home__actions {
@@ -83,15 +85,15 @@
   font-size: 0.875rem;
   font-weight: 600;
   text-decoration: none;
-  color: var(--color-text);
-  background: color-mix(in srgb, var(--color-surface) 70%, var(--color-bg));
-  border: 1px solid var(--color-border);
+  color: var(--text);
+  background: color-mix(in srgb, var(--surface-bg) 70%, var(--body-bg));
+  border: 1px solid var(--border);
   transition: border-color 0.15s ease, color 0.15s ease, background 0.15s ease;
 
   &:hover {
-    border-color: color-mix(in srgb, map.get($score-color, birdie) 55%, var(--color-border));
+    border-color: color-mix(in srgb, map.get($score-color, birdie) 55%, var(--border));
     color: map.get($score-color, birdie);
-    background: color-mix(in srgb, map.get($score-color, birdie) 10%, var(--color-surface));
+    background: color-mix(in srgb, map.get($score-color, birdie) 10%, var(--surface-bg));
   }
 
   &:focus-visible {
@@ -100,7 +102,7 @@
   }
 
   &:visited {
-    color: var(--color-text);
+    color: var(--text);
   }
 
   &:hover:visited {
@@ -133,6 +135,7 @@
 .dashboard-home__subheading {
   margin: 0;
   font-size: 0.95rem;
+  color: var(--text);
 }
 
 // Section “see all” — compact control aligned with heading row (no browser default link color).
@@ -146,14 +149,14 @@
   font-size: 0.8125rem;
   font-weight: 600;
   text-decoration: none;
-  color: var(--color-text-muted);
+  color: var(--text-muted);
   background: transparent;
-  border: 1px solid var(--color-border);
+  border: 1px solid var(--border);
   transition: border-color 0.15s ease, color 0.15s ease, background 0.15s ease;
 
   &:hover {
     color: map.get($score-color, birdie);
-    border-color: color-mix(in srgb, map.get($score-color, birdie) 45%, var(--color-border));
+    border-color: color-mix(in srgb, map.get($score-color, birdie) 45%, var(--border));
     background: color-mix(in srgb, map.get($score-color, birdie) 8%, transparent);
   }
 
@@ -163,7 +166,7 @@
   }
 
   &:visited {
-    color: var(--color-text-muted);
+    color: var(--text-muted);
   }
 
   &:hover:visited {
@@ -181,9 +184,9 @@
 }
 
 .dashboard-home__round-row {
-  border: 1px solid $color-border;
+  border: 1px solid var(--border);
   border-radius: $radius-sm;
-  background: $color-surface;
+  background: var(--surface-bg);
 }
 
 .dashboard-home__round-link {
@@ -197,11 +200,12 @@
 
 .dashboard-home__round-name {
   font-weight: 600;
+  color: var(--text);
 }
 
 .dashboard-home__round-meta {
   font-size: 0.8rem;
-  color: $color-text-muted;
+  color: var(--text-muted);
 }
 
 .dashboard-home__back {

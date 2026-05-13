@@ -4,10 +4,10 @@
 .scoring-panel {
   margin-top: 0;
   padding: $layout-stack-gap;
-  border: 1px solid $color-border;
+  border: 1px solid var(--border);
   border-radius: $radius-md;
-  background: $color-surface;
-  box-shadow: 0 0.5rem 1.25rem color-mix(in srgb, $color-text 6%, transparent);
+  background: var(--surface-bg);
+  box-shadow: 0 0.5rem 1.25rem color-mix(in srgb, var(--text) 6%, transparent);
   display: flex;
   flex-direction: column;
   gap: $layout-section-gap;
@@ -29,7 +29,7 @@
   display: block;
   margin-bottom: calc(#{$space-unit} * 1.5);
   font-size: 0.85rem;
-  color: $color-text-muted;
+  color: var(--text-muted);
 }
 
 .scoring-panel__tabs {
@@ -43,17 +43,17 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  border: 1px solid $color-border;
+  border: 1px solid var(--border);
   border-radius: $radius-sm;
-  background: $color-bg;
-  color: $color-text;
+  background: var(--body-bg);
+  color: var(--text);
   min-height: $touch-target-comfortable;
   padding: $space-2 $space-3;
   font-weight: 600;
 
   &--active {
     border-color: map.get($score-color, eagle);
-    background: color-mix(in srgb, map.get($score-color, eagle) 9%, $color-surface);
+    background: color-mix(in srgb, map.get($score-color, eagle) 9%, var(--surface-bg));
   }
 }
 
@@ -158,23 +158,23 @@
 .scoring-panel__selection {
   margin: 0;
   padding: $space-3 $layout-stack-gap;
-  border: 1px solid $color-border;
+  border: 1px solid var(--border);
   border-radius: $radius-sm;
-  background: $color-bg;
-  color: $color-text-muted;
+  background: var(--body-bg);
+  color: var(--text-muted);
   font-size: 0.875rem;
 }
 
 .scoring-panel__selection strong {
-  color: $color-text;
+  color: var(--text);
 }
 
 .scoring-panel__participant-list {
   max-height: 12rem;
   overflow-y: auto;
-  border: 1px solid $color-border;
+  border: 1px solid var(--border);
   border-radius: $radius-sm;
-  background: $color-bg;
+  background: var(--body-bg);
 }
 
 .scoring-panel__participant-option {
@@ -183,7 +183,7 @@
   align-items: flex-start;
   padding: calc(#{$space-unit} * 2) calc(#{$space-unit} * 3);
   font-size: 0.875rem;
-  color: $color-text;
+  color: var(--text);
 
   input {
     margin-top: calc(#{$space-unit} * 0.5);
@@ -195,10 +195,10 @@
   align-items: center;
   gap: 0;
   padding: $space-2 $space-4;
-  border: 1px solid $color-border;
+  border: 1px solid var(--border);
   border-radius: $radius-sm;
-  background: $color-bg;
-  color: $color-text-muted;
+  background: var(--body-bg);
+  color: var(--text-muted);
   cursor: pointer;
   user-select: none;
   transition: border-color 0.15s ease, background 0.15s ease, color 0.15s ease;
@@ -214,14 +214,14 @@
   }
 
   &:hover {
-    border-color: $color-text-muted;
-    color: $color-text;
+    border-color: var(--text-muted);
+    color: var(--text);
   }
 
   &:has(input:checked) {
     border-color: map.get($score-color, eagle);
-    color: $color-text;
-    background: color-mix(in srgb, map.get($score-color, eagle) 10%, $color-bg);
+    color: var(--text);
+    background: color-mix(in srgb, map.get($score-color, eagle) 10%, var(--body-bg));
   }
 
   &:has(input:disabled) {
@@ -245,9 +245,9 @@
   align-items: stretch;
   gap: 0;
   padding: calc(#{$space-unit} * 3);
-  border: 1px solid $color-border;
+  border: 1px solid var(--border);
   border-radius: $radius-sm;
-  background: $color-bg;
+  background: var(--body-bg);
 }
 
 .scoring-panel__list-item--stacked {
@@ -285,9 +285,9 @@
 
 .scoring-panel__disclosure {
   margin: 0;
-  border: 1px solid var(--color-border);
+  border: 1px solid var(--border);
   border-radius: $radius-sm;
-  background: var(--color-surface);
+  background: var(--surface-bg);
   padding: 0;
 }
 
@@ -297,7 +297,7 @@
   padding: calc(#{$space-unit} * 2.5) calc(#{$space-unit} * 3);
   font-size: 0.85rem;
   font-weight: 600;
-  color: var(--color-text-muted);
+  color: var(--text-muted);
   cursor: pointer;
   user-select: none;
   transition: background 0.15s ease, color 0.15s ease;
@@ -312,16 +312,16 @@
     width: 0.45em;
     height: 0.45em;
     margin-right: $space-2;
-    border-right: 2px solid var(--color-text-muted);
-    border-bottom: 2px solid var(--color-text-muted);
+    border-right: 2px solid var(--text-muted);
+    border-bottom: 2px solid var(--text-muted);
     transform: rotate(-45deg);
     vertical-align: 0.15em;
     transition: transform 0.15s ease;
   }
 
   &:hover {
-    background: color-mix(in srgb, var(--color-surface) 82%, var(--color-bg));
-    color: var(--color-text);
+    background: color-mix(in srgb, var(--surface-bg) 82%, var(--body-bg));
+    color: var(--text);
   }
 }
 
@@ -343,15 +343,15 @@
 
 .scoring-panel__list-item--round-compact {
   padding: $space-2 $space-3;
-  border-color: var(--color-border);
-  background: var(--color-bg);
+  border-color: var(--border);
+  background: var(--body-bg);
 }
 
 .scoring-panel__list-item-meta--compact {
   margin-top: $space-1;
   margin-bottom: 0;
   line-height: 1.35;
-  color: var(--color-text-muted);
+  color: var(--text-muted);
 }
 
 .scoring-panel__your-rounds-toggle {
@@ -371,7 +371,7 @@
   text-underline-offset: 3px;
 
   &:hover:not(:disabled) {
-    color: var(--color-text);
+    color: var(--text);
   }
 
   &:disabled {
@@ -382,7 +382,7 @@
 .scoring-panel__list-item-replace {
   width: 100%;
   padding-top: $space-3;
-  border-top: 1px solid $color-border;
+  border-top: 1px solid var(--border);
 }
 
 .scoring-panel__hole-stepper {
@@ -391,9 +391,9 @@
   z-index: 5;
   margin: 0;
   padding: $space-3;
-  border: 1px solid $color-border;
+  border: 1px solid var(--border);
   border-radius: $radius-sm;
-  background: color-mix(in srgb, $color-surface 95%, $color-bg);
+  background: color-mix(in srgb, var(--surface-bg) 95%, var(--body-bg));
   display: flex;
   flex-direction: column;
   gap: $space-3;
@@ -411,7 +411,7 @@
   margin: 0 0 $space-1;
   font-size: 0.8rem;
   font-weight: 600;
-  color: $color-text-muted;
+  color: var(--text-muted);
 }
 
 .scoring-panel__hole-stepper-title {
@@ -421,7 +421,7 @@
 
 .scoring-panel__hole-stepper-meta {
   margin: 0;
-  color: $color-text-muted;
+  color: var(--text-muted);
   font-size: 0.8rem;
 }
 
@@ -432,9 +432,9 @@
 }
 
 .scoring-panel__button--danger {
-  border-color: color-mix(in srgb, map.get($score-color, double-bogey-plus) 55%, $color-border);
+  border-color: color-mix(in srgb, map.get($score-color, double-bogey-plus) 55%, var(--border));
   color: map.get($score-color, double-bogey-plus);
-  background: color-mix(in srgb, map.get($score-color, double-bogey-plus) 8%, $color-bg);
+  background: color-mix(in srgb, map.get($score-color, double-bogey-plus) 8%, var(--body-bg));
 }
 
 .scoring-panel__hole-dots {
@@ -448,10 +448,10 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  border: 2px solid $color-border;
+  border: 2px solid var(--border);
   border-radius: $radius-sm;
-  background: $color-bg;
-  color: $color-text;
+  background: var(--body-bg);
+  color: var(--text);
   min-width: 2.5rem;
   min-height: 2.5rem;
   font-size: 0.95rem;
@@ -466,9 +466,9 @@
 }
 
 .scoring-panel__hole-form {
-  border: 1px solid $color-border;
+  border: 1px solid var(--border);
   border-radius: $radius-sm;
-  background: $color-bg;
+  background: var(--body-bg);
   padding: $layout-stack-gap;
   display: flex;
   flex-direction: column;
@@ -489,17 +489,17 @@
 }
 
 .scoring-panel__player-row {
-  border: 1px solid $color-border;
+  border: 1px solid var(--border);
   border-radius: $radius-sm;
   overflow: hidden;
-  background: $color-surface;
+  background: var(--surface-bg);
 }
 
 .scoring-panel__player-row-toggle {
   width: 100%;
   border: 0;
-  background: color-mix(in srgb, $color-bg 85%, $color-surface);
-  color: $color-text;
+  background: color-mix(in srgb, var(--body-bg) 85%, var(--surface-bg));
+  color: var(--text);
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -514,13 +514,13 @@
 }
 
 .scoring-panel__player-row-summary {
-  color: $color-text-muted;
+  color: var(--text-muted);
   font-size: 0.8rem;
 }
 
 .scoring-panel__player-row-body {
   padding: $layout-stack-gap;
-  border-top: 1px solid $color-border;
+  border-top: 1px solid var(--border);
   display: flex;
   flex-direction: column;
   gap: $space-3;
@@ -557,7 +557,7 @@
 .scoring-panel__legend-footnote {
   margin: 0;
   font-size: 0.75rem;
-  color: $color-text-muted;
+  color: var(--text-muted);
 }
 
 .scoring-panel__score-notation {
@@ -574,16 +574,16 @@
   max-width: min(100%, 15rem);
   padding: $space-2 $space-3;
   border-radius: $radius-md;
-  border: 1px solid color-mix(in srgb, $color-text 12%, $color-border);
-  background: color-mix(in srgb, $color-text 5%, $color-surface);
-  box-shadow: 0 1px 2px color-mix(in srgb, $color-text 6%, transparent);
+  border: 1px solid color-mix(in srgb, var(--text) 12%, var(--border));
+  background: color-mix(in srgb, var(--text) 5%, var(--surface-bg));
+  box-shadow: 0 1px 2px color-mix(in srgb, var(--text) 6%, transparent);
 }
 
 .scoring-panel__round-leader-chip-names {
   font-size: 0.875rem;
   font-weight: 700;
   line-height: 1.25;
-  color: $color-text;
+  color: var(--text);
   text-align: right;
   word-break: break-word;
 }
@@ -592,7 +592,7 @@
   font-size: 0.75rem;
   font-weight: 600;
   letter-spacing: 0.02em;
-  color: $color-text-muted;
+  color: var(--text-muted);
 }
 
 .scoring-panel__notation {
@@ -655,19 +655,19 @@
 .scoring-panel__notation-par {
   font-size: 0.8rem;
   font-weight: 600;
-  color: $color-text-muted;
+  color: var(--text-muted);
 }
 
 .scoring-panel__muted {
   margin: 0;
   font-size: 0.85rem;
-  color: $color-text-muted;
+  color: var(--text-muted);
 }
 
 .scoring-panel__analytics-summary {
   margin: 0;
   font-size: 0.875rem;
-  color: $color-text-muted;
+  color: var(--text-muted);
 }
 
 .scoring-panel__analytics-delta {
@@ -687,16 +687,16 @@
 
 .scoring-panel__save-status {
   font-weight: 600;
-  color: color-mix(in srgb, $color-text 84%, $color-text-muted);
+  color: color-mix(in srgb, var(--text) 84%, var(--text-muted));
   margin: 0;
 }
 
 .scoring-panel__scorecard-participants {
   margin-top: 0;
   padding: $layout-stack-gap;
-  border: 1px solid $color-border;
+  border: 1px solid var(--border);
   border-radius: $radius-sm;
-  background: color-mix(in srgb, $color-bg 70%, $color-surface);
+  background: color-mix(in srgb, var(--body-bg) 70%, var(--surface-bg));
   display: flex;
   flex-direction: column;
   gap: $layout-stack-gap;

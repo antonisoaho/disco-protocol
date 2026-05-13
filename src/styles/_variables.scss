@@ -56,9 +56,5 @@ $radius-md: 8px;
 $app-shell-content-max-width: 72rem;
 $app-shell-inline-padding: $space-6;
 
-// Neutral surface tokens — dark by default
-$color-bg: #0b0d12;
-$color-surface: #13161e;
-$color-text: #dfe3ec;
-$color-text-muted: #525a6a;
-$color-border: #1c2030;
+// Theme colors live only as CSS custom properties in `main.scss` (`:root` / `[data-theme='light']`):
+// `--body-bg`, `--surface-bg`, `--text`, `--text-muted`, `--border`. Blocks must use `var(--…)`, not Sass color variables.

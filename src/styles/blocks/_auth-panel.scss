@@ -8,22 +8,22 @@
   max-width: 22rem;
   margin-inline: auto;
   padding: $layout-section-gap;
-  border: 1px solid $color-border;
+  border: 1px solid var(--border);
   border-radius: $radius-md;
-  background: $color-surface;
+  background: var(--surface-bg);
 }
 
 .auth-panel__title {
   margin: 0 0 calc(#{$space-unit} * 2);
   font-size: 1.25rem;
   font-weight: 600;
-  color: $color-text;
+  color: var(--text);
 }
 
 .auth-panel__hint {
   margin: 0 0 calc(#{$space-unit} * 4);
   font-size: 0.875rem;
-  color: $color-text-muted;
+  color: var(--text-muted);
   line-height: 1.45;
 }
 
@@ -42,7 +42,7 @@
 .auth-panel__label {
   font-size: 0.8125rem;
   font-weight: 600;
-  color: $color-text;
+  color: var(--text);
 }
 
 .auth-panel__error {
@@ -60,12 +60,12 @@
   margin-top: $layout-stack-gap;
   width: 100%;
   background: transparent;
-  color: $color-text-muted;
+  color: var(--text-muted);
   border-color: transparent;
 
   &:hover:not(:disabled) {
-    color: $color-text;
-    border-color: $color-border;
+    color: var(--text);
+    border-color: var(--border);
     background: transparent;
   }
 }
