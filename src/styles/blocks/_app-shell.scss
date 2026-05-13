@@ -367,7 +367,8 @@
 }
 
 [data-theme='light'] {
-  .app-shell__profile {
+  /* Card-style profile only; unboxed profile should match page background */
+  .app-shell__profile:not(.app-shell__profile--unboxed) {
     background: #ffffff;
     border-color: #d1d5db;
   }
