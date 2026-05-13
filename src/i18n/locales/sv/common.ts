@@ -9,6 +9,11 @@ export const commonSv = {
       courses: 'Banor',
       primaryAria: 'Primär navigering',
     },
+    bottomNav: {
+      aria: 'Huvudsektioner',
+      home: 'Hem',
+      players: 'Spelare',
+    },
     signOut: 'Logga ut',
     signOutError: 'Kunde inte logga ut. Försök igen.',
     profile: 'Profil',
@@ -405,6 +410,41 @@ export const commonSv = {
       totalRoundDelta: 'Total runddifferens {{delta}}',
     },
     legend: 'Legend: Eagle+ <= -2, Birdie -1, Par 0, Bogey +1, Double+ >= +2.',
+  },
+  dashboard: {
+    title: 'Din översikt',
+    publicTitle: '{{name}} översikt',
+    statsAria: 'Rundstatistik',
+    bestVsPar: 'Bästa mot par',
+    avgVsPar: 'Snitt mot par',
+    roundsPlayed: 'Spelade rundor',
+    trendCaption: 'Slag mot par per runda',
+    trendAria: 'Diagram över slag mot par för avslutade rundor',
+    noCompletedRounds: 'Slutför en runda för att se trenden här.',
+    startNewRound: 'Starta ny runda',
+    recentRounds: 'Senaste rundor',
+    viewAllRounds: 'Alla rundor',
+    noRoundsYet: 'Inga rundor ännu. Starta en med knappen ovan.',
+    browseCourses: 'Utforska banor',
+  },
+  rounds: {
+    new: {
+      title: 'Ny runda',
+      visibilityPublicHint: 'Nya rundor listas på spelarnas översikter för synlighet.',
+      continueToScorecard: 'Fortsätt till scorekort',
+    },
+    list: {
+      title: 'Dina rundor',
+      empty: 'Inga rundor ännu.',
+      countLabel: '{{count}} rundor',
+    },
+    scorecard: {
+      backHome: '← Tillbaka till översikten',
+      notFoundOrNoAccess: 'Rundan finns inte. Den kan ha tagits bort eller så är du inte deltagare.',
+    },
+  },
+  players: {
+    intro: 'Sök i katalogen och öppna en spelare för att se deras offentliga översikt.',
   },
   follow: {
     title: 'Upptäck spelare',

@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest'
 import type { RoundDoc } from '../firebase/roundTypes'
-import { computeHeadToHeadSummary, computeParticipantParSummary } from './roundAnalytics'
+import {
+  computeHeadToHeadSummary,
+  computeParticipantParSummary,
+  listParticipantRoundDeltasChronological,
+} from './roundAnalytics'
 
 const ts = {} as RoundDoc['startedAt']
 
@@ -160,5 +164,28 @@ describe('computeHeadToHeadSummary', () => {
       losses: 1,
       ties: 1,
     })
+  })
+})
+
+describe('listParticipantRoundDeltasChronological', () => {
+  it('returns scored completed rounds sorted by startedAt ascending', () => {
+    const mk = (ms: number, deltaStrokes: number, id: string): { id: string; data: RoundDoc } => ({
+      id,
+      data: makeRound({
+        startedAt: { toMillis: () => ms } as RoundDoc['startedAt'],
+        completedAt: ts,
+        participantHoleScores: {
+          me: {
+            '1': scoreEntry(3 + deltaStrokes, 3, 'me'),
+          },
+        },
+      }),
+    })
+    const items = [mk(300, 2, 'c'), mk(100, -1, 'a'), mk(200, 0, 'b')]
+    expect(listParticipantRoundDeltasChronological(items, 'me')).toEqual([
+      { roundId: 'a', dateMs: 100, totalDelta: -1, scoredHoles: 1 },
+      { roundId: 'b', dateMs: 200, totalDelta: 0, scoredHoles: 1 },
+      { roundId: 'c', dateMs: 300, totalDelta: 2, scoredHoles: 1 },
+    ])
   })
 })

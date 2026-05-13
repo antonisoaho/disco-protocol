@@ -1,4 +1,55 @@
+import type { Timestamp } from 'firebase/firestore'
 import type { RoundDoc } from '../firebase/roundTypes'
+
+/** Round row with Firestore id (matches `RoundListItem` in firebase/rounds). */
+export type IdRound = { id: string; data: RoundDoc }
+
+export type RoundDeltaSample = {
+  roundId: string
+  /** Milliseconds from `startedAt`, or 0 if missing. */
+  dateMs: number
+  totalDelta: number
+  scoredHoles: number
+}
+
+function startedAtToMs(startedAt: Timestamp | null | undefined): number {
+  if (!startedAt || typeof startedAt.toMillis !== 'function') {
+    return 0
+  }
+  try {
+    return startedAt.toMillis()
+  } catch {
+    return 0
+  }
+}
+
+/**
+ * Completed rounds where the participant recorded at least one hole, oldest → newest.
+ * Used for per-round averages and trend charts (strokes vs par per round).
+ */
+export function listParticipantRoundDeltasChronological(
+  items: IdRound[],
+  participantUid: string,
+): RoundDeltaSample[] {
+  const rows: RoundDeltaSample[] = []
+  for (const { id, data } of items) {
+    if (!isCompletedRound(data) || !data.participantIds.includes(participantUid)) {
+      continue
+    }
+    const participantRound = aggregateParticipantRound(data, participantUid)
+    if (participantRound.scoredHoles === 0) {
+      continue
+    }
+    rows.push({
+      roundId: id,
+      dateMs: startedAtToMs(data.startedAt),
+      totalDelta: participantRound.totalDelta,
+      scoredHoles: participantRound.scoredHoles,
+    })
+  }
+  rows.sort((a, b) => a.dateMs - b.dateMs)
+  return rows
+}
 
 type ParticipantAggregate = {
   scoredHoles: number

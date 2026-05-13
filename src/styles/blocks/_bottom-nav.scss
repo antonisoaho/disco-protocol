@@ -1,0 +1,46 @@
+@use 'sass:map';
+@use '../variables' as *;
+
+.bottom-nav {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 20;
+  display: flex;
+  justify-content: space-around;
+  align-items: stretch;
+  gap: $space-1;
+  padding: $space-2 calc(#{$app-shell-inline-padding} + env(safe-area-inset-right, 0))
+    calc(#{$space-2} + env(safe-area-inset-bottom, 0))
+    calc(#{$app-shell-inline-padding} + env(safe-area-inset-left, 0));
+  border-top: 1px solid $color-border;
+  background: color-mix(in srgb, $color-surface 92%, $color-bg);
+  backdrop-filter: blur(8px);
+}
+
+.bottom-nav__link {
+  flex: 1 1 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: $touch-target-comfortable;
+  padding: $space-2 $space-1;
+  border-radius: $radius-sm;
+  text-decoration: none;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: $color-text-muted;
+  text-align: center;
+  line-height: 1.15;
+
+  &--active {
+    color: $color-text;
+    background: color-mix(in srgb, map.get($score-color, birdie) 14%, transparent);
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, map.get($score-color, birdie) 35%, transparent);
+  }
+}
+
+[data-theme='light'] .bottom-nav {
+  background: color-mix(in srgb, #ffffff 94%, #f4f6fa);
+}

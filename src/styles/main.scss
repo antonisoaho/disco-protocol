@@ -1,8 +1,11 @@
 @use 'sass:map';
 @use 'variables' as *;
 @use 'mixins' as *;
-@use 'blocks/app-shell';
-@use 'blocks/auth-panel';
+@use 'blocks/bottom-nav';
+@use 'blocks/dashboard-home';
+@use 'blocks/delta-area-chart';
+@use 'blocks/players-page';
+@use 'blocks/rounds-list-page';
 @use 'blocks/course-picker';
 @use 'blocks/field';
 @use 'blocks/follow-panel';

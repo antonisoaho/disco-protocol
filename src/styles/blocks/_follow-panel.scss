@@ -57,6 +57,16 @@
   background: $color-bg;
 }
 
+.follow-panel__profile-link {
+  text-decoration: none;
+  color: inherit;
+
+  &:hover strong,
+  &:focus-visible strong {
+    text-decoration: underline;
+  }
+}
+
 .follow-panel__follow-btn {
   flex-shrink: 0;
 
