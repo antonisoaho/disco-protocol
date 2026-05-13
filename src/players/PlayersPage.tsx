@@ -9,7 +9,7 @@ type Props = {
 export function PlayersPage({ user }: Props) {
   const { t } = useTranslation('common')
   return (
-    <div className="players-page">
+    <div className="app-shell__flow players-page">
       <p className="players-page__intro">{t('players.intro')}</p>
       <FollowPanel user={user} profileHrefForUid={(uid) => `/players/${uid}`} />
     </div>

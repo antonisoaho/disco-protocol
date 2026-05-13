@@ -1,32 +1,38 @@
 @use 'sass:map';
 @use '../variables' as *;
 
+// Same pattern as dashboard “Senaste rundor”: no outer wrapping card; list rows are individual surfaces.
 .follow-panel {
-  padding: $layout-section-gap;
-  border: 1px solid var(--border);
-  border-radius: $radius-md;
-  background: var(--surface-bg);
+  display: flex;
+  flex-direction: column;
+  gap: $layout-stack-gap;
+  margin: 0;
+  padding: 0;
+  border: none;
+  border-radius: 0;
+  background: transparent;
 }
 
 .follow-panel__title {
-  margin: 0 0 calc(#{$space-unit} * 2);
+  margin: 0;
   font-size: 1rem;
+  color: var(--text);
 }
 
 .follow-panel__meta {
-  margin: 0 0 calc(#{$space-unit} * 2);
+  margin: 0;
   font-size: 0.875rem;
   color: var(--text-muted);
 }
 
 .follow-panel__error {
-  margin: 0 0 calc(#{$space-unit} * 2);
+  margin: 0;
   color: map.get($score-color, double-bogey-plus);
 }
 
 .follow-panel__label {
   display: block;
-  margin-bottom: calc(#{$space-unit} * 1.5);
+  margin-bottom: $space-2;
   font-size: 0.8125rem;
   font-weight: 600;
   color: var(--text-muted);
@@ -34,7 +40,7 @@
 
 .follow-panel__search {
   width: 100%;
-  margin-bottom: calc(#{$space-unit} * 2);
+  margin: 0;
 }
 
 .follow-panel__list {
@@ -54,7 +60,8 @@
   padding: calc(#{$space-unit} * 2.5) calc(#{$space-unit} * 3);
   border: 1px solid var(--border);
   border-radius: $radius-sm;
-  background: var(--body-bg);
+  background: var(--surface-bg);
+  color: var(--text);
 }
 
 .follow-panel__profile-link {
@@ -80,27 +87,5 @@
       border-color: color-mix(in srgb, map.get($score-color, double-bogey-plus) 50%, transparent);
       background: transparent;
     }
-  }
-}
-
-[data-theme='light'] {
-  .follow-panel {
-    background: #ffffff;
-    border-color: #d1d5db;
-  }
-
-  .follow-panel__meta { color: #6b7280; }
-
-  .follow-panel__label { color: #6b7280; }
-
-  .follow-panel__item {
-    background: #f4f6fa;
-    border-color: #d1d5db;
-  }
-
-  .follow-panel__follow-btn--following {
-    background: transparent;
-    color: #6b7280;
-    border-color: #d1d5db;
   }
 }
