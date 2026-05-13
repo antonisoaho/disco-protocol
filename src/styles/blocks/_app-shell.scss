@@ -18,8 +18,8 @@
 
 .app-shell__header {
   flex-shrink: 0;
-  border-bottom: 1px solid var(--color-border);
-  background: var(--color-bg);
+  border-bottom: 1px solid var(--border);
+  background: var(--body-bg);
   width: 100%;
 }
 
@@ -54,7 +54,7 @@
   margin: 0;
   font-size: 1rem;
   font-weight: 500;
-  color: var(--color-text);
+  color: var(--text);
   letter-spacing: -0.01em;
 
   &--brand {
@@ -81,7 +81,7 @@
 .app-shell__tagline {
   margin: $space-1 0 0;
   font-size: 0.875rem;
-  color: var(--color-text-muted);
+  color: var(--text-muted);
 
   &--compact {
     margin-top: $space-1;
@@ -109,12 +109,12 @@
   border-bottom: 2px solid transparent;
   text-decoration: none;
   font-size: 0.875rem;
-  color: var(--color-text-muted);
+  color: var(--text-muted);
   background: transparent;
   transition: color 0.15s ease;
 
   &--active {
-    color: var(--color-text);
+    color: var(--text);
     border-bottom-color: map.get($score-color, birdie);
   }
 }
@@ -154,7 +154,7 @@
   margin: 0;
   font-size: 0.9375rem;
   line-height: 1.5;
-  color: var(--color-text-muted);
+  color: var(--text-muted);
 
   &--error {
     color: map.get($score-color, double-bogey-plus);
@@ -172,23 +172,23 @@
   padding-inline: $space-3;
   white-space: nowrap;
   background: transparent;
-  color: var(--color-text-muted);
+  color: var(--text-muted);
   border-color: transparent;
 
   &:hover:not(:disabled) {
-    color: var(--color-text);
-    border-color: var(--color-border);
+    color: var(--text);
+    border-color: var(--border);
     background: transparent;
   }
 }
 
 .app-shell__retry-btn {
   background: transparent;
-  color: $color-text-muted;
-  border-color: $color-border;
+  color: var(--text-muted);
+  border-color: var(--border);
 
   &:hover:not(:disabled) {
-    color: $color-text;
+    color: var(--text);
     background: transparent;
   }
 }
@@ -206,18 +206,18 @@
   flex-direction: column;
   gap: $space-3;
   padding: $layout-section-gap;
-  border: 1px solid $color-border;
+  border: 1px solid var(--border);
   border-radius: $radius-md;
-  background: $color-surface;
+  background: var(--surface-bg);
 }
 
 .app-shell__profile-actions button {
   background: transparent;
-  color: $color-text-muted;
-  border-color: $color-border;
+  color: var(--text-muted);
+  border-color: var(--border);
 
   &:hover:not(:disabled) {
-    color: $color-text;
+    color: var(--text);
     background: transparent;
   }
 }
@@ -225,7 +225,7 @@
 .app-shell__section-title {
   margin: 0;
   font-size: 1rem;
-  color: $color-text;
+  color: var(--text);
 }
 
 .app-shell__profile-form {
@@ -243,7 +243,7 @@
 .app-shell__profile-label {
   font-size: 0.8125rem;
   font-weight: 600;
-  color: $color-text;
+  color: var(--text);
 }
 
 .app-shell__profile-input {
@@ -297,7 +297,7 @@
   font-family: $font-family-mono;
   font-size: 0.8125rem;
   word-break: break-all;
-  color: var(--color-text);
+  color: var(--text);
 }
 
 @media (min-width: $breakpoint-md) {
@@ -349,13 +349,13 @@
   min-height: $touch-target-comfortable;
   padding: 0;
   background: transparent;
-  color: var(--color-text-muted);
+  color: var(--text-muted);
   border-color: transparent;
 
   &:hover:not(:disabled) {
-    color: var(--color-text);
-    border-color: var(--color-border);
-    background: color-mix(in srgb, var(--color-surface) 55%, transparent);
+    color: var(--text);
+    border-color: var(--border);
+    background: color-mix(in srgb, var(--surface-bg) 55%, transparent);
   }
 }
 

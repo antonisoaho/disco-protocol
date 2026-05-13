@@ -22,19 +22,21 @@
   color-scheme: dark;
   font-family: $font-family-sans;
   line-height: 1.45;
-  color: $color-text;
-  background-color: $color-bg;
+
+  // Semantic theme tokens (dark defaults). `[data-theme='light']` overrides these only.
+  --body-bg: #0b0d12;
+  --surface-bg: #13161e;
+  --text: #dfe3ec;
+  --text-muted: #525a6a;
+  --border: #1c2030;
+
+  color: var(--text);
+  background-color: var(--body-bg);
 
   // Expose score palette as CSS variables for charts / inline styles when needed.
   @each $name, $value in $score-color {
     --score-#{$name}: #{$value};
   }
-
-  --color-bg: #{$color-bg};
-  --color-surface: #{$color-surface};
-  --color-text: #{$color-text};
-  --color-text-muted: #{$color-text-muted};
-  --color-border: #{$color-border};
 
   // Total fixed bar height (top pad + link row min + bottom pad + border). Keep in sync with `.bottom-nav`.
   --app-bottom-nav-block-height: calc(#{$space-2} + #{$touch-target-comfortable} + #{$space-3} + 1px);
@@ -42,14 +44,13 @@
 
 [data-theme='light'] {
   color-scheme: light;
-  color: #111827;
-  background-color: #f4f6fa;
-
-  --color-bg: #f4f6fa;
-  --color-surface: #ffffff;
-  --color-text: #111827;
-  --color-text-muted: #6b7280;
-  --color-border: #d1d5db;
+  --body-bg: #f4f6fa;
+  --surface-bg: #ffffff;
+  --text: #111827;
+  --text-muted: #6b7280;
+  --border: #d1d5db;
+  color: var(--text);
+  background-color: var(--body-bg);
 }
 
 *,
@@ -86,17 +87,17 @@ button {
   gap: $space-2;
   min-height: $touch-target-min;
   padding: $space-2 $space-4;
-  border: 1px solid var(--color-border);
+  border: 1px solid var(--border);
   border-radius: $radius-sm;
   font: inherit;
   font-size: 0.875rem;
-  color: var(--color-text);
-  background: var(--color-surface);
+  color: var(--text);
+  background: var(--surface-bg);
   cursor: pointer;
   transition: border-color 0.15s ease, background 0.15s ease, color 0.15s ease;
 
   &:hover:not(:disabled) {
-    border-color: var(--color-text-muted);
+    border-color: var(--text-muted);
   }
 
   &:disabled {
@@ -115,15 +116,15 @@ select,
 textarea {
   min-height: $touch-target-min;
   padding: $space-2 $space-3;
-  border: 1px solid var(--color-border);
+  border: 1px solid var(--border);
   border-radius: $radius-sm;
   font: inherit;
   font-size: 0.875rem;
-  color: var(--color-text);
-  background: var(--color-bg);
+  color: var(--text);
+  background: var(--body-bg);
 
   &::placeholder {
-    color: var(--color-text-muted);
+    color: var(--text-muted);
   }
 
   &:focus-visible {
@@ -135,6 +136,6 @@ textarea {
   &:disabled {
     opacity: 0.7;
     cursor: not-allowed;
-    background: color-mix(in srgb, var(--color-surface) 82%, var(--color-bg));
+    background: color-mix(in srgb, var(--surface-bg) 82%, var(--body-bg));
   }
 }

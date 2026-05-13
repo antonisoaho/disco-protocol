@@ -8,7 +8,7 @@
 .rounds-list-page__count {
   margin: 0 0 $space-3;
   font-size: 0.8rem;
-  color: $color-text-muted;
+  color: var(--text-muted);
 }
 
 .rounds-list-page__error {
@@ -18,7 +18,7 @@
 
 .rounds-list-page__muted {
   margin: 0;
-  color: $color-text-muted;
+  color: var(--text-muted);
 }
 
 .rounds-list-page__list {
@@ -31,9 +31,9 @@
 }
 
 .rounds-list-page__item {
-  border: 1px solid $color-border;
+  border: 1px solid var(--border);
   border-radius: $radius-sm;
-  background: $color-surface;
+  background: var(--surface-bg);
 }
 
 .rounds-list-page__link {
@@ -47,5 +47,5 @@
 
 .rounds-list-page__meta {
   font-size: 0.8rem;
-  color: $color-text-muted;
+  color: var(--text-muted);
 }
