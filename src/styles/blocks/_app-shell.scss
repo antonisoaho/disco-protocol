@@ -94,6 +94,47 @@
   gap: $space-2;
 }
 
+.app-shell__header--toolbar.app-shell__header--signed-out {
+  align-items: center;
+}
+
+.app-shell__header-main--signed-out {
+  gap: 0;
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.app-shell__header--toolbar.app-shell__header--signed-out .app-shell__header-actions {
+  align-self: center;
+}
+
+.app-shell__main--signed-out {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding-block: $space-5;
+}
+
+.app-shell__signed-out {
+  width: 100%;
+  max-width: 22rem;
+  margin-inline: auto;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: $space-4;
+  box-sizing: border-box;
+}
+
+.app-shell__signed-out-intro {
+  margin: 0;
+  text-align: center;
+  font-size: 0.9375rem;
+  line-height: 1.5;
+  color: var(--text-muted);
+}
+
 .app-shell__nav {
   display: flex;
   flex-wrap: wrap;
@@ -326,6 +367,15 @@
 
   .app-shell__flow {
     gap: $layout-section-gap-lg;
+  }
+
+  .app-shell__signed-out {
+    max-width: 26rem;
+    gap: $space-5;
+  }
+
+  .app-shell__main--signed-out {
+    padding-block: $layout-section-gap-lg;
   }
 }
 

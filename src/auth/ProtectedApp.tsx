@@ -133,8 +133,8 @@ export function ProtectedApp() {
     return (
       <div className="app-shell">
         <header className="app-shell__header">
-          <div className="app-shell__container app-shell__header-inner app-shell__header--row app-shell__header--toolbar">
-            <div className="app-shell__header-main">
+          <div className="app-shell__container app-shell__header-inner app-shell__header--row app-shell__header--toolbar app-shell__header--signed-out">
+            <div className="app-shell__header-main app-shell__header-main--signed-out">
               <h1 className="app-shell__title app-shell__title--brand">
                 <img
                   className="app-shell__brand-logo"
@@ -145,15 +145,15 @@ export function ProtectedApp() {
                   decoding="async"
                 />
               </h1>
-              <p className="app-shell__tagline">{t('shell.signInPrompt')}</p>
             </div>
             <div className="app-shell__header-actions">
               <ThemeToggleButton theme={theme} onToggle={toggleTheme} />
             </div>
           </div>
         </header>
-        <main className="app-shell__main">
-          <div className="app-shell__container">
+        <main className="app-shell__main app-shell__main--signed-out">
+          <div className="app-shell__container app-shell__signed-out">
+            <p className="app-shell__signed-out-intro">{t('shell.signInPrompt')}</p>
             <AuthPanel />
           </div>
         </main>

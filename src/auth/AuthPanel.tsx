@@ -77,6 +77,7 @@ export function AuthPanel() {
         <label className="auth-panel__field">
           <span className="auth-panel__label">{t('auth.fields.email')}</span>
           <input
+            className="auth-panel__input"
             type="email"
             name="email"
             autoComplete="email"
@@ -89,6 +90,7 @@ export function AuthPanel() {
         <label className="auth-panel__field">
           <span className="auth-panel__label">{t('auth.fields.password')}</span>
           <input
+            className="auth-panel__input"
             type="password"
             name="password"
             autoComplete={mode === 'signin' ? 'current-password' : 'new-password'}
@@ -105,7 +107,7 @@ export function AuthPanel() {
           </p>
         ) : null}
 
-        <button type="submit" disabled={busy}>
+        <button type="submit" className="auth-panel__submit" disabled={busy}>
           {busy ? t('auth.actions.working') : mode === 'signin' ? t('auth.actions.signIn') : t('auth.actions.signUp')}
         </button>
       </form>
