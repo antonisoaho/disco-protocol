@@ -1,6 +1,7 @@
 import type { User } from 'firebase/auth'
 import { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { Link } from 'react-router-dom'
 import { followUser, subscribeFollowers, subscribeFollowing, unfollowUser } from '../firebase/follows'
 import { translateUserError } from '../i18n/translateError'
 import { subscribeUserDirectory, type UserDirectoryEntry } from '../firebase/userDirectory'
@@ -8,9 +9,11 @@ import { directoryDisplayName, filterDiscoverableUsers } from './followSearch'
 
 type Props = {
   user: User
+  /** When set, the player name links to this path for each uid (e.g. profile dashboard). */
+  profileHrefForUid?: (uid: string) => string
 }
 
-export function FollowPanel({ user }: Props) {
+export function FollowPanel({ user, profileHrefForUid }: Props) {
   const { t } = useTranslation('common')
   const [directoryEntries, setDirectoryEntries] = useState<UserDirectoryEntry[]>([])
   const [relationshipState, setRelationshipState] = useState<{
@@ -124,7 +127,13 @@ export function FollowPanel({ user }: Props) {
           return (
             <li key={entry.uid} className="follow-panel__item">
               <div>
-                <strong>{directoryDisplayName(entry)}</strong>
+                {profileHrefForUid ? (
+                  <Link to={profileHrefForUid(entry.uid)} className="follow-panel__profile-link">
+                    <strong>{directoryDisplayName(entry)}</strong>
+                  </Link>
+                ) : (
+                  <strong>{directoryDisplayName(entry)}</strong>
+                )}
               </div>
               <button
                 type="button"

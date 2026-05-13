@@ -1,19 +1,53 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useReducer, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { NavLink, Navigate, Route, Routes } from 'react-router-dom'
+import { Navigate, Route, Routes } from 'react-router-dom'
 import { CoursePicker } from '../courses/CoursePicker'
 import type { CourseRoundSelection } from '../courses/courseData'
+import { DashboardHome } from '../dashboard/DashboardHome'
+import { PublicPlayerDashboard } from '../dashboard/PublicPlayerDashboard'
 import { AuthPanel } from './AuthPanel'
 import { useAuth } from './useAuth'
-import { ScoringPanel } from '../scoring/ScoringPanel'
 import {
   normalizeDisplayName,
   setCourseFavorite,
   subscribeFavoriteCourseIds,
 } from '../firebase/userProfile'
 import { ProfilePage } from '../profile/ProfilePage'
+import { PlayersPage } from '../players/PlayersPage'
+import { NewRoundPage } from '../rounds/NewRoundPage'
+import { RoundScorecardPage } from '../rounds/RoundScorecardPage'
+import { RoundsListPage } from '../rounds/RoundsListPage'
+import { BottomNav } from '../shell/BottomNav'
 import { useNavigatorOnline } from '../shell/useNavigatorOnline'
 import { useTheme } from '../theme/useTheme'
+
+type FavoriteState = {
+  courseIds: string[]
+  error: string | null
+}
+
+type FavoriteAction =
+  | { type: 'syncOk'; courseIds: string[] }
+  | { type: 'syncFailed'; message: string }
+  | { type: 'clearError' }
+  | { type: 'setError'; message: string }
+
+function favoriteReducer(state: FavoriteState, action: FavoriteAction): FavoriteState {
+  switch (action.type) {
+    case 'syncOk':
+      return { courseIds: action.courseIds, error: null }
+    case 'syncFailed':
+      return { ...state, error: action.message }
+    case 'clearError':
+      return { ...state, error: null }
+    case 'setError':
+      return { ...state, error: action.message }
+    default:
+      return state
+  }
+}
+
+const initialFavoriteState: FavoriteState = { courseIds: [], error: null }
 
 function ThemeToggleButton({ theme, onToggle }: { theme: 'dark' | 'light'; onToggle: () => void }) {
   return (
@@ -38,7 +72,7 @@ function ThemeToggleButton({ theme, onToggle }: { theme: 'dark' | 'light'; onTog
   )
 }
 
-/** Protected shell: signed-in users can navigate between home and course discovery. */
+/** Protected shell: signed-in users navigate via bottom bar and routed views. */
 export function ProtectedApp() {
   const { t } = useTranslation('common')
   const online = useNavigatorOnline()
@@ -47,19 +81,17 @@ export function ProtectedApp() {
     useAuth()
   const [signOutError, setSignOutError] = useState<string | null>(null)
   const [selectedCourseTemplate, setSelectedCourseTemplate] = useState<CourseRoundSelection | null>(null)
-  const [favoriteCourseIds, setFavoriteCourseIds] = useState<string[]>([])
-  const [favoriteCourseError, setFavoriteCourseError] = useState<string | null>(null)
+  const [favoriteState, dispatchFavorite] = useReducer(favoriteReducer, initialFavoriteState)
 
   useEffect(() => {
     if (!user) return
     const unsub = subscribeFavoriteCourseIds(
       user.uid,
       (next) => {
-        setFavoriteCourseIds(next)
-        setFavoriteCourseError(null)
+        dispatchFavorite({ type: 'syncOk', courseIds: next })
       },
       () => {
-        setFavoriteCourseError(t('courses.errors.favoriteSyncFailed'))
+        dispatchFavorite({ type: 'syncFailed', message: t('courses.errors.favoriteSyncFailed') })
       },
     )
     return () => unsub()
@@ -68,7 +100,7 @@ export function ProtectedApp() {
   const onToggleFavoriteCourse = useCallback(
     async (courseId: string, isFavorite: boolean) => {
       if (!user) return
-      setFavoriteCourseError(null)
+      dispatchFavorite({ type: 'clearError' })
       try {
         await setCourseFavorite({
           uid: user.uid,
@@ -76,7 +108,7 @@ export function ProtectedApp() {
           isFavorite,
         })
       } catch {
-        setFavoriteCourseError(t('courses.errors.favoriteUpdateFailed'))
+        dispatchFavorite({ type: 'setError', message: t('courses.errors.favoriteUpdateFailed') })
       }
     },
     [t, user],
@@ -156,23 +188,6 @@ export function ProtectedApp() {
             <p className="app-shell__tagline app-shell__tagline--compact">
               {currentDisplayName || user.email}
             </p>
-            <nav className="app-shell__nav" aria-label={t('shell.nav.primaryAria')}>
-              <NavLink to="/" end className={({ isActive }) => `app-shell__nav-link${isActive ? ' app-shell__nav-link--active' : ''}`}>
-                {t('shell.nav.home')}
-              </NavLink>
-              <NavLink
-                to="/courses"
-                className={({ isActive }) => `app-shell__nav-link${isActive ? ' app-shell__nav-link--active' : ''}`}
-              >
-                {t('shell.nav.courses')}
-              </NavLink>
-              <NavLink
-                to="/profile"
-                className={({ isActive }) => `app-shell__nav-link${isActive ? ' app-shell__nav-link--active' : ''}`}
-              >
-                {t('shell.profile')}
-              </NavLink>
-            </nav>
           </div>
           <div className="app-shell__header-actions">
             <ThemeToggleButton theme={theme} onToggle={toggleTheme} />
@@ -198,10 +213,10 @@ export function ProtectedApp() {
           </p>
         </div>
       ) : null}
-      {favoriteCourseError ? (
+      {favoriteState.error ? (
         <div className="app-shell__container app-shell__status">
           <p className="app-shell__placeholder app-shell__placeholder--error" role="alert">
-            {favoriteCourseError}
+            {favoriteState.error}
           </p>
         </div>
       ) : null}
@@ -228,21 +243,18 @@ export function ProtectedApp() {
           </button>
         </div>
       ) : null}
-      <main className="app-shell__main">
+      <main className="app-shell__main app-shell__main--with-bottom-nav">
         <div className="app-shell__container">
           <Routes>
+            <Route path="/" element={<DashboardHome viewer={user} profileUid={user.uid} />} />
+            <Route path="/rounds" element={<RoundsListPage user={user} />} />
             <Route
-              path="/"
-              element={
-                <div className="app-shell__flow">
-                  <ScoringPanel
-                    user={user}
-                    selectedCourseTemplate={selectedCourseTemplate}
-                    favoriteCourseIds={favoriteCourseIds}
-                  />
-                </div>
-              }
+              path="/rounds/new"
+              element={<NewRoundPage user={user} favoriteCourseIds={favoriteState.courseIds} />}
             />
+            <Route path="/rounds/:roundId/scorecard" element={<RoundScorecardPage user={user} />} />
+            <Route path="/players" element={<PlayersPage user={user} />} />
+            <Route path="/players/:userId" element={<PublicPlayerDashboard viewer={user} />} />
             <Route
               path="/courses"
               element={
@@ -250,7 +262,7 @@ export function ProtectedApp() {
                   <CoursePicker
                     selection={selectedCourseTemplate}
                     onSelectionChange={setSelectedCourseTemplate}
-                    favoriteCourseIds={favoriteCourseIds}
+                    favoriteCourseIds={favoriteState.courseIds}
                     onToggleFavoriteCourse={onToggleFavoriteCourse}
                   />
                 </div>
@@ -261,6 +273,7 @@ export function ProtectedApp() {
           </Routes>
         </div>
       </main>
+      <BottomNav />
     </div>
   )
 }

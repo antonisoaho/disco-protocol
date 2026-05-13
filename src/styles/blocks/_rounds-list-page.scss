@@ -1,0 +1,51 @@
+@use 'sass:map';
+@use '../variables' as *;
+
+.rounds-list-page {
+  padding: $layout-stack-gap 0;
+}
+
+.rounds-list-page__count {
+  margin: 0 0 $space-3;
+  font-size: 0.8rem;
+  color: $color-text-muted;
+}
+
+.rounds-list-page__error {
+  margin: 0 0 $space-3;
+  color: map.get($score-color, double-bogey-plus);
+}
+
+.rounds-list-page__muted {
+  margin: 0;
+  color: $color-text-muted;
+}
+
+.rounds-list-page__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: $space-2;
+}
+
+.rounds-list-page__item {
+  border: 1px solid $color-border;
+  border-radius: $radius-sm;
+  background: $color-surface;
+}
+
+.rounds-list-page__link {
+  display: flex;
+  flex-direction: column;
+  gap: $space-1;
+  padding: $space-3;
+  text-decoration: none;
+  color: inherit;
+}
+
+.rounds-list-page__meta {
+  font-size: 0.8rem;
+  color: $color-text-muted;
+}

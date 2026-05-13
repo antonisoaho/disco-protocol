@@ -115,6 +115,10 @@
   flex: 1 1 auto;
   padding-block: $layout-section-gap;
 
+  &--with-bottom-nav {
+    padding-bottom: calc(#{$layout-section-gap} + 4.25rem + env(safe-area-inset-bottom, 0));
+  }
+
   &--centered {
     min-height: 100%;
     display: flex;

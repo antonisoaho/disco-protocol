@@ -431,29 +431,37 @@
   gap: $space-2;
 }
 
+.scoring-panel__button--danger {
+  border-color: color-mix(in srgb, map.get($score-color, double-bogey-plus) 55%, $color-border);
+  color: map.get($score-color, double-bogey-plus);
+  background: color-mix(in srgb, map.get($score-color, double-bogey-plus) 8%, $color-bg);
+}
+
 .scoring-panel__hole-dots {
   display: flex;
   flex-wrap: wrap;
-  gap: $space-1;
+  gap: $space-2;
+  padding: $space-2 0;
 }
 
 .scoring-panel__hole-dot {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  border: 1px solid $color-border;
-  border-radius: 999px;
+  border: 2px solid $color-border;
+  border-radius: $radius-sm;
   background: $color-bg;
   color: $color-text;
-  min-width: $space-8;
-  min-height: $space-8;
-  font-size: 0.78rem;
-  font-weight: 600;
+  min-width: 2.5rem;
+  min-height: 2.5rem;
+  font-size: 0.95rem;
+  font-weight: 700;
 
   &--active {
     border-color: map.get($score-color, birdie);
     background: map.get($score-color, birdie);
     color: #fff;
+    box-shadow: 0 0.15rem 0.5rem color-mix(in srgb, map.get($score-color, birdie) 45%, transparent);
   }
 }
 

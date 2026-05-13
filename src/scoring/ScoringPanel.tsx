@@ -1,33 +1,21 @@
 import { type User } from 'firebase/auth'
 import { doc, onSnapshot } from 'firebase/firestore'
-import type { Timestamp } from 'firebase/firestore'
-import type { TFunction } from 'i18next'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useAuth } from '../auth/useAuth'
-import {
-  loadRoundSelectionForCourseAndHoleChoice,
-  subscribeCourses,
-  type CourseRoundSelection,
-  type CourseWithId,
-} from '../courses/courseData'
 import type { CourseTemplateDoc } from '../firebase/models/course'
 import { db } from '../firebase/firestore'
 import { COLLECTIONS } from '../firebase/paths'
-import { sortCoursesForRoundStart } from '../courses/roundStartSort'
 import { translateUserError } from '../i18n/translateError'
 import { computeHeadToHeadSummary, computeParticipantParSummary } from '../analytics/roundAnalytics'
 import {
   FreshRoundDraftValidationError,
-  normalizeFreshCourseDraft,
   normalizeFreshCourseDraftForPromotion,
-  type FreshRoundDraftIssue,
 } from '../firebase/freshRoundCourse'
 import {
   addAnonymousParticipantToRound,
   addParticipantToRound,
   completeRoundAndPromote,
-  createRound,
   deleteRound,
   recordParticipantHoleScoreTransaction,
   removeParticipantFromRound,
@@ -36,11 +24,12 @@ import {
   syncSavedRoundHoleParForHole,
   updateFreshRoundHoleMetadata,
 } from '../firebase/rounds'
-import type { RoundDoc, RoundVisibility } from '../firebase/roundTypes'
+import type { RoundDoc } from '../firebase/roundTypes'
 import { subscribeFollowers, subscribeFollowing } from '../firebase/follows'
 import { subscribeUserDirectory, type UserDirectoryEntry } from '../firebase/userDirectory'
 import { scoreTierToNotationClassName, strokesParDeltaToNotation } from '../lib/scoreSemantic'
 import { FollowPanel } from '../social/FollowPanel'
+import { formatDraftIssues } from './formatDraftIssues'
 import {
   buildAnonymousParticipantNameMap,
   createAnonymousParticipantId,
@@ -49,7 +38,6 @@ import {
   isAnonymousParticipantId,
   mergeAnonymousParticipants,
   normalizeAnonymousParticipantName,
-  type AnonymousParticipant,
 } from './participantRoster'
 import { HoleForm } from './HoleForm'
 import { HoleStepper } from './HoleStepper'
@@ -61,57 +49,16 @@ import { computeGrandTotals, computeParticipantTotals, pickLeadingParticipantIds
 
 type Props = {
   user: User
-  selectedCourseTemplate: CourseRoundSelection | null
-  favoriteCourseIds: string[]
+  roundId: string
+  onAfterRoundDeleted?: () => void
 }
 
-type NineOrEighteen = 9 | 18
 const AUTOSAVE_DEBOUNCE_MS = 550
 const ANONYMOUS_NAME_MAX_LENGTH = 80
 const NON_WHITESPACE_PATTERN = '.*\\S.*'
-const YOUR_ROUNDS_PREVIEW_LIMIT = 4
 
 type AppTabId = 'scorecard' | 'participants' | 'analytics' | 'follow'
 type SaveState = 'saved' | 'dirty' | 'saving' | 'error'
-
-function formatDraftIssues(t: TFunction<'common'>, issues: FreshRoundDraftIssue[]): string {
-  if (issues.length === 0) {
-    return t('scoring.errors.freshHoleMetadataIncomplete')
-  }
-
-  const perHole = new Map<number, Set<string>>()
-  const generalMessages = new Set<string>()
-
-  for (const issue of issues) {
-    const holeMatch = issue.path.match(/^holes\.(\d+)\.(par|lengthMeters)$/)
-    if (holeMatch) {
-      const holeNumber = Number(holeMatch[1]) + 1
-      const field = holeMatch[2] === 'par' ? t('scoring.fields.par') : t('scoring.fields.length')
-      if (!perHole.has(holeNumber)) {
-        perHole.set(holeNumber, new Set<string>())
-      }
-      perHole.get(holeNumber)?.add(field)
-      continue
-    }
-    generalMessages.add(translateUserError(t, issue.message))
-  }
-
-  const holeMessages = Array.from(perHole.entries())
-    .sort(([a], [b]) => a - b)
-    .map(([holeNumber, fields]) =>
-      t('scoring.errors.holeIssue', { holeNumber, fields: Array.from(fields).join(' + ') }),
-    )
-
-  return [...holeMessages, ...Array.from(generalMessages)].join('. ')
-}
-
-function formatStartedAt(ts: Timestamp): string {
-  try {
-    return ts.toDate().toLocaleString()
-  } catch {
-    return ''
-  }
-}
 
 function formatDelta(delta: number): string {
   return delta > 0 ? `+${delta}` : `${delta}`
@@ -124,29 +71,6 @@ function parseIntegerInput(value: string): number | null {
 
 function participantDisplayName(entry: UserDirectoryEntry): string {
   return entry.displayName.trim().length > 0 ? entry.displayName : entry.uid
-}
-
-function buildParticipantNamesForRound(
-  data: RoundDoc,
-  directoryByUid: Record<string, UserDirectoryEntry>,
-): Record<string, string> {
-  const anonymousMap = buildAnonymousParticipantNameMap(data.anonymousParticipants ?? [])
-  const names: Record<string, string> = {}
-  for (const participantId of data.participantIds) {
-    const anonymous = anonymousMap[participantId]
-    if (anonymous) {
-      names[participantId] = anonymous
-      continue
-    }
-    names[participantId] = participantDisplayName(
-      directoryByUid[participantId] ?? {
-        uid: participantId,
-        displayName: participantId,
-        subtitle: participantId,
-      },
-    )
-  }
-  return names
 }
 
 function readParticipantHoleScores(data: RoundDoc, fallbackUid: string) {
@@ -185,30 +109,14 @@ function readParticipantHoleScores(data: RoundDoc, fallbackUid: string) {
   return next
 }
 
-export function ScoringPanel({ user, selectedCourseTemplate, favoriteCourseIds }: Props) {
+export function ScoringPanel({ user, roundId, onAfterRoundDeleted }: Props) {
   const { t } = useTranslation('common')
   const { isAdmin } = useAuth()
   const uid = user.uid
   const [activeTab, setActiveTab] = useState<AppTabId>('scorecard')
-  const [yourRoundsShowAll, setYourRoundsShowAll] = useState(false)
+  const [listSnapshotSeen, setListSnapshotSeen] = useState(false)
   const [items, setItems] = useState<{ id: string; data: RoundDoc }[]>([])
-  const [selectedId, setSelectedId] = useState<string | null>(null)
-  const [startCourseSelection, setStartCourseSelection] = useState('fresh')
-  const [availableCourses, setAvailableCourses] = useState<CourseWithId[]>([])
-  const [courseLoadError, setCourseLoadError] = useState<string | null>(null)
-  const [freshCourseName, setFreshCourseName] = useState('')
-  const [freshHoleChoice, setFreshHoleChoice] = useState<NineOrEighteen>(18)
-  const [savedRoundHoleChoice, setSavedRoundHoleChoice] = useState<NineOrEighteen>(18)
-  const [savedTemplateHoleCount, setSavedTemplateHoleCount] = useState<number | null>(null)
-  const [savedRoundTemplateCount, setSavedRoundTemplateCount] = useState<number | null>(null)
-  const [visibility, setVisibility] = useState<RoundVisibility>('private')
-  const [newRoundParticipants, setNewRoundParticipants] = useState<string[]>([uid])
-  const [newRoundParticipantQuery, setNewRoundParticipantQuery] = useState('')
-  const [newRoundAnonymousName, setNewRoundAnonymousName] = useState('')
-  const [freshCourseNameError, setFreshCourseNameError] = useState<string | null>(null)
-  const [newRoundAnonymousNameError, setNewRoundAnonymousNameError] = useState<string | null>(null)
   const [inviteAnonymousNameError, setInviteAnonymousNameError] = useState<string | null>(null)
-  const [newRoundAnonymousParticipants, setNewRoundAnonymousParticipants] = useState<AnonymousParticipant[]>([])
   const [inviteParticipantQuery, setInviteParticipantQuery] = useState('')
   const [inviteAnonymousName, setInviteAnonymousName] = useState('')
   const [inviteSelections, setInviteSelections] = useState<string[]>([])
@@ -227,19 +135,7 @@ export function ScoringPanel({ user, selectedCourseTemplate, favoriteCourseIds }
   const [error, setError] = useState<string | null>(null)
   const [notice, setNotice] = useState<string | null>(null)
   const autosaveTimerRef = useRef<number | null>(null)
-  const freshCourseNameInputRef = useRef<HTMLInputElement | null>(null)
-  const newRoundAnonymousNameInputRef = useRef<HTMLInputElement | null>(null)
   const inviteAnonymousNameInputRef = useRef<HTMLInputElement | null>(null)
-
-  const resolveFreshCourseNameError = useCallback(
-    (input: HTMLInputElement): string => {
-      if (input.validity.valueMissing || input.validity.patternMismatch) {
-        return t('scoring.errors.courseNameRequired')
-      }
-      return input.validationMessage || t('scoring.errors.courseNameRequired')
-    },
-    [t],
-  )
 
   const resolveAnonymousNameError = useCallback(
     (input: HTMLInputElement): string => {
@@ -262,22 +158,12 @@ export function ScoringPanel({ user, selectedCourseTemplate, favoriteCourseIds }
       (next) => {
         setError(null)
         setItems(next)
+        setListSnapshotSeen(true)
       },
       (nextError) => setError(translateUserError(t, nextError.message)),
     )
     return () => unsub()
   }, [t, uid])
-
-  useEffect(() => {
-    const unsub = subscribeCourses(
-      (rows) => {
-        setAvailableCourses(rows)
-        setCourseLoadError(null)
-      },
-      (nextError) => setCourseLoadError(translateUserError(t, nextError.message)),
-    )
-    return () => unsub()
-  }, [t])
 
   useEffect(() => {
     const unsub = subscribeUserDirectory(
@@ -315,42 +201,9 @@ export function ScoringPanel({ user, selectedCourseTemplate, favoriteCourseIds }
     return () => unsub()
   }, [uid])
 
-  const selected = useMemo(() => items.find((round) => round.id === selectedId) ?? null, [items, selectedId])
+  const selected = useMemo(() => items.find((round) => round.id === roundId) ?? null, [items, roundId])
 
-  const yourRoundsVisibleItems = useMemo(() => {
-    if (items.length <= YOUR_ROUNDS_PREVIEW_LIMIT || yourRoundsShowAll) {
-      return items
-    }
-    return items.slice(0, YOUR_ROUNDS_PREVIEW_LIMIT)
-  }, [items, yourRoundsShowAll])
-
-  const roundDisplayNames = useMemo(() => {
-    const baseName = (data: RoundDoc) =>
-      data.courseSource === 'fresh'
-        ? (data.courseDraft?.name ?? t('scoring.rounds.unnamed'))
-        : (data.courseName ?? t('scoring.rounds.unnamed'))
-
-    // Count occurrences of each base name across all rounds
-    const counts: Record<string, number> = {}
-    for (const { data } of items) {
-      const name = baseName(data)
-      counts[name] = (counts[name] ?? 0) + 1
-    }
-
-    // Assign suffixes — iterate oldest→newest so the oldest gets no suffix
-    const index: Record<string, number> = {}
-    const result = new Map<string, string>()
-    for (const { id, data } of [...items].reverse()) {
-      const name = baseName(data)
-      if (counts[name] === 1) {
-        result.set(id, name)
-      } else {
-        index[name] = (index[name] ?? 0) + 1
-        result.set(id, index[name] === 1 ? name : `${name} ${index[name]}`)
-      }
-    }
-    return result
-  }, [items, t])
+  const roundMissingAfterSync = listSnapshotSeen && !items.some((row) => row.id === roundId)
 
   const canManageRoundRoster = useMemo(() => {
     if (!selected) return false
@@ -384,65 +237,6 @@ export function ScoringPanel({ user, selectedCourseTemplate, favoriteCourseIds }
     // Intentionally depend on layout ids only so we do not re-subscribe on every live round score update.
     // eslint-disable-next-line react-hooks/exhaustive-deps -- selected is read only for the branch above; deps track layout identity.
   }, [selected?.data.courseId, selected?.data.courseSource, selected?.data.templateId, selected?.id])
-
-  const effectiveStartCourseSelection = useMemo(() => {
-    if (startCourseSelection === 'fresh') {
-      return 'fresh'
-    }
-    return availableCourses.some((course) => course.id === startCourseSelection)
-      ? startCourseSelection
-      : 'fresh'
-  }, [availableCourses, startCourseSelection])
-  const startMode: 'saved' | 'fresh' = effectiveStartCourseSelection === 'fresh' ? 'fresh' : 'saved'
-  const sortedRoundStartCourses = useMemo(
-    () => sortCoursesForRoundStart(availableCourses, favoriteCourseIds),
-    [availableCourses, favoriteCourseIds],
-  )
-  const selectedSavedCourse = useMemo(
-    () => sortedRoundStartCourses.find((course) => course.id === effectiveStartCourseSelection) ?? null,
-    [effectiveStartCourseSelection, sortedRoundStartCourses],
-  )
-
-  useEffect(() => {
-    let cancelled = false
-    const applyHoleCount = (count: number | null) => {
-      queueMicrotask(() => {
-        if (!cancelled) {
-          setSavedTemplateHoleCount(count)
-        }
-      })
-    }
-    const applyTemplateCount = (count: number | null) => {
-      queueMicrotask(() => {
-        if (!cancelled) {
-          setSavedRoundTemplateCount(count)
-        }
-      })
-    }
-    if (startMode !== 'saved' || !selectedSavedCourse) {
-      applyHoleCount(null)
-      applyTemplateCount(null)
-    } else {
-      void loadRoundSelectionForCourseAndHoleChoice({
-        courseId: selectedSavedCourse.id,
-        courseName: selectedSavedCourse.name,
-        holeChoice: savedRoundHoleChoice,
-      }).then((resolution) => {
-        applyHoleCount(resolution ? resolution.selection.holeCount : null)
-        applyTemplateCount(resolution ? resolution.templateCount : null)
-      })
-    }
-    return () => {
-      cancelled = true
-    }
-  }, [savedRoundHoleChoice, selectedSavedCourse, startMode])
-
-  useEffect(() => {
-    const courseId = selectedCourseTemplate?.courseId
-    if (!courseId) return
-    if (!availableCourses.some((course) => course.id === courseId)) return
-    queueMicrotask(() => setStartCourseSelection(courseId))
-  }, [availableCourses, selectedCourseTemplate?.courseId])
 
   const selectedHoleCount = useMemo(
     () => (selected ? inferRoundHoleCount(selected.data) : null),
@@ -488,16 +282,6 @@ export function ScoringPanel({ user, selectedCourseTemplate, favoriteCourseIds }
   const searchableDirectoryEntries = useMemo(
     () => allDirectoryEntries.filter((entry) => entry.uid !== uid),
     [allDirectoryEntries, uid],
-  )
-
-  const availableNewRoundParticipants = useMemo(
-    () =>
-      filterParticipantDirectoryEntries({
-        entries: searchableDirectoryEntries,
-        query: newRoundParticipantQuery,
-        friendUidSet,
-      }),
-    [friendUidSet, newRoundParticipantQuery, searchableDirectoryEntries],
   )
 
   const inviteCandidateEntries = useMemo(() => {
@@ -783,7 +567,7 @@ export function ScoringPanel({ user, selectedCourseTemplate, favoriteCourseIds }
   )
 
   const saveCurrentHole = useCallback(async (): Promise<boolean> => {
-    if (!selected || !selectedId || !effectiveHoleDraft || !persistedHoleState) return true
+    if (!selected || !roundId || !effectiveHoleDraft || !persistedHoleState) return true
     const roundCourseSource = selected.data.courseSource ?? 'saved'
     const payload = mergeAutosavePayload({
       courseSource: roundCourseSource,
@@ -809,7 +593,7 @@ export function ScoringPanel({ user, selectedCourseTemplate, favoriteCourseIds }
     try {
       if (roundCourseSource === 'fresh' && payload.metadata) {
         await updateFreshRoundHoleMetadata({
-          roundId: selectedId,
+          roundId: roundId,
           actorUid: uid,
           holeNumber: activeHoleNumber,
           metadata: payload.metadata,
@@ -817,7 +601,7 @@ export function ScoringPanel({ user, selectedCourseTemplate, favoriteCourseIds }
       }
       if (payload.savedParSync) {
         await syncSavedRoundHoleParForHole({
-          roundId: selectedId,
+          roundId: roundId,
           actorUid: uid,
           holeNumber: activeHoleNumber,
           par: payload.savedParSync.par,
@@ -826,7 +610,7 @@ export function ScoringPanel({ user, selectedCourseTemplate, favoriteCourseIds }
       await Promise.all(
         payload.participantScoreUpdates.map((update) =>
           recordParticipantHoleScoreTransaction(
-            selectedId,
+            roundId,
             uid,
             update.participantUid,
             activeHoleNumber,
@@ -856,7 +640,7 @@ export function ScoringPanel({ user, selectedCourseTemplate, favoriteCourseIds }
     effectiveHoleDraft,
     persistedHoleState,
     selected,
-    selectedId,
+    roundId,
     t,
     uid,
   ])
@@ -893,148 +677,8 @@ export function ScoringPanel({ user, selectedCourseTemplate, favoriteCourseIds }
     [activeHoleNumber, saveCurrentHole, saveState, selectedHoleCount],
   )
 
-  const onAddNewRoundAnonymousParticipant = useCallback(() => {
-    const anonymousInput = newRoundAnonymousNameInputRef.current
-    if (!anonymousInput) {
-      return
-    }
-    anonymousInput.setCustomValidity('')
-    if (newRoundAnonymousName.trim().length === 0) {
-      anonymousInput.setCustomValidity(t('scoring.messages.anonymousNameRequired'))
-    }
-    if (!anonymousInput.checkValidity()) {
-      setNewRoundAnonymousNameError(resolveAnonymousNameError(anonymousInput))
-      return
-    }
-
-    const normalizedName = normalizeAnonymousParticipantName(newRoundAnonymousName)
-    const id = createAnonymousParticipantId()
-    setNewRoundAnonymousParticipants((current) => [...current, { id, displayName: normalizedName }])
-    setNewRoundParticipants((current) => Array.from(new Set([...current, id])))
-    setNewRoundAnonymousName('')
-    setNewRoundAnonymousNameError(null)
-    anonymousInput.setCustomValidity('')
-    setError(null)
-  }, [newRoundAnonymousName, resolveAnonymousNameError, t])
-
-  const onRemoveNewRoundAnonymousParticipant = useCallback((participantId: string) => {
-    setNewRoundAnonymousParticipants((current) =>
-      current.filter((participant) => participant.id !== participantId),
-    )
-    setNewRoundParticipants((current) => current.filter((participant) => participant !== participantId))
-  }, [])
-
-  const onCreateRound = useCallback(async () => {
-    if (startMode === 'fresh') {
-      const freshNameInput = freshCourseNameInputRef.current
-      if (freshNameInput) {
-        if (!freshNameInput.checkValidity()) {
-          setFreshCourseNameError(resolveFreshCourseNameError(freshNameInput))
-          return
-        }
-      }
-    }
-
-    setBusy(true)
-    setError(null)
-    setNotice(null)
-    try {
-      const participantIds = Array.from(new Set([uid, ...newRoundParticipants])).filter(
-        (participantId) => participantId.trim().length > 0,
-      )
-      const anonymousParticipants = mergeAnonymousParticipants(participantIds, newRoundAnonymousParticipants)
-      let id = ''
-      if (startMode === 'saved') {
-        if (!selectedSavedCourse) {
-          setError(t('scoring.errors.selectCourseOrFresh'))
-          return
-        }
-        const resolution = await loadRoundSelectionForCourseAndHoleChoice({
-          courseId: selectedSavedCourse.id,
-          courseName: selectedSavedCourse.name,
-          holeChoice: savedRoundHoleChoice,
-        })
-        if (!resolution) {
-          setError(t('scoring.errors.selectedCourseHasNoTemplates'))
-          return
-        }
-        const { selection: resolvedSelection } = resolution
-        id = await createRound({
-          ownerId: uid,
-          courseSource: 'saved',
-          courseId: resolvedSelection.courseId,
-          templateId: resolvedSelection.templateId,
-          holeCount: resolvedSelection.holeCount,
-          courseName: selectedSavedCourse.name,
-          visibility,
-          participantIds,
-          anonymousParticipants,
-        })
-      } else {
-        const courseDraft = normalizeFreshCourseDraft({
-          name: freshCourseName,
-          holes: Array.from({ length: freshHoleChoice }, () => ({
-            par: null,
-            lengthMeters: null,
-          })),
-        })
-        id = await createRound({
-          ownerId: uid,
-          courseSource: 'fresh',
-          courseDraft,
-          holeCount: courseDraft.holes.length,
-          visibility,
-          participantIds,
-          anonymousParticipants,
-        })
-      }
-      clearRosterReplaceFlow()
-      setSelectedId(id)
-      setHoleNumber(1)
-      setHoleDraft(null)
-      setSaveState('saved')
-      setExpandedPlayers({})
-      setStartCourseSelection('fresh')
-      setFreshCourseNameError(null)
-      setNewRoundParticipantQuery('')
-      setNewRoundAnonymousName('')
-      setNewRoundAnonymousNameError(null)
-      setNewRoundAnonymousParticipants([])
-      setNewRoundParticipants([uid])
-      setFreshHoleChoice(18)
-      setSavedRoundHoleChoice(18)
-      setActiveTab('scorecard')
-      setNotice(t('scoring.notices.roundCreated'))
-    } catch (nextError) {
-      if (nextError instanceof FreshRoundDraftValidationError) {
-        setError(formatDraftIssues(t, nextError.issues))
-      } else {
-        setError(
-          nextError instanceof Error
-            ? translateUserError(t, nextError.message)
-            : t('scoring.errors.failedToCreateRound'),
-        )
-      }
-    } finally {
-      setBusy(false)
-    }
-  }, [
-    clearRosterReplaceFlow,
-    freshCourseName,
-    freshHoleChoice,
-    newRoundParticipants,
-    newRoundAnonymousParticipants,
-    savedRoundHoleChoice,
-    selectedSavedCourse,
-    startMode,
-    resolveFreshCourseNameError,
-    t,
-    uid,
-    visibility,
-  ])
-
   const onAddParticipant = useCallback(async () => {
-    if (!selectedId || !selected) return
+    if (!roundId || !selected) return
     const inviteInput = inviteAnonymousNameInputRef.current
     if (inviteInput) {
       inviteInput.setCustomValidity('')
@@ -1057,11 +701,11 @@ export function ScoringPanel({ user, selectedCourseTemplate, favoriteCourseIds }
           }
         : null
       await Promise.all([
-        ...inviteSelections.map((participantUid) => addParticipantToRound(selectedId, participantUid)),
+        ...inviteSelections.map((participantUid) => addParticipantToRound(roundId, participantUid)),
         ...(anonymousParticipant
           ? [
               addAnonymousParticipantToRound({
-                roundId: selectedId,
+                roundId: roundId,
                 actorUid: uid,
                 participant: anonymousParticipant,
               }),
@@ -1086,17 +730,17 @@ export function ScoringPanel({ user, selectedCourseTemplate, favoriteCourseIds }
     } finally {
       setBusy(false)
     }
-  }, [inviteAnonymousName, inviteSelections, resolveAnonymousNameError, selected, selectedId, t, uid])
+  }, [inviteAnonymousName, inviteSelections, resolveAnonymousNameError, selected, roundId, t, uid])
 
   const onRemoveRoundParticipant = useCallback(
     async (participantId: string) => {
-      if (!selectedId || !canManageRoundRoster) return
+      if (!roundId || !canManageRoundRoster) return
       setBusy(true)
       setError(null)
       setNotice(null)
       try {
         await removeParticipantFromRound({
-          roundId: selectedId,
+          roundId: roundId,
           actorUid: uid,
           participantId,
         })
@@ -1111,17 +755,17 @@ export function ScoringPanel({ user, selectedCourseTemplate, favoriteCourseIds }
         setBusy(false)
       }
     },
-    [canManageRoundRoster, selectedId, t, uid],
+    [canManageRoundRoster, roundId, t, uid],
   )
 
   const onReplaceRoundParticipant = useCallback(async () => {
-    if (!selectedId || !rosterReplaceFromId || !rosterReplaceTargetUid || !canManageRoundRoster) return
+    if (!roundId || !rosterReplaceFromId || !rosterReplaceTargetUid || !canManageRoundRoster) return
     setBusy(true)
     setError(null)
     setNotice(null)
     try {
       await replaceRoundParticipant({
-        roundId: selectedId,
+        roundId: roundId,
         actorUid: uid,
         fromParticipantId: rosterReplaceFromId,
         toParticipantUid: rosterReplaceTargetUid,
@@ -1142,13 +786,13 @@ export function ScoringPanel({ user, selectedCourseTemplate, favoriteCourseIds }
     clearRosterReplaceFlow,
     rosterReplaceFromId,
     rosterReplaceTargetUid,
-    selectedId,
+    roundId,
     t,
     uid,
   ])
 
   const onDeleteRound = useCallback(
-    async (roundId: string, ownerId: string) => {
+    async (deletedRoundId: string, ownerId: string) => {
       if (ownerId !== uid && !isAdmin) return
       const confirmed = window.confirm(t('scoring.confirmations.deleteRound'))
       if (!confirmed) return
@@ -1156,14 +800,14 @@ export function ScoringPanel({ user, selectedCourseTemplate, favoriteCourseIds }
       setError(null)
       setNotice(null)
       try {
-        await deleteRound(roundId)
-        if (selectedId === roundId) {
+        await deleteRound(deletedRoundId)
+        if (deletedRoundId === roundId) {
           clearRosterReplaceFlow()
-          setSelectedId(null)
           setHoleNumber(1)
           setHoleDraft(null)
           setSaveState('saved')
           setExpandedPlayers({})
+          onAfterRoundDeleted?.()
         }
         setNotice(t('scoring.notices.roundDeleted'))
       } catch (nextError) {
@@ -1176,11 +820,11 @@ export function ScoringPanel({ user, selectedCourseTemplate, favoriteCourseIds }
         setBusy(false)
       }
     },
-    [clearRosterReplaceFlow, isAdmin, selectedId, t, uid],
+    [clearRosterReplaceFlow, isAdmin, onAfterRoundDeleted, roundId, t, uid],
   )
 
   const onComplete = useCallback(async () => {
-    if (!selectedId || !selected) return
+    if (!roundId || !selected) return
     if (selected.data.courseSource === 'fresh') {
       try {
         normalizeFreshCourseDraftForPromotion(selected.data.courseDraft)
@@ -1200,7 +844,7 @@ export function ScoringPanel({ user, selectedCourseTemplate, favoriteCourseIds }
     setError(null)
     setNotice(null)
     try {
-      const result = await completeRoundAndPromote(selectedId, uid)
+      const result = await completeRoundAndPromote(roundId, uid)
       if (result.promotionStatus === 'created' || result.promotionStatus === 'already_created') {
         setNotice(t('scoring.notices.roundCompletedPromoted'))
       } else if (result.promotionStatus === 'pending') {
@@ -1221,15 +865,15 @@ export function ScoringPanel({ user, selectedCourseTemplate, favoriteCourseIds }
     } finally {
       setBusy(false)
     }
-  }, [selected, selectedId, t, uid])
+  }, [selected, roundId, t, uid])
 
   const onRetryPromotion = useCallback(async () => {
-    if (!selectedId) return
+    if (!roundId) return
     setBusy(true)
     setError(null)
     setNotice(null)
     try {
-      const result = await completeRoundAndPromote(selectedId, uid)
+      const result = await completeRoundAndPromote(roundId, uid)
       if (result.promotionStatus === 'created' || result.promotionStatus === 'already_created') {
         setNotice(t('scoring.notices.promotionSucceeded'))
       } else if (result.promotionStatus === 'pending') {
@@ -1250,7 +894,7 @@ export function ScoringPanel({ user, selectedCourseTemplate, favoriteCourseIds }
     } finally {
       setBusy(false)
     }
-  }, [selectedId, t, uid])
+  }, [roundId, t, uid])
 
   return (
     <section className="scoring-panel" aria-labelledby="scoring-panel-title">
@@ -1305,370 +949,11 @@ export function ScoringPanel({ user, selectedCourseTemplate, favoriteCourseIds }
 
       {activeTab === 'scorecard' ? (
         <>
-          <div className="scoring-panel__section">
-            <span className="scoring-panel__label">{t('scoring.sections.startRound')}</span>
-            <div className="scoring-panel__field scoring-panel__field--grow">
-              <label className="scoring-panel__label" htmlFor="round-course-selection">
-                {t('scoring.start.courseToPlay')}
-              </label>
-              <select
-                id="round-course-selection"
-                className="scoring-panel__select"
-                value={effectiveStartCourseSelection}
-                onChange={(event) => {
-                  setStartCourseSelection(event.target.value)
-                  setFreshCourseNameError(null)
-                }}
-                disabled={busy}
-              >
-                <option value="fresh">{t('courses.freshOption')}</option>
-                {sortedRoundStartCourses.map((course) => (
-                  <option key={course.id} value={course.id}>
-                    {course.name}
-                  </option>
-                ))}
-              </select>
-              {courseLoadError ? (
-                <p className="scoring-panel__error" role="alert">
-                  {courseLoadError}
-                </p>
-              ) : null}
-            </div>
-            {startMode === 'saved' ? (
-              selectedSavedCourse ? (
-                <>
-                  <p className="scoring-panel__selection">
-                    {t('scoring.start.savedSelection', {
-                      courseName: selectedSavedCourse.name,
-                    })}
-                  </p>
-                  {savedRoundTemplateCount === 1 ? (
-                    <p className="scoring-panel__muted scoring-panel__hint" role="status">
-                      {t('courses.hints.singleLayoutAutoUsed')}
-                    </p>
-                  ) : null}
-                  {savedRoundTemplateCount !== null && savedRoundTemplateCount > 1 ? (
-                    <p className="scoring-panel__muted scoring-panel__hint" role="status">
-                      {t('courses.hints.multipleLayoutsUsingDefault')}
-                    </p>
-                  ) : null}
-                  {savedTemplateHoleCount !== null && savedTemplateHoleCount > 9 ? (
-                    <fieldset className="scoring-panel__field field">
-                      <legend className="scoring-panel__label field__label">{t('scoring.start.roundLength')}</legend>
-                      <div className="scoring-panel__row scoring-panel__row--compact" role="group">
-                        <label className="scoring-panel__participant-option">
-                          <input
-                            type="radio"
-                            name="saved-hole-choice"
-                            checked={savedRoundHoleChoice === 9}
-                            disabled={busy}
-                            onChange={() => setSavedRoundHoleChoice(9)}
-                          />
-                          <span>{t('scoring.start.holes9')}</span>
-                        </label>
-                        <label className="scoring-panel__participant-option">
-                          <input
-                            type="radio"
-                            name="saved-hole-choice"
-                            checked={savedRoundHoleChoice === 18}
-                            disabled={busy}
-                            onChange={() => setSavedRoundHoleChoice(18)}
-                          />
-                          <span>
-                            {savedTemplateHoleCount >= 18
-                              ? t('scoring.start.holes18')
-                              : t('scoring.start.holesFullLayout', { count: savedTemplateHoleCount })}
-                          </span>
-                        </label>
-                      </div>
-                    </fieldset>
-                  ) : null}
-                </>
-              ) : (
-                <p className="scoring-panel__muted">{t('scoring.start.noSavedCourses')}</p>
-              )
-            ) : (
-              <>
-                <p className="scoring-panel__muted">
-                  {t('scoring.start.freshHint')}
-                </p>
-                <div className="scoring-panel__row">
-                  <div className="scoring-panel__field scoring-panel__field--grow field">
-                    <label className="scoring-panel__label field__label" htmlFor="fresh-course-name">
-                      {t('scoring.start.courseName')}
-                    </label>
-                    <input
-                      id="fresh-course-name"
-                      ref={freshCourseNameInputRef}
-                      className={`scoring-panel__input field__control${
-                        freshCourseNameError ? ' field__control--invalid' : ''
-                      }`}
-                      value={freshCourseName}
-                      onChange={(event) => {
-                        setFreshCourseName(event.target.value)
-                        if (freshCourseNameError && event.currentTarget.validity.valid) {
-                          setFreshCourseNameError(null)
-                        }
-                      }}
-                      onInvalid={(event) => {
-                        event.preventDefault()
-                        setFreshCourseNameError(resolveFreshCourseNameError(event.currentTarget))
-                      }}
-                      placeholder={t('scoring.start.courseNamePlaceholder')}
-                      autoComplete="off"
-                      required
-                      pattern={NON_WHITESPACE_PATTERN}
-                      aria-invalid={freshCourseNameError ? 'true' : 'false'}
-                      aria-describedby={freshCourseNameError ? 'fresh-course-name-error' : undefined}
-                    />
-                    {freshCourseNameError ? (
-                      <p id="fresh-course-name-error" className="field__error" role="alert">
-                        {freshCourseNameError}
-                      </p>
-                    ) : null}
-                  </div>
-                  <fieldset className="scoring-panel__field field">
-                    <legend className="scoring-panel__label field__label">{t('scoring.start.roundLength')}</legend>
-                    <div className="scoring-panel__row scoring-panel__row--compact" role="group">
-                      <label className="scoring-panel__participant-option">
-                        <input
-                          type="radio"
-                          name="fresh-hole-choice"
-                          checked={freshHoleChoice === 9}
-                          disabled={busy}
-                          onChange={() => setFreshHoleChoice(9)}
-                        />
-                        <span>{t('scoring.start.holes9')}</span>
-                      </label>
-                      <label className="scoring-panel__participant-option">
-                        <input
-                          type="radio"
-                          name="fresh-hole-choice"
-                          checked={freshHoleChoice === 18}
-                          disabled={busy}
-                          onChange={() => setFreshHoleChoice(18)}
-                        />
-                        <span>{t('scoring.start.holes18')}</span>
-                      </label>
-                    </div>
-                  </fieldset>
-                </div>
-              </>
-            )}
-            <div className="scoring-panel__field scoring-panel__field--grow">
-              <label className="scoring-panel__label" htmlFor="participant-search">
-                {t('scoring.start.participants')}
-              </label>
-              <input
-                id="participant-search"
-                className="scoring-panel__input"
-                value={newRoundParticipantQuery}
-                onChange={(event) => setNewRoundParticipantQuery(event.target.value)}
-                placeholder={t('scoring.start.searchParticipantsPlaceholder')}
-                autoComplete="off"
-              />
-              <div
-                className="scoring-panel__participant-list"
-                role="group"
-                aria-label={t('scoring.aria.selectRoundParticipants')}
-              >
-                {availableNewRoundParticipants.map((entry) => {
-                  const checked = newRoundParticipants.includes(entry.uid)
-                  return (
-                    <label key={entry.uid} className="scoring-panel__participant-option">
-                      <input
-                        type="checkbox"
-                        checked={checked}
-                        disabled={busy}
-                        onChange={() => {
-                          setNewRoundParticipants((current) => {
-                            if (current.includes(entry.uid)) {
-                              return current.filter((participantId) => participantId !== entry.uid)
-                            }
-                            return [...current, entry.uid]
-                          })
-                        }}
-                      />
-                      <span>
-                        {participantDisplayName(entry)}
-                      </span>
-                    </label>
-                  )
-                })}
-              </div>
-            </div>
-            <div className="scoring-panel__row scoring-panel__row--compact">
-              <div className="scoring-panel__field scoring-panel__field--grow scoring-panel__field--compact scoring-panel__field--add-player field">
-                <label className="scoring-panel__label field__label" htmlFor="new-round-anonymous-name">
-                  {t('scoring.labels.playerNameOptional')}
-                </label>
-                <input
-                  id="new-round-anonymous-name"
-                  ref={newRoundAnonymousNameInputRef}
-                  className={`scoring-panel__input field__control${
-                    newRoundAnonymousNameError ? ' field__control--invalid' : ''
-                  }`}
-                  value={newRoundAnonymousName}
-                  onChange={(event) => {
-                    event.currentTarget.setCustomValidity('')
-                    setNewRoundAnonymousName(event.target.value)
-                    if (newRoundAnonymousNameError && event.currentTarget.validity.valid) {
-                      setNewRoundAnonymousNameError(null)
-                    }
-                  }}
-                  onInvalid={(event) => {
-                    event.preventDefault()
-                    setNewRoundAnonymousNameError(resolveAnonymousNameError(event.currentTarget))
-                  }}
-                  pattern={NON_WHITESPACE_PATTERN}
-                  maxLength={ANONYMOUS_NAME_MAX_LENGTH}
-                  placeholder={t('scoring.placeholders.playerName')}
-                  autoComplete="off"
-                  aria-invalid={newRoundAnonymousNameError ? 'true' : 'false'}
-                  aria-describedby={newRoundAnonymousNameError ? 'new-round-anonymous-name-error' : undefined}
-                />
-                {newRoundAnonymousNameError ? (
-                  <p id="new-round-anonymous-name-error" className="field__error" role="alert">
-                    {newRoundAnonymousNameError}
-                  </p>
-                ) : null}
-              </div>
-              <button
-                type="button"
-                className="scoring-panel__button scoring-panel__button--primary scoring-panel__button--field-submit"
-                onClick={onAddNewRoundAnonymousParticipant}
-                disabled={busy}
-              >
-                {t('scoring.buttons.addPlayer')}
-              </button>
-            </div>
-            {newRoundAnonymousParticipants.length > 0 ? (
-              <ul className="scoring-panel__list">
-                {newRoundAnonymousParticipants.map((participant) => (
-                  <li key={participant.id} className="scoring-panel__list-item">
-                    <strong>{participant.displayName}</strong>
-                    <button
-                      type="button"
-                      className="scoring-panel__button scoring-panel__button--inline"
-                      onClick={() => onRemoveNewRoundAnonymousParticipant(participant.id)}
-                      disabled={busy}
-                    >
-                      {t('scoring.buttons.removeAnonymous')}
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            ) : null}
-            <div className="scoring-panel__row">
-              <div className="scoring-panel__field">
-                <label className="scoring-panel__label" htmlFor="visibility">
-                  {t('scoring.start.visibility')}
-                </label>
-                <select
-                  id="visibility"
-                  className="scoring-panel__select"
-                  value={visibility}
-                  onChange={(event) => setVisibility(event.target.value as RoundVisibility)}
-                >
-                  <option value="private">{t('scoring.visibility.private')}</option>
-                  <option value="unlisted">{t('scoring.visibility.unlisted')}</option>
-                  <option value="public">{t('scoring.visibility.public')}</option>
-                </select>
-              </div>
-              <button
-                type="button"
-                className="scoring-panel__button scoring-panel__button--primary"
-                onClick={() => void onCreateRound()}
-                disabled={busy || (startMode === 'saved' && !selectedSavedCourse)}
-              >
-                {t('scoring.buttons.newRound')}
-              </button>
-            </div>
-          </div>
-
-          <div className="scoring-panel__section scoring-panel__section--your-rounds">
-            {items.length === 0 ? (
-              <>
-                <span className="scoring-panel__label">{t('scoring.sections.yourRounds')}</span>
-                <p className="scoring-panel__muted">{t('scoring.rounds.none')}</p>
-              </>
-            ) : (
-              <details className="scoring-panel__disclosure" open>
-                <summary className="scoring-panel__disclosure-summary">
-                  {t('scoring.rounds.disclosureSummary', { count: items.length })}
-                </summary>
-                <ul className="scoring-panel__list scoring-panel__list--your-rounds">
-                  {yourRoundsVisibleItems.map(({ id, data }) => {
-                    const roundParticipantScores = readParticipantHoleScores(data, data.ownerId)
-                    const roundTotals = computeParticipantTotals(data.participantIds, roundParticipantScores)
-                    const leaderIds = pickLeadingParticipantIds(data.participantIds, roundTotals)
-                    const roundParticipantNames = buildParticipantNamesForRound(data, directoryByUid)
-                    const leaderNamesJoined = leaderIds.map((pid) => roundParticipantNames[pid] ?? pid).join(', ')
-                    const leaderDelta =
-                      leaderIds.length > 0 ? (roundTotals[leaderIds[0]]?.totalDelta ?? 0) : 0
-                    const startedAndStatus = `${formatStartedAt(data.startedAt)}${
-                      data.completedAt ? ` · ${t('scoring.rounds.completed')}` : ''
-                    }`
-                    const leaderSummary =
-                      leaderIds.length > 0
-                        ? `${leaderNamesJoined} ${formatDelta(leaderDelta)}`
-                        : t('scoring.rounds.noScores')
-                    return (
-                      <li key={id} className="scoring-panel__list-item scoring-panel__list-item--round-compact">
-                        <div className="scoring-panel__list-item-main">
-                          <strong>{roundDisplayNames.get(id)}</strong>
-                          <div className="scoring-panel__list-item-actions">
-                            <button
-                              type="button"
-                              className="scoring-panel__button scoring-panel__button--inline"
-                              onClick={() => {
-                                clearRosterReplaceFlow()
-                                setSelectedId(id)
-                                setHoleNumber(1)
-                                setHoleDraft(null)
-                                setSaveState('saved')
-                                setExpandedPlayers({})
-                                setActiveTab('scorecard')
-                              }}
-                              disabled={busy}
-                            >
-                              {selectedId === id ? t('scoring.buttons.selected') : t('scoring.buttons.select')}
-                            </button>
-                            {data.ownerId === uid || isAdmin ? (
-                              <button
-                                type="button"
-                                className="scoring-panel__button scoring-panel__button--inline"
-                                onClick={() => void onDeleteRound(id, data.ownerId)}
-                                disabled={busy}
-                              >
-                                {t('scoring.buttons.delete')}
-                              </button>
-                            ) : null}
-                          </div>
-                        </div>
-                        <p className="scoring-panel__list-item-meta scoring-panel__list-item-meta--compact scoring-panel__muted">
-                          {startedAndStatus} · {leaderSummary}
-                        </p>
-                      </li>
-                    )
-                  })}
-                </ul>
-                {items.length > YOUR_ROUNDS_PREVIEW_LIMIT ? (
-                  <div className="scoring-panel__your-rounds-toggle">
-                    <button
-                      type="button"
-                      className="scoring-panel__button scoring-panel__button--linkish"
-                      onClick={() => setYourRoundsShowAll((current) => !current)}
-                    >
-                      {yourRoundsShowAll
-                        ? t('scoring.rounds.showFewerRounds')
-                        : t('scoring.rounds.showAllRounds', { count: items.length })}
-                    </button>
-                  </div>
-                ) : null}
-              </details>
-            )}
-          </div>
+          {roundMissingAfterSync ? (
+            <p className="scoring-panel__error" role="alert">
+              {t('rounds.scorecard.notFoundOrNoAccess')}
+            </p>
+          ) : null}
 
           {selected ? (
             <div className="scoring-panel__section">
@@ -1772,6 +1057,16 @@ export function ScoringPanel({ user, selectedCourseTemplate, favoriteCourseIds }
                     disabled={busy}
                   >
                     {t('scoring.buttons.retryPromotion')}
+                  </button>
+                ) : null}
+                {selected.data.ownerId === uid || isAdmin ? (
+                  <button
+                    type="button"
+                    className="scoring-panel__button scoring-panel__button--danger"
+                    onClick={() => void onDeleteRound(roundId, selected.data.ownerId)}
+                    disabled={busy}
+                  >
+                    {t('scoring.buttons.delete')}
                   </button>
                 ) : null}
               </div>

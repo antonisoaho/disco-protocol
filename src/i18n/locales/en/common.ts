@@ -9,6 +9,11 @@ export const commonEn = {
       courses: 'Courses',
       primaryAria: 'Primary navigation',
     },
+    bottomNav: {
+      aria: 'Primary sections',
+      home: 'Home',
+      players: 'Players',
+    },
     signOut: 'Sign out',
     signOutError: 'Could not sign out. Try again.',
     profile: 'Profile',
@@ -408,6 +413,41 @@ export const commonEn = {
       totalRoundDelta: 'Total round delta {{delta}}',
     },
     legend: 'Legend: Eagle+ <= -2, Birdie -1, Par 0, Bogey +1, Double+ >= +2.',
+  },
+  dashboard: {
+    title: 'Your dashboard',
+    publicTitle: '{{name}} dashboard',
+    statsAria: 'Round statistics',
+    bestVsPar: 'Best vs par',
+    avgVsPar: 'Average vs par',
+    roundsPlayed: 'Rounds played',
+    trendCaption: 'Strokes vs par by round',
+    trendAria: 'Chart of strokes versus par over completed rounds',
+    noCompletedRounds: 'Complete a round to see your trend here.',
+    startNewRound: 'Start new round',
+    recentRounds: 'Recent rounds',
+    viewAllRounds: 'All rounds',
+    noRoundsYet: 'No rounds yet. Start one from the button above.',
+    browseCourses: 'Browse courses',
+  },
+  rounds: {
+    new: {
+      title: 'New round',
+      visibilityPublicHint: 'New rounds are listed on player dashboards for discoverability.',
+      continueToScorecard: 'Continue to scorecard',
+    },
+    list: {
+      title: 'Your rounds',
+      empty: 'No rounds yet.',
+      countLabel: '{{count}} rounds',
+    },
+    scorecard: {
+      backHome: '← Back to dashboard',
+      notFoundOrNoAccess: 'This round is not available. It may have been removed or you may not be a participant.',
+    },
+  },
+  players: {
+    intro: 'Search the directory and open a player to view their public dashboard.',
   },
   follow: {
     title: 'Discover players',

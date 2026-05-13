@@ -1,0 +1,142 @@
+@use 'sass:map';
+@use '../variables' as *;
+
+.dashboard-home {
+  display: flex;
+  flex-direction: column;
+  gap: $layout-stack-gap;
+  padding: $layout-stack-gap 0;
+}
+
+.dashboard-home__title {
+  margin: 0;
+  font-size: 1.1rem;
+}
+
+.dashboard-home__error {
+  margin: 0;
+  color: map.get($score-color, double-bogey-plus);
+  font-size: 0.9rem;
+}
+
+.dashboard-home__stats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: $space-3;
+}
+
+.dashboard-home__stat {
+  padding: $space-3;
+  border: 1px solid $color-border;
+  border-radius: $radius-md;
+  background: $color-surface;
+  display: flex;
+  flex-direction: column;
+  gap: $space-1;
+}
+
+.dashboard-home__stat-label {
+  font-size: 0.75rem;
+  color: $color-text-muted;
+}
+
+.dashboard-home__stat-value {
+  font-size: 1.25rem;
+  font-weight: 700;
+}
+
+.dashboard-home__chart-wrap {
+  border: 1px solid $color-border;
+  border-radius: $radius-md;
+  padding: $space-3;
+  background: $color-surface;
+  color: map.get($score-color, eagle);
+}
+
+.dashboard-home__chart-caption {
+  margin: 0 0 $space-2;
+  font-size: 0.8rem;
+  color: $color-text-muted;
+}
+
+.dashboard-home__muted {
+  margin: 0;
+  font-size: 0.875rem;
+  color: $color-text-muted;
+}
+
+.dashboard-home__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: $space-3;
+}
+
+.dashboard-home__secondary-link {
+  font-size: 0.9rem;
+}
+
+.dashboard-home__cta {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: $touch-target-comfortable;
+  padding: $space-3 $space-5;
+  border-radius: $radius-md;
+  font-weight: 700;
+  text-decoration: none;
+  color: #fff;
+  background: map.get($score-color, birdie);
+  border: 1px solid color-mix(in srgb, map.get($score-color, birdie) 70%, #000);
+}
+
+.dashboard-home__rounds-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: $space-3;
+}
+
+.dashboard-home__subheading {
+  margin: 0;
+  font-size: 0.95rem;
+}
+
+.dashboard-home__round-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: $space-2;
+}
+
+.dashboard-home__round-row {
+  border: 1px solid $color-border;
+  border-radius: $radius-sm;
+  background: $color-surface;
+}
+
+.dashboard-home__round-link {
+  display: flex;
+  flex-direction: column;
+  gap: $space-1;
+  padding: $space-3;
+  text-decoration: none;
+  color: inherit;
+}
+
+.dashboard-home__round-name {
+  font-weight: 600;
+}
+
+.dashboard-home__round-meta {
+  font-size: 0.8rem;
+  color: $color-text-muted;
+}
+
+.dashboard-home__back {
+  display: inline-block;
+  margin-bottom: $space-3;
+}
