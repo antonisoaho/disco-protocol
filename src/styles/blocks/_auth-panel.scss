@@ -1,42 +1,45 @@
 @use 'sass:map';
 @use '../variables' as *;
 
-// BEM: auth-panel — email/password gate (mobile-first, 44px tap targets).
+// BEM: auth-panel — email/password gate (mobile-first, touch targets).
 
 .auth-panel {
   width: 100%;
-  max-width: 22rem;
-  margin-inline: auto;
-  padding: $layout-section-gap;
+  margin: 0;
+  padding: $space-5 $layout-stack-gap;
   border: 1px solid var(--border);
   border-radius: $radius-md;
   background: var(--surface-bg);
+  box-sizing: border-box;
 }
 
 .auth-panel__title {
-  margin: 0 0 calc(#{$space-unit} * 2);
-  font-size: 1.25rem;
-  font-weight: 600;
+  margin: 0 0 $space-2;
+  text-align: center;
+  font-size: 1.125rem;
+  font-weight: 700;
   color: var(--text);
+  letter-spacing: -0.02em;
 }
 
 .auth-panel__hint {
-  margin: 0 0 calc(#{$space-unit} * 4);
-  font-size: 0.875rem;
+  margin: 0 0 $space-4;
+  text-align: center;
+  font-size: 0.8125rem;
   color: var(--text-muted);
-  line-height: 1.45;
+  line-height: 1.5;
 }
 
 .auth-panel__form {
   display: flex;
   flex-direction: column;
-  gap: calc(#{$space-unit} * 4);
+  gap: $space-4;
 }
 
 .auth-panel__field {
   display: flex;
   flex-direction: column;
-  gap: calc(#{$space-unit} * 2);
+  gap: $space-2;
 }
 
 .auth-panel__label {
@@ -45,52 +48,79 @@
   color: var(--text);
 }
 
+.auth-panel__input {
+  width: 100%;
+  margin: 0;
+  display: block;
+  font-size: 1rem;
+}
+
 .auth-panel__error {
   margin: 0;
   font-size: 0.875rem;
   color: map.get($score-color, double-bogey-plus);
 }
 
-.auth-panel__form button {
+.auth-panel__submit {
+  margin-top: $space-1;
   width: 100%;
-  min-height: 44px;
+  min-height: $touch-target-comfortable;
+  font-weight: 600;
+  font-size: 0.9375rem;
+  border-color: map.get($score-color, eagle);
+  background: map.get($score-color, eagle);
+  color: #fff;
+
+  &:hover:not(:disabled) {
+    border-color: color-mix(in srgb, map.get($score-color, eagle) 82%, #000);
+    background: color-mix(in srgb, map.get($score-color, eagle) 90%, #000);
+  }
+
+  &:disabled {
+    opacity: 0.65;
+  }
 }
 
 .auth-panel__toggle {
-  margin-top: $layout-stack-gap;
+  margin-top: $space-3;
   width: 100%;
+  min-height: $touch-target-min;
+  border-radius: $radius-sm;
+  border: 1px solid var(--border);
   background: transparent;
   color: var(--text-muted);
-  border-color: transparent;
+  font-size: 0.875rem;
 
   &:hover:not(:disabled) {
     color: var(--text);
-    border-color: var(--border);
-    background: transparent;
+    border-color: var(--text-muted);
+    background: color-mix(in srgb, var(--surface-bg) 55%, transparent);
   }
 }
 
 [data-theme='light'] {
   .auth-panel {
-    background: #ffffff;
-    border-color: #d1d5db;
+    background: var(--surface-bg);
+    border-color: var(--border);
   }
 
-  .auth-panel__title { color: #111827; }
+  .auth-panel__title,
+  .auth-panel__label {
+    color: var(--text);
+  }
 
-  .auth-panel__hint { color: #6b7280; }
-
-  .auth-panel__label { color: #111827; }
+  .auth-panel__hint {
+    color: var(--text-muted);
+  }
 
   .auth-panel__toggle {
-    background: transparent;
-    color: #6b7280;
-    border-color: transparent;
+    color: var(--text-muted);
+    border-color: var(--border);
 
     &:hover:not(:disabled) {
-      color: #111827;
-      border-color: #d1d5db;
-      background: transparent;
+      color: var(--text);
+      border-color: var(--text-muted);
+      background: color-mix(in srgb, var(--body-bg) 65%, var(--surface-bg));
     }
   }
 }
