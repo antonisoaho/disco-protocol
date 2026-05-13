@@ -333,6 +333,15 @@ export const commonEn = {
       strokesForPlayerAria: 'Strokes for {{displayName}}',
       notationAria: '{{displayName}}: {{label}}',
       enterStrokesHint: 'Enter strokes to see notation.',
+      needParForResult: 'Set hole par to see result vs par',
+    },
+    summary: {
+      caption: 'Saved throws by hole (scroll sideways on small screens).',
+      aria: 'Round scorecard summary by hole',
+      playerCol: 'Player',
+      totalAbbr: 'Tot',
+      parRow: 'Par',
+      cellTitle: '{{strokes}} throws, par {{par}}: {{label}} ({{delta}})',
     },
     saveState: {
       unsavedChanges: 'Unsaved changes',

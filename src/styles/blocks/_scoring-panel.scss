@@ -94,7 +94,7 @@
 .scoring-panel__select:focus-visible,
 .scoring-panel__button:focus-visible,
 .scoring-panel__tab:focus-visible,
-.scoring-panel__player-row-toggle:focus-visible,
+.scoring-panel__player-score-input:focus-visible,
 .scoring-panel__hole-dot:focus-visible {
   outline: 2px solid map.get($score-color, eagle);
   outline-offset: 2px;
@@ -481,77 +481,120 @@
   gap: calc(#{$space-unit} * 2);
 }
 
+.scoring-panel__summary-caption {
+  margin: 0 0 $space-2;
+}
+
 .scoring-panel__player-rows {
   display: flex;
   flex-direction: column;
-  gap: calc(#{$space-unit} * 2);
+  gap: $space-2;
   margin-top: 0;
 }
 
-.scoring-panel__player-row {
+.scoring-panel__player-row--compact {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  gap: $space-3;
+  padding: $space-2 $space-3;
   border: 1px solid var(--border);
   border-radius: $radius-sm;
-  overflow: hidden;
   background: var(--surface-bg);
 }
 
-.scoring-panel__player-row-toggle {
-  width: 100%;
-  border: 0;
-  background: color-mix(in srgb, var(--body-bg) 85%, var(--surface-bg));
-  color: var(--text);
+.scoring-panel__player-row-name--compact {
+  font-weight: 600;
+  min-width: 0;
+  flex: 1 1 auto;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.scoring-panel__player-score-control {
+  flex: 0 0 auto;
+  width: min(11rem, 46vw);
+}
+
+.scoring-panel__player-score-input-shell {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: calc(#{$space-unit} * 2);
-  text-align: left;
+  align-items: stretch;
+  border: 1px solid var(--border);
+  border-radius: $radius-sm;
+  overflow: hidden;
+  background: var(--body-bg);
+}
+
+.scoring-panel__player-score-input {
+  width: 3.25rem;
+  flex: 0 0 auto;
   min-height: $touch-target-min;
-  padding: $space-3 $layout-stack-gap;
-}
-
-.scoring-panel__player-row-name {
+  margin: 0;
+  border: none;
+  border-radius: 0;
+  text-align: center;
+  font-size: 1rem;
   font-weight: 700;
+  color: var(--text);
+  background: transparent;
+
+  &:focus {
+    outline: none;
+  }
+
+  &:focus-visible {
+    outline: 2px solid map.get($score-color, eagle);
+    outline-offset: -2px;
+  }
 }
 
-.scoring-panel__player-row-summary {
+.scoring-panel__player-score-chip {
+  flex: 1 1 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: $space-1;
+  padding: 0 $space-2;
+  font-size: 0.72rem;
+  font-weight: 700;
+  line-height: 1.2;
+  white-space: nowrap;
+  border-left: 1px solid var(--border);
   color: var(--text-muted);
-  font-size: 0.8rem;
+  background: color-mix(in srgb, var(--surface-bg) 40%, var(--body-bg));
 }
 
-.scoring-panel__player-row-body {
-  padding: $layout-stack-gap;
-  border-top: 1px solid var(--border);
-  display: flex;
-  flex-direction: column;
-  gap: $space-3;
+.scoring-panel__player-score-chip-placeholder {
+  opacity: 0.55;
 }
 
-.scoring-panel__player-row-notation {
-  margin: calc(#{$space-unit} * 1.5) 0 0;
-  font-size: 0.8rem;
-  font-weight: 700;
+.scoring-panel__player-score-chip-delta {
+  font-variant-numeric: tabular-nums;
+  opacity: 0.9;
+}
 
-  &.scoring-panel__notation--albatross-plus,
-  &.scoring-panel__notation--eagle {
-    color: map.get($score-color, eagle);
-  }
+.scoring-panel__player-score-chip.scoring-panel__notation--albatross-plus,
+.scoring-panel__player-score-chip.scoring-panel__notation--eagle {
+  color: map.get($score-color, eagle);
+}
 
-  &.scoring-panel__notation--birdie {
-    color: map.get($score-color, birdie);
-  }
+.scoring-panel__player-score-chip.scoring-panel__notation--birdie {
+  color: map.get($score-color, birdie);
+}
 
-  &.scoring-panel__notation--par {
-    color: map.get($score-color, par);
-  }
+.scoring-panel__player-score-chip.scoring-panel__notation--par {
+  color: map.get($score-color, par);
+}
 
-  &.scoring-panel__notation--bogey {
-    color: map.get($score-color, bogey);
-  }
+.scoring-panel__player-score-chip.scoring-panel__notation--bogey {
+  color: map.get($score-color, bogey);
+}
 
-  &.scoring-panel__notation--double-bogey,
-  &.scoring-panel__notation--triple-bogey-plus {
-    color: map.get($score-color, double-bogey-plus);
-  }
+.scoring-panel__player-score-chip.scoring-panel__notation--double-bogey,
+.scoring-panel__player-score-chip.scoring-panel__notation--triple-bogey-plus {
+  color: map.get($score-color, double-bogey-plus);
 }
 
 .scoring-panel__legend-footnote {
@@ -691,6 +734,138 @@
   margin: 0;
 }
 
+// Scrollable scorecard matrix (holes × players), similar to a traditional card view.
+.scorecard-summary-grid__scroll {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  margin: 0 0 $space-3;
+  border: 1px solid var(--border);
+  border-radius: $radius-sm;
+  background: var(--surface-bg);
+}
+
+.scorecard-summary-grid {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.78rem;
+}
+
+.scorecard-summary-grid__corner,
+.scorecard-summary-grid__hole-head,
+.scorecard-summary-grid__total-head {
+  padding: $space-2 $space-1;
+  text-align: center;
+  font-weight: 600;
+  color: var(--text-muted);
+  border-bottom: 1px solid var(--border);
+  white-space: nowrap;
+}
+
+.scorecard-summary-grid__corner {
+  text-align: left;
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  background: var(--surface-bg);
+  min-width: 6.5rem;
+  max-width: 9rem;
+}
+
+.scorecard-summary-grid__hole-head {
+  min-width: 2.1rem;
+}
+
+.scorecard-summary-grid__total-head {
+  min-width: 2.5rem;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.scorecard-summary-grid__par-row {
+  color: var(--text-muted);
+}
+
+.scorecard-summary-grid__par-label {
+  padding: $space-1 $space-2;
+  text-align: left;
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  background: color-mix(in srgb, var(--body-bg) 55%, var(--surface-bg));
+  border-bottom: 1px solid var(--border);
+  font-weight: 600;
+}
+
+.scorecard-summary-grid__par-cell {
+  padding: $space-1 $space-1;
+  text-align: center;
+  border-bottom: 1px solid var(--border);
+}
+
+.scorecard-summary-grid__par-cell--total {
+  font-weight: 600;
+  color: var(--text);
+}
+
+.scorecard-summary-grid__player-name {
+  padding: $space-2;
+  text-align: left;
+  font-weight: 600;
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  background: var(--surface-bg);
+  border-bottom: 1px solid var(--border);
+  max-width: 9rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.scorecard-summary-grid__stroke-cell {
+  padding: $space-2 $space-1;
+  text-align: center;
+  font-weight: 700;
+  border-bottom: 1px solid var(--border);
+  color: var(--text);
+}
+
+.scorecard-summary-grid__stroke-cell--empty {
+  color: var(--text-muted);
+  font-weight: 500;
+}
+
+.scorecard-summary-grid__stroke-cell.scoring-panel__notation--albatross-plus,
+.scorecard-summary-grid__stroke-cell.scoring-panel__notation--eagle {
+  color: map.get($score-color, eagle);
+}
+
+.scorecard-summary-grid__stroke-cell.scoring-panel__notation--birdie {
+  color: map.get($score-color, birdie);
+}
+
+.scorecard-summary-grid__stroke-cell.scoring-panel__notation--par {
+  color: map.get($score-color, par);
+}
+
+.scorecard-summary-grid__stroke-cell.scoring-panel__notation--bogey {
+  color: map.get($score-color, bogey);
+}
+
+.scorecard-summary-grid__stroke-cell.scoring-panel__notation--double-bogey,
+.scorecard-summary-grid__stroke-cell.scoring-panel__notation--triple-bogey-plus {
+  color: map.get($score-color, double-bogey-plus);
+}
+
+.scorecard-summary-grid__total-cell {
+  padding: $space-2 $space-1;
+  text-align: center;
+  font-weight: 700;
+  border-bottom: 1px solid var(--border);
+  color: var(--text);
+}
+
 .scoring-panel__scorecard-participants {
   margin-top: 0;
   padding: $layout-stack-gap;
@@ -801,18 +976,33 @@
     border-color: #d1d5db;
   }
 
-  .scoring-panel__player-row {
+  .scoring-panel__player-row--compact {
     background: #ffffff;
     border-color: #d1d5db;
   }
 
-  .scoring-panel__player-row-toggle {
-    background: color-mix(in srgb, #f4f6fa 85%, #ffffff);
-    color: #111827;
+  .scoring-panel__player-score-input-shell {
+    border-color: #d1d5db;
+    background: #f4f6fa;
   }
 
-  .scoring-panel__player-row-body {
-    border-top-color: #d1d5db;
+  .scoring-panel__player-score-chip {
+    border-left-color: #d1d5db;
+    background: color-mix(in srgb, #ffffff 35%, #f4f6fa);
+  }
+
+  .scorecard-summary-grid__scroll {
+    background: #ffffff;
+    border-color: #d1d5db;
+  }
+
+  .scorecard-summary-grid__corner,
+  .scorecard-summary-grid__player-name {
+    background: #ffffff;
+  }
+
+  .scorecard-summary-grid__par-label {
+    background: #f4f6fa;
   }
 
   .scoring-panel__round-leader-chip {
