@@ -18,8 +18,8 @@
 
 .app-shell__header {
   flex-shrink: 0;
-  border-bottom: 1px solid $color-border;
-  background: $color-bg;
+  border-bottom: 1px solid var(--color-border);
+  background: var(--color-bg);
   width: 100%;
 }
 
@@ -37,7 +37,7 @@
 .app-shell__header--row {
   display: flex;
   flex-wrap: wrap;
-  align-items: flex-start;
+  align-items: center;
   justify-content: space-between;
   gap: $layout-stack-gap;
 }
@@ -46,7 +46,7 @@
   margin: 0;
   font-size: 1rem;
   font-weight: 500;
-  color: $color-text;
+  color: var(--color-text);
   letter-spacing: -0.01em;
 
   &--brand {
@@ -73,7 +73,7 @@
 .app-shell__tagline {
   margin: $space-1 0 0;
   font-size: 0.875rem;
-  color: $color-text-muted;
+  color: var(--color-text-muted);
 
   &--compact {
     margin-top: $space-1;
@@ -101,12 +101,12 @@
   border-bottom: 2px solid transparent;
   text-decoration: none;
   font-size: 0.875rem;
-  color: $color-text-muted;
+  color: var(--color-text-muted);
   background: transparent;
   transition: color 0.15s ease;
 
   &--active {
-    color: $color-text;
+    color: var(--color-text);
     border-bottom-color: map.get($score-color, birdie);
   }
 }
@@ -116,7 +116,10 @@
   padding-block: $layout-section-gap;
 
   &--with-bottom-nav {
-    padding-bottom: calc(#{$layout-section-gap} + 4.25rem + env(safe-area-inset-bottom, 0));
+    // Fixed `.bottom-nav` sits outside document flow; keep scrollable tail clear of bar + home indicator.
+    padding-bottom: calc(
+      #{$layout-section-gap} + var(--app-bottom-nav-height) + #{$space-3} + env(safe-area-inset-bottom, 0)
+    );
   }
 
   &--centered {
@@ -143,7 +146,7 @@
   margin: 0;
   font-size: 0.9375rem;
   line-height: 1.5;
-  color: $color-text-muted;
+  color: var(--color-text-muted);
 
   &--error {
     color: map.get($score-color, double-bogey-plus);
@@ -157,13 +160,15 @@
 .app-shell__sign-out {
   flex-shrink: 0;
   align-self: center;
+  min-height: $touch-target-comfortable;
+  padding-inline: $space-3;
   background: transparent;
-  color: $color-text-muted;
+  color: var(--color-text-muted);
   border-color: transparent;
 
   &:hover:not(:disabled) {
-    color: $color-text;
-    border-color: $color-border;
+    color: var(--color-text);
+    border-color: var(--color-border);
     background: transparent;
   }
 }
@@ -283,7 +288,7 @@
   font-family: $font-family-mono;
   font-size: 0.8125rem;
   word-break: break-all;
-  color: $color-text;
+  color: var(--color-text);
 }
 
 @media (min-width: $breakpoint-md) {
@@ -292,7 +297,15 @@
   }
 
   .app-shell__main {
-    padding-block: $layout-section-gap-lg;
+    padding-top: $layout-section-gap-lg;
+    padding-bottom: $layout-section-gap-lg;
+  }
+
+  .app-shell__main--with-bottom-nav {
+    padding-bottom: calc(
+      #{$layout-section-gap-lg} + var(--app-bottom-nav-height) + #{$space-3} +
+        env(safe-area-inset-bottom, 0)
+    );
   }
 
   .app-shell__flow {
@@ -301,62 +314,34 @@
 }
 
 .app-shell__header-actions {
-  display: flex;
+  display: inline-flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: $space-2;
   flex-shrink: 0;
-  align-self: center;
 }
 
 .app-shell__theme-toggle {
   flex-shrink: 0;
-  align-self: center;
-  padding: $space-2;
+  box-sizing: border-box;
+  min-width: $touch-target-comfortable;
+  min-height: $touch-target-comfortable;
+  padding: 0;
   background: transparent;
-  color: $color-text-muted;
+  color: var(--color-text-muted);
   border-color: transparent;
 
   &:hover:not(:disabled) {
-    color: $color-text;
-    border-color: $color-border;
-    background: transparent;
+    color: var(--color-text);
+    border-color: var(--color-border);
+    background: color-mix(in srgb, var(--color-surface) 55%, transparent);
   }
 }
 
 [data-theme='light'] {
-  .app-shell__header {
-    background: #f4f6fa;
-    border-bottom-color: #d1d5db;
-  }
-
-  .app-shell__title { color: #111827; }
-
-  .app-shell__tagline { color: #6b7280; }
-
-  .app-shell__nav-link {
-    color: #6b7280;
-
-    &--active { color: #111827; }
-  }
-
   .app-shell__profile {
     background: #ffffff;
     border-color: #d1d5db;
-  }
-
-  .app-shell__placeholder { color: #6b7280; }
-
-  .app-shell__sign-out,
-  .app-shell__theme-toggle {
-    color: #6b7280;
-    background: transparent;
-    border-color: transparent;
-
-    &:hover:not(:disabled) {
-      color: #111827;
-      border-color: #d1d5db;
-      background: transparent;
-    }
   }
 
   .app-shell__retry-btn {
@@ -371,8 +356,7 @@
   }
 
   .app-shell__section-title,
-  .app-shell__profile-label,
-  .app-shell__code { color: #111827; }
+  .app-shell__profile-label { color: #111827; }
 
   .app-shell__profile-actions button {
     color: #6b7280;
