@@ -526,7 +526,7 @@
 
 .scoring-panel__player-row--compact {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(7.25rem, 10rem);
+  grid-template-columns: minmax(0, 1fr) minmax(3.75rem, 5rem);
   align-items: center;
   column-gap: $space-3;
   padding: $space-2 $space-3;
@@ -545,7 +545,7 @@
 
 .scoring-panel__player-score-control {
   width: 100%;
-  max-width: 10rem;
+  max-width: 5rem;
   justify-self: end;
 }
 
@@ -581,12 +581,11 @@
 }
 
 .scoring-panel__player-score-input {
-  width: 3rem;
-  flex: 0 0 3rem;
+  width: 100%;
   min-height: $touch-target-min;
   margin: 0;
   border: none;
-  border-radius: 0;
+  border-radius: $radius-sm;
   text-align: center;
   font-size: 1rem;
   font-weight: 700;
@@ -603,58 +602,16 @@
   }
 }
 
-.scoring-panel__player-score-chip {
-  flex: 1 1 auto;
-  min-width: 0;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: $space-1;
-  padding: 0 $space-2;
-  font-size: 0.72rem;
-  font-weight: 700;
-  line-height: 1.2;
-  white-space: nowrap;
-  border-right: 1px solid var(--border);
-  color: var(--text-muted);
-  background: color-mix(in srgb, var(--surface-bg) 40%, var(--body-bg));
+.scoring-panel__next-hole-row {
+  margin-top: $space-3;
+  display: flex;
+  justify-content: stretch;
 }
 
-.scoring-panel__player-score-chip-label {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  min-width: 0;
-}
-
-.scoring-panel__player-score-chip-placeholder {
-  opacity: 0.55;
-}
-
-.scoring-panel__player-score-chip-delta {
-  font-variant-numeric: tabular-nums;
-  opacity: 0.9;
-}
-
-.scoring-panel__player-score-chip.scoring-panel__notation--albatross-plus,
-.scoring-panel__player-score-chip.scoring-panel__notation--eagle {
-  color: map.get($score-color, eagle);
-}
-
-.scoring-panel__player-score-chip.scoring-panel__notation--birdie {
-  color: map.get($score-color, birdie);
-}
-
-.scoring-panel__player-score-chip.scoring-panel__notation--par {
-  color: map.get($score-color, par);
-}
-
-.scoring-panel__player-score-chip.scoring-panel__notation--bogey {
-  color: map.get($score-color, bogey);
-}
-
-.scoring-panel__player-score-chip.scoring-panel__notation--double-bogey,
-.scoring-panel__player-score-chip.scoring-panel__notation--triple-bogey-plus {
-  color: map.get($score-color, double-bogey-plus);
+.scoring-panel__next-hole {
+  width: 100%;
+  min-height: $touch-target-comfortable;
+  font-weight: 600;
 }
 
 .scoring-panel__legend-footnote {
@@ -1045,11 +1002,6 @@
   .scoring-panel__player-score-input-shell {
     border-color: #d1d5db;
     background: #f4f6fa;
-  }
-
-  .scoring-panel__player-score-chip {
-    border-right-color: #d1d5db;
-    background: color-mix(in srgb, #ffffff 35%, #f4f6fa);
   }
 
   .scorecard-summary-grid__scroll {

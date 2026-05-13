@@ -312,6 +312,7 @@ export const commonSv = {
       currentHoleInputAria: 'Aktuellt hål, 1–{{total}}',
       holeOfTotal: '{{current}} / {{total}}',
       honorThrowFirst: '{{names}} honör',
+      nextHoleCta: 'Nästa hål',
     },
     holeForm: {
       sectionAria: 'Formulär för hål {{holeNumber}}',
@@ -356,13 +357,6 @@ export const commonSv = {
       bogey: 'Bogey',
       doubleBogey: 'Dubbelbogey',
       tripleBogeyPlus: 'Trippelbogey eller sämre',
-      chipAlbatrossPlus: '−3+',
-      chipEagle: 'Eagle',
-      chipBirdie: 'Birdie',
-      chipPar: 'Par',
-      chipBogey: 'Bogey',
-      chipDoubleBogey: 'Dbl',
-      chipTripleBogeyPlus: '3+',
     },
     notices: {
       roundCreated: 'Rundan skapades. Börja poängsätta hål för hål.',

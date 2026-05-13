@@ -136,6 +136,7 @@ export function ScoringPanel({ user, roundId, onAfterRoundDeleted }: Props) {
   const [error, setError] = useState<string | null>(null)
   const [notice, setNotice] = useState<string | null>(null)
   const autosaveTimerRef = useRef<number | null>(null)
+  const holeSaveInFlightRef = useRef<Promise<boolean> | null>(null)
   const inviteAnonymousNameInputRef = useRef<HTMLInputElement | null>(null)
 
   const resolveAnonymousNameError = useCallback(
@@ -568,72 +569,84 @@ export function ScoringPanel({ user, roundId, onAfterRoundDeleted }: Props) {
   )
 
   const saveCurrentHole = useCallback(async (): Promise<boolean> => {
-    if (!selected || !roundId || !effectiveHoleDraft || !persistedHoleState) return true
-    const roundCourseSource = selected.data.courseSource ?? 'saved'
-    const payload = mergeAutosavePayload({
-      courseSource: roundCourseSource,
-      participantIds: selected.data.participantIds,
-      draft: effectiveHoleDraft,
-      persisted: persistedHoleState,
-      allowSavedParAdjust: canAdjustSavedCourseMetadata,
-    })
-
-    if (payload.validationError) {
-      setError(payload.validationError)
-      setSaveState('error')
-      return false
+    if (holeSaveInFlightRef.current) {
+      return holeSaveInFlightRef.current
     }
+    const run = async (): Promise<boolean> => {
+      if (!selected || !roundId || !effectiveHoleDraft || !persistedHoleState) return true
+      const roundCourseSource = selected.data.courseSource ?? 'saved'
+      const payload = mergeAutosavePayload({
+        courseSource: roundCourseSource,
+        participantIds: selected.data.participantIds,
+        draft: effectiveHoleDraft,
+        persisted: persistedHoleState,
+        allowSavedParAdjust: canAdjustSavedCourseMetadata,
+      })
 
-    if (!payload.hasMeaningfulChange) {
-      setSaveState('saved')
-      return true
-    }
+      if (payload.validationError) {
+        setError(payload.validationError)
+        setSaveState('error')
+        return false
+      }
 
-    setSaveState('saving')
-    setError(null)
-    try {
-      if (roundCourseSource === 'fresh' && payload.metadata) {
-        await updateFreshRoundHoleMetadata({
-          roundId: roundId,
-          actorUid: uid,
-          holeNumber: activeHoleNumber,
-          metadata: payload.metadata,
-        })
+      if (!payload.hasMeaningfulChange) {
+        setSaveState('saved')
+        return true
       }
-      if (payload.savedParSync) {
-        await syncSavedRoundHoleParForHole({
-          roundId: roundId,
-          actorUid: uid,
-          holeNumber: activeHoleNumber,
-          par: payload.savedParSync.par,
-        })
-      }
-      await Promise.all(
-        payload.participantScoreUpdates.map((update) =>
-          recordParticipantHoleScoreTransaction(
-            roundId,
-            uid,
-            update.participantUid,
-            activeHoleNumber,
-            update.strokes,
-            update.par,
+
+      setSaveState('saving')
+      setError(null)
+      try {
+        if (roundCourseSource === 'fresh' && payload.metadata) {
+          await updateFreshRoundHoleMetadata({
+            roundId: roundId,
+            actorUid: uid,
+            holeNumber: activeHoleNumber,
+            metadata: payload.metadata,
+          })
+        }
+        if (payload.savedParSync) {
+          await syncSavedRoundHoleParForHole({
+            roundId: roundId,
+            actorUid: uid,
+            holeNumber: activeHoleNumber,
+            par: payload.savedParSync.par,
+          })
+        }
+        await Promise.all(
+          payload.participantScoreUpdates.map((update) =>
+            recordParticipantHoleScoreTransaction(
+              roundId,
+              uid,
+              update.participantUid,
+              activeHoleNumber,
+              update.strokes,
+              update.par,
+            ),
           ),
-        ),
-      )
-      setSaveState('saved')
-      return true
-    } catch (nextError) {
-      if (nextError instanceof FreshRoundDraftValidationError) {
-        setError(formatDraftIssues(t, nextError.issues))
-      } else {
-        setError(
-          nextError instanceof Error
-            ? translateUserError(t, nextError.message)
-            : t('scoring.errors.failedToAutosaveHole'),
         )
+        setSaveState('saved')
+        return true
+      } catch (nextError) {
+        if (nextError instanceof FreshRoundDraftValidationError) {
+          setError(formatDraftIssues(t, nextError.issues))
+        } else {
+          setError(
+            nextError instanceof Error
+              ? translateUserError(t, nextError.message)
+              : t('scoring.errors.failedToAutosaveHole'),
+          )
+        }
+        setSaveState('error')
+        return false
       }
-      setSaveState('error')
-      return false
+    }
+    const p = run()
+    holeSaveInFlightRef.current = p
+    try {
+      return await p
+    } finally {
+      holeSaveInFlightRef.current = null
     }
   }, [
     activeHoleNumber,
@@ -667,15 +680,17 @@ export function ScoringPanel({ user, roundId, onAfterRoundDeleted }: Props) {
       if (!selectedHoleCount) return
       const nextHoleNumber = clampHoleNumber(targetHoleNumber, selectedHoleCount)
       if (nextHoleNumber === activeHoleNumber) return
-      if (saveState === 'dirty' || saveState === 'error') {
-        const saved = await saveCurrentHole()
-        if (!saved) return
+      if (autosaveTimerRef.current !== null) {
+        window.clearTimeout(autosaveTimerRef.current)
+        autosaveTimerRef.current = null
       }
+      const saved = await saveCurrentHole()
+      if (!saved) return
       setHoleNumber(nextHoleNumber)
       setHoleDraft(null)
       setSaveState('saved')
     },
-    [activeHoleNumber, saveCurrentHole, saveState, selectedHoleCount],
+    [activeHoleNumber, saveCurrentHole, selectedHoleCount],
   )
 
   const onAddParticipant = useCallback(async () => {
@@ -1013,21 +1028,39 @@ export function ScoringPanel({ user, roundId, onAfterRoundDeleted }: Props) {
                   disableLength={selected.data.courseSource !== 'fresh'}
                   saveStateLabel={saveStateLabel}
                 >
-                  <PlayerScoreRows
-                    participantIds={selected.data.participantIds}
-                    participantNames={selectedParticipantNames}
-                    scoreInputs={effectiveHoleDraft.scoreInputs}
-                    onScoreChange={(participantUid, value) =>
-                      updateHoleDraft((current) => ({
-                        ...current,
-                        scoreInputs: {
-                          ...current.scoreInputs,
-                          [participantUid]: value,
-                        },
-                      }))
-                    }
-                    parValue={parseIntegerInput(effectiveHoleDraft.parInput)}
-                  />
+                  <>
+                    <PlayerScoreRows
+                      participantIds={selected.data.participantIds}
+                      participantNames={selectedParticipantNames}
+                      scoreInputs={effectiveHoleDraft.scoreInputs}
+                      onScoreChange={(participantUid, value) =>
+                        updateHoleDraft((current) => ({
+                          ...current,
+                          scoreInputs: {
+                            ...current.scoreInputs,
+                            [participantUid]: value,
+                          },
+                        }))
+                      }
+                      parValue={parseIntegerInput(effectiveHoleDraft.parInput)}
+                    />
+                    {selectedHoleCount ? (
+                      <div className="scoring-panel__next-hole-row">
+                        <button
+                          type="button"
+                          className="scoring-panel__button scoring-panel__button--primary scoring-panel__next-hole"
+                          onClick={() =>
+                            void navigateToHole(stepHoleNumber(activeHoleNumber, 1, selectedHoleCount))
+                          }
+                          disabled={
+                            busy || activeHoleNumber >= selectedHoleCount || !effectiveHoleDraft
+                          }
+                        >
+                          {t('scoring.stepper.nextHoleCta')}
+                        </button>
+                      </div>
+                    ) : null}
+                  </>
                 </HoleForm>
               ) : (
                 <p className="scoring-panel__muted">{t('scoring.rounds.selectRoundToLoadHoleForm')}</p>

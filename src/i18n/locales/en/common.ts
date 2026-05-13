@@ -315,6 +315,7 @@ export const commonEn = {
       currentHoleInputAria: 'Current hole number, 1–{{total}}',
       holeOfTotal: '{{current}} / {{total}}',
       honorThrowFirst: 'Honors: {{names}} (throw first)',
+      nextHoleCta: 'Next hole',
     },
     holeForm: {
       sectionAria: 'Hole {{holeNumber}} form',
@@ -359,13 +360,6 @@ export const commonEn = {
       bogey: 'Bogey',
       doubleBogey: 'Double bogey',
       tripleBogeyPlus: 'Triple bogey or worse',
-      chipAlbatrossPlus: '−3+',
-      chipEagle: 'Eagle',
-      chipBirdie: 'Birdie',
-      chipPar: 'Par',
-      chipBogey: 'Bogey',
-      chipDoubleBogey: 'Dbl',
-      chipTripleBogeyPlus: '3+',
     },
     notices: {
       roundCreated: 'Round created. Start scoring hole-by-hole.',
