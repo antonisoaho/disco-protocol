@@ -43,6 +43,7 @@ import { HoleForm } from './HoleForm'
 import { HoleStepper } from './HoleStepper'
 import { mergeAutosavePayload, type HoleDraftInputs, clampHoleNumber, stepHoleNumber } from './holeAutosave'
 import { PlayerScoreRows } from './PlayerScoreRows'
+import { ScorecardSummaryGrid } from './ScorecardSummaryGrid'
 import { aggregateScoreProtocol, normalizeScoreProtocol } from './protocol'
 import { inferRoundHoleCount } from './inferRoundHoleCount'
 import { computeGrandTotals, computeParticipantTotals, pickLeadingParticipantIds } from './scorecardTable'
@@ -129,7 +130,6 @@ export function ScoringPanel({ user, roundId, onAfterRoundDeleted }: Props) {
   const [followerIds, setFollowerIds] = useState<string[]>([])
   const [holeNumber, setHoleNumber] = useState(1)
   const [holeDraft, setHoleDraft] = useState<HoleDraftInputs | null>(null)
-  const [expandedPlayers, setExpandedPlayers] = useState<Record<string, boolean>>({})
   const [saveState, setSaveState] = useState<SaveState>('saved')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -806,7 +806,6 @@ export function ScoringPanel({ user, roundId, onAfterRoundDeleted }: Props) {
           setHoleNumber(1)
           setHoleDraft(null)
           setSaveState('saved')
-          setExpandedPlayers({})
           onAfterRoundDeleted?.()
         }
         setNotice(t('scoring.notices.roundDeleted'))
@@ -969,6 +968,13 @@ export function ScoringPanel({ user, roundId, onAfterRoundDeleted }: Props) {
                   })}
                 </p>
               ) : null}
+              <p className="scoring-panel__muted scoring-panel__summary-caption">{t('scoring.summary.caption')}</p>
+              <ScorecardSummaryGrid
+                participantIds={selected.data.participantIds}
+                participantNames={selectedParticipantNames}
+                scoresByParticipant={selectedParticipantScores ?? {}}
+                holeCount={selectedHoleCount ?? 0}
+              />
               <HoleStepper
                 holeCount={selectedHoleCount ?? 1}
                 currentHole={activeHoleNumber}
@@ -1017,13 +1023,6 @@ export function ScoringPanel({ user, roundId, onAfterRoundDeleted }: Props) {
                           ...current.scoreInputs,
                           [participantUid]: value,
                         },
-                      }))
-                    }
-                    expandedByUid={expandedPlayers}
-                    onToggleExpanded={(participantUid) =>
-                      setExpandedPlayers((current) => ({
-                        ...current,
-                        [participantUid]: !(current[participantUid] ?? true),
                       }))
                     }
                     parValue={parseIntegerInput(effectiveHoleDraft.parInput)}

@@ -330,6 +330,15 @@ export const commonSv = {
       strokesForPlayerAria: 'Kast för {{displayName}}',
       notationAria: '{{displayName}}: {{label}}',
       enterStrokesHint: 'Ange kast för att se notation.',
+      needParForResult: 'Ange hålets par för att se resultat mot par',
+    },
+    summary: {
+      caption: 'Sparade kast per hål (scrolla åt sidan på små skärmar).',
+      aria: 'Sammanfattning av rundan per hål',
+      playerCol: 'Spelare',
+      totalAbbr: 'Tot',
+      parRow: 'Par',
+      cellTitle: '{{strokes}} kast, par {{par}}: {{label}} ({{delta}})',
     },
     saveState: {
       unsavedChanges: 'Osparade ändringar',
