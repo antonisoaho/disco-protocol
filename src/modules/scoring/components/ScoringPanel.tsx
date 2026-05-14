@@ -7,7 +7,6 @@ import type { CourseTemplateDoc } from '@core/domain/course'
 import { db } from '@core/firebase/firestore'
 import { COLLECTIONS } from '@core/firebase/paths'
 import { translateUserError } from '@common/i18n/translateError'
-import { computeHeadToHeadSummary, computeParticipantParSummary } from '@core/domain/roundAnalytics'
 import {
   FreshRoundDraftValidationError,
   normalizeFreshCourseDraftForPromotion,
@@ -27,8 +26,6 @@ import {
 import type { RoundDoc } from '@core/domain/round'
 import { subscribeFollowers, subscribeFollowing } from '@core/users/follows'
 import { subscribeUserDirectory, type UserDirectoryEntry } from '@core/users/userDirectory'
-import { scoreTierToNotationClassName, strokesParDeltaToNotation } from '@modules/scoring/domain/scoreSemantic'
-import { FollowPanel } from '@common/components/FollowPanel'
 import { formatDraftIssues } from '@common/helpers/formatDraftIssues'
 import {
   buildAnonymousParticipantNameMap,
@@ -36,7 +33,6 @@ import {
   deriveFriendUidSet,
   filterParticipantDirectoryEntries,
   isAnonymousParticipantId,
-  mergeAnonymousParticipants,
   normalizeAnonymousParticipantName,
 } from '@core/domain/participantRoster'
 import { HoleForm } from '@modules/scoring/components/HoleForm'
@@ -60,7 +56,7 @@ const AUTOSAVE_DEBOUNCE_MS = 550
 const ANONYMOUS_NAME_MAX_LENGTH = 80
 const NON_WHITESPACE_PATTERN = '.*\\S.*'
 
-type AppTabId = 'scorecard' | 'participants' | 'analytics' | 'follow'
+type AppTabId = 'scorecard' | 'participants'
 type SaveState = 'saved' | 'dirty' | 'saving' | 'error'
 
 function formatDelta(delta: number): string {
@@ -126,7 +122,6 @@ export function ScoringPanel({ user, roundId, onAfterRoundDeleted }: Props) {
   const [rosterReplaceFromId, setRosterReplaceFromId] = useState<string | null>(null)
   const [rosterReplaceQuery, setRosterReplaceQuery] = useState('')
   const [rosterReplaceTargetUid, setRosterReplaceTargetUid] = useState<string | null>(null)
-  const [analyticsOpponentUid, setAnalyticsOpponentUid] = useState('')
   const [directoryEntries, setDirectoryEntries] = useState<UserDirectoryEntry[]>([])
   const [followingIds, setFollowingIds] = useState<string[]>([])
   const [followerIds, setFollowerIds] = useState<string[]>([])
@@ -312,77 +307,6 @@ export function ScoringPanel({ user, roundId, onAfterRoundDeleted }: Props) {
     setRosterReplaceQuery('')
     setRosterReplaceTargetUid(null)
   }, [])
-
-  const roundDocs = useMemo(() => items.map((item) => item.data), [items])
-
-  const participantParSummary = useMemo(
-    () => computeParticipantParSummary(roundDocs, uid),
-    [roundDocs, uid],
-  )
-
-  const participantParNotation = useMemo(() => {
-    if (participantParSummary.scoredHoles === 0 || participantParSummary.totalPar <= 0) {
-      return null
-    }
-    return strokesParDeltaToNotation(participantParSummary.totalStrokes, participantParSummary.totalPar)
-  }, [participantParSummary])
-
-  const anonymousDisplayNameById = useMemo(() => {
-    const map: Record<string, string> = {}
-    for (const round of roundDocs) {
-      const merged = mergeAnonymousParticipants(round.participantIds, round.anonymousParticipants)
-      for (const anonymous of merged) {
-        if (!map[anonymous.id]) {
-          map[anonymous.id] = anonymous.displayName
-        }
-      }
-    }
-    return map
-  }, [roundDocs])
-
-  const analyticsOpponentOptions = useMemo(() => {
-    const opponentIds = new Set<string>()
-    for (const round of roundDocs) {
-      if (round.completedAt === null) continue
-      for (const participantId of round.participantIds) {
-        if (participantId !== uid) {
-          opponentIds.add(participantId)
-        }
-      }
-    }
-    return Array.from(opponentIds).sort((a, b) => {
-      const aName =
-        anonymousDisplayNameById[a] ??
-        participantDisplayName(
-          directoryByUid[a] ?? {
-            uid: a,
-            displayName: a,
-            subtitle: a,
-          },
-        )
-      const bName =
-        anonymousDisplayNameById[b] ??
-        participantDisplayName(
-          directoryByUid[b] ?? {
-            uid: b,
-            displayName: b,
-            subtitle: b,
-          },
-        )
-      return aName.localeCompare(bName, undefined, { sensitivity: 'base' })
-    })
-  }, [anonymousDisplayNameById, directoryByUid, roundDocs, uid])
-
-  const selectedAnalyticsOpponentUid = analyticsOpponentOptions.includes(analyticsOpponentUid)
-    ? analyticsOpponentUid
-    : (analyticsOpponentOptions[0] ?? '')
-
-  const headToHeadSummary = useMemo(() => {
-    if (!selectedAnalyticsOpponentUid) {
-      return null
-    }
-    return computeHeadToHeadSummary(roundDocs, uid, selectedAnalyticsOpponentUid)
-  }, [roundDocs, selectedAnalyticsOpponentUid, uid])
 
   const selectedParticipantScores = useMemo(
     () => (selected ? readParticipantHoleScores(selected.data, uid) : null),
@@ -982,24 +906,6 @@ export function ScoringPanel({ user, roundId, onAfterRoundDeleted }: Props) {
         >
           {t('scoring.tabs.participants')}
         </button>
-        <button
-          type="button"
-          role="tab"
-          aria-selected={activeTab === 'analytics'}
-          className={`scoring-panel__tab${activeTab === 'analytics' ? ' scoring-panel__tab--active' : ''}`}
-          onClick={() => setActiveTab('analytics')}
-        >
-          {t('scoring.tabs.analytics')}
-        </button>
-        <button
-          type="button"
-          role="tab"
-          aria-selected={activeTab === 'follow'}
-          className={`scoring-panel__tab${activeTab === 'follow' ? ' scoring-panel__tab--active' : ''}`}
-          onClick={() => setActiveTab('follow')}
-        >
-          {t('scoring.tabs.follow')}
-        </button>
       </div>
 
       {activeTab === 'scorecard' ? (
@@ -1384,93 +1290,6 @@ export function ScoringPanel({ user, roundId, onAfterRoundDeleted }: Props) {
               ) : null}
             </>
           )}
-        </div>
-      ) : null}
-
-      {activeTab === 'analytics' ? (
-        <div className="scoring-panel__section">
-          <span className="scoring-panel__label">{t('scoring.sections.analyticsStrip')}</span>
-          {participantParSummary.scoredRounds === 0 ? (
-            <p className="scoring-panel__muted">{t('scoring.analytics.empty')}</p>
-          ) : (
-            <>
-              <p className="scoring-panel__analytics-summary">
-                {t('scoring.analytics.completedRoundsSummary', {
-                  completedRounds: participantParSummary.completedRounds,
-                  scoredRounds: participantParSummary.scoredRounds,
-                  scoredHoles: participantParSummary.scoredHoles,
-                })}
-              </p>
-              <p className="scoring-panel__analytics-delta">
-                <strong>{t('scoring.analytics.deltaLabel')}</strong>
-                <span
-                  className={`scoring-panel__notation scoring-panel__analytics-delta-value ${
-                    participantParNotation ? scoreTierToNotationClassName(participantParNotation.tier) : ''
-                  }`}
-                  aria-label={t('scoring.aria.totalRoundDelta', { delta: formatDelta(participantParSummary.totalDelta) })}
-                >
-                  {formatDelta(participantParSummary.totalDelta)}
-                </span>
-                <span className="scoring-panel__muted">
-                  {t('scoring.analytics.deltaFromTotals', {
-                    totalStrokes: participantParSummary.totalStrokes,
-                    totalPar: participantParSummary.totalPar,
-                  })}
-                </span>
-              </p>
-            </>
-          )}
-          {analyticsOpponentOptions.length > 0 ? (
-            <>
-              <div className="scoring-panel__row">
-                <div className="scoring-panel__field">
-                  <label className="scoring-panel__label" htmlFor="analytics-opponent">
-                    {t('scoring.analytics.headToHeadOpponent')}
-                  </label>
-                  <select
-                    id="analytics-opponent"
-                    className="scoring-panel__select"
-                    value={selectedAnalyticsOpponentUid}
-                    onChange={(event) => setAnalyticsOpponentUid(event.target.value)}
-                  >
-                    {analyticsOpponentOptions.map((opponentUid) => {
-                      const entry = directoryByUid[opponentUid]
-                      return (
-                        <option key={opponentUid} value={opponentUid}>
-                          {anonymousDisplayNameById[opponentUid] ??
-                            (entry ? participantDisplayName(entry) : opponentUid)}
-                        </option>
-                      )
-                    })}
-                  </select>
-                </div>
-              </div>
-              {headToHeadSummary ? (
-                <p className="scoring-panel__analytics-summary">
-                  {t('scoring.analytics.headToHeadLabel')}{' '}
-                  <strong>
-                    {headToHeadSummary.wins}-{headToHeadSummary.losses}-{headToHeadSummary.ties}
-                  </strong>{' '}
-                  {t('scoring.analytics.acrossComparableRounds', {
-                    comparedRounds: headToHeadSummary.comparedRounds,
-                  })}
-                  {headToHeadSummary.skippedRounds > 0
-                    ? ` (${t('scoring.analytics.skippedRoundsReason', { skippedRounds: headToHeadSummary.skippedRounds })}).`
-                    : '.'}
-                </p>
-              ) : null}
-            </>
-          ) : (
-            <p className="scoring-panel__muted">
-              {t('scoring.analytics.addRoundsToUnlock')}
-            </p>
-          )}
-        </div>
-      ) : null}
-
-      {activeTab === 'follow' ? (
-        <div className="scoring-panel__section">
-          <FollowPanel user={user} />
         </div>
       ) : null}
     </section>

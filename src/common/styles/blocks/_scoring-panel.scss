@@ -738,27 +738,6 @@
   color: var(--text-muted);
 }
 
-.scoring-panel__analytics-summary {
-  margin: 0;
-  font-size: 0.875rem;
-  color: var(--text-muted);
-}
-
-.scoring-panel__analytics-delta {
-  margin: 0;
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: calc(#{$space-unit} * 1.5);
-}
-
-.scoring-panel__analytics-delta-value {
-  min-width: auto;
-  min-height: auto;
-  font-size: 1rem;
-  font-weight: 700;
-}
-
 .scoring-panel__save-status {
   font-weight: 600;
   color: color-mix(in srgb, var(--text) 84%, var(--text-muted));

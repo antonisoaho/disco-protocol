@@ -238,6 +238,29 @@
   color: var(--text-muted);
 }
 
+.dashboard-home__head-to-head {
+  display: flex;
+  flex-direction: column;
+  gap: $space-3;
+  padding: $space-3;
+  border: 1px solid var(--border);
+  border-radius: $radius-md;
+  background: var(--surface-bg);
+}
+
+.dashboard-home__head-to-head-title {
+  margin: 0;
+}
+
+.dashboard-home__stats--head-to-head {
+  margin: 0;
+}
+
+.dashboard-home__head-to-head-foot {
+  margin: 0;
+  font-size: 0.8rem;
+}
+
 .dashboard-home__back {
   display: inline-flex;
   margin-bottom: $space-3;

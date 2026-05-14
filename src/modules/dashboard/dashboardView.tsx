@@ -3,7 +3,7 @@ import type { Timestamp } from 'firebase/firestore'
 import { useEffect, useMemo, useReducer } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router-dom'
-import { listParticipantRoundDeltasChronological } from '@core/domain/roundAnalytics'
+import { computeHeadToHeadSummary, listParticipantRoundDeltasChronological } from '@core/domain/roundAnalytics'
 import { subscribeMyRounds, type RoundListItem } from '@core/domain/rounds'
 import { subscribeUserDirectory, type UserDirectoryEntry } from '@core/users/userDirectory'
 import { translateUserError } from '@common/i18n/translateError'
@@ -110,6 +110,12 @@ export function DashboardHome({ viewer, profileUid, readOnly }: Props) {
 
   const completedRoundRows = items.filter((row) => row.data.completedAt !== null)
 
+  const mutualVsViewerSummary = useMemo(() => {
+    if (!readOnly) return null
+    const rounds = items.map((row) => row.data)
+    return computeHeadToHeadSummary(rounds, viewer.uid, profileUid)
+  }, [items, profileUid, readOnly, viewer.uid])
+
   return (
     <section className="dashboard-home" aria-labelledby="dashboard-home-title">
       <h2 id="dashboard-home-title" className="dashboard-home__title">
@@ -141,6 +147,49 @@ export function DashboardHome({ viewer, profileUid, readOnly }: Props) {
           <span className="dashboard-home__stat-value">{stats.count}</span>
         </div>
       </div>
+
+      {readOnly && mutualVsViewerSummary ? (
+        <div
+          className="dashboard-home__head-to-head"
+          aria-label={t('dashboard.headToHeadSectionAria', { name: profileLabel })}
+        >
+          <h3 className="dashboard-home__subheading dashboard-home__head-to-head-title">
+            {t('dashboard.headToHeadTitle', { name: profileLabel })}
+          </h3>
+          {mutualVsViewerSummary.sharedCompletedRounds === 0 ? (
+            <p className="dashboard-home__muted">{t('dashboard.headToHeadEmpty')}</p>
+          ) : mutualVsViewerSummary.comparedRounds === 0 ? (
+            <p className="dashboard-home__muted">{t('dashboard.headToHeadNoComparable')}</p>
+          ) : (
+            <>
+              <div
+                className="dashboard-home__stats dashboard-home__stats--head-to-head"
+                role="group"
+                aria-label={t('dashboard.headToHeadStatsAria')}
+              >
+                <div className="dashboard-home__stat">
+                  <span className="dashboard-home__stat-label">{t('dashboard.headToHeadWins')}</span>
+                  <span className="dashboard-home__stat-value">{mutualVsViewerSummary.wins}</span>
+                </div>
+                <div className="dashboard-home__stat">
+                  <span className="dashboard-home__stat-label">{t('dashboard.headToHeadTies')}</span>
+                  <span className="dashboard-home__stat-value">{mutualVsViewerSummary.ties}</span>
+                </div>
+                <div className="dashboard-home__stat">
+                  <span className="dashboard-home__stat-label">{t('dashboard.headToHeadLosses')}</span>
+                  <span className="dashboard-home__stat-value">{mutualVsViewerSummary.losses}</span>
+                </div>
+              </div>
+              <p className="dashboard-home__muted dashboard-home__head-to-head-foot">
+                {t('dashboard.headToHeadCompared', { count: mutualVsViewerSummary.comparedRounds })}
+                {mutualVsViewerSummary.skippedRounds > 0
+                  ? ` ${t('dashboard.headToHeadSkipped', { count: mutualVsViewerSummary.skippedRounds })}`
+                  : ''}
+              </p>
+            </>
+          )}
+        </div>
+      ) : null}
 
       {deltas.length > 0 ? (
         <div className="dashboard-home__chart-wrap">
