@@ -69,9 +69,26 @@
 
 .dashboard-home__actions {
   display: flex;
-  flex-wrap: wrap;
+  flex-direction: column;
   align-items: stretch;
   gap: $space-3;
+
+  > a {
+    width: 100%;
+    box-sizing: border-box;
+  }
+
+  @media (min-width: $breakpoint-md) {
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: stretch;
+
+    > a {
+      flex: 1 1 0;
+      min-width: 0;
+      width: auto;
+    }
+  }
 }
 
 // Secondary control next to primary CTA — reads as a button, not a default hyperlink.
