@@ -1,6 +1,6 @@
 import { type User } from 'firebase/auth'
 import { doc, onSnapshot } from 'firebase/firestore'
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { type FormEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useAuth } from '@core/auth/useAuth'
 import type { CourseTemplateDoc } from '@core/domain/course'
@@ -42,6 +42,7 @@ import {
 import { HoleForm } from '@modules/scoring/components/HoleForm'
 import { HoleStepper } from '@modules/scoring/components/HoleStepper'
 import { mergeAutosavePayload, type HoleDraftInputs, clampHoleNumber, stepHoleNumber } from '@modules/scoring/domain/holeAutosave'
+import { resolveHoleSubmitMode } from '@modules/scoring/domain/holeSubmit'
 import { PlayerScoreRows } from '@modules/scoring/components/PlayerScoreRows'
 import { ScorecardSummaryGrid } from '@modules/scoring/components/ScorecardSummaryGrid'
 import { aggregateScoreProtocol, normalizeScoreProtocol } from '@core/domain/scoreProtocol'
@@ -911,6 +912,45 @@ export function ScoringPanel({ user, roundId, onAfterRoundDeleted }: Props) {
     }
   }, [roundId, t, uid])
 
+  const holeSubmitMode = selectedHoleCount
+    ? resolveHoleSubmitMode({ activeHoleNumber, holeCount: selectedHoleCount })
+    : null
+  const holeSubmitLabel = holeSubmitMode === 'complete'
+    ? t('scoring.buttons.completeRound')
+    : t('scoring.stepper.nextHoleCta')
+
+  const onSubmitHoleForm = useCallback(
+    (event: FormEvent<HTMLFormElement>) => {
+      event.preventDefault()
+      if (!selectedHoleCount || busy || !effectiveHoleDraft || !holeSubmitMode) return
+
+      if (holeSubmitMode === 'complete') {
+        if (autosaveTimerRef.current !== null) {
+          window.clearTimeout(autosaveTimerRef.current)
+          autosaveTimerRef.current = null
+        }
+        void saveCurrentHole().then((saved) => {
+          if (saved) {
+            void onComplete()
+          }
+        })
+        return
+      }
+
+      void navigateToHole(stepHoleNumber(activeHoleNumber, 1, selectedHoleCount))
+    },
+    [
+      activeHoleNumber,
+      busy,
+      effectiveHoleDraft,
+      holeSubmitMode,
+      navigateToHole,
+      onComplete,
+      saveCurrentHole,
+      selectedHoleCount,
+    ],
+  )
+
   return (
     <section className="scoring-panel" aria-labelledby="scoring-panel-title">
       <h2 id="scoring-panel-title" className="scoring-panel__title">
@@ -1027,6 +1067,7 @@ export function ScoringPanel({ user, roundId, onAfterRoundDeleted }: Props) {
                   disablePar={savedCourseMetadataLocked}
                   disableLength={selected.data.courseSource !== 'fresh'}
                   saveStateLabel={saveStateLabel}
+                  onSubmit={onSubmitHoleForm}
                 >
                   <>
                     <PlayerScoreRows
@@ -1047,16 +1088,13 @@ export function ScoringPanel({ user, roundId, onAfterRoundDeleted }: Props) {
                     {selectedHoleCount ? (
                       <div className="scoring-panel__next-hole-row">
                         <button
-                          type="button"
+                          type="submit"
                           className="scoring-panel__button scoring-panel__button--primary scoring-panel__next-hole"
-                          onClick={() =>
-                            void navigateToHole(stepHoleNumber(activeHoleNumber, 1, selectedHoleCount))
-                          }
                           disabled={
-                            busy || activeHoleNumber >= selectedHoleCount || !effectiveHoleDraft
+                            busy || !effectiveHoleDraft || !holeSubmitMode
                           }
                         >
-                          {t('scoring.stepper.nextHoleCta')}
+                          {holeSubmitLabel}
                         </button>
                       </div>
                     ) : null}
@@ -1075,14 +1113,16 @@ export function ScoringPanel({ user, roundId, onAfterRoundDeleted }: Props) {
                 {t('scoring.buttons.completeRoundHint')}
               </p>
               <div className="scoring-panel__row">
-                <button
-                  type="button"
-                  className="scoring-panel__button scoring-panel__button--primary"
-                  onClick={() => void onComplete()}
-                  disabled={busy}
-                >
-                  {t('scoring.buttons.completeRound')}
-                </button>
+                {holeSubmitMode !== 'complete' ? (
+                  <button
+                    type="button"
+                    className="scoring-panel__button scoring-panel__button--primary"
+                    onClick={() => void onComplete()}
+                    disabled={busy}
+                  >
+                    {t('scoring.buttons.completeRound')}
+                  </button>
+                ) : null}
                 {selected.data.courseSource === 'fresh' &&
                 (selected.data.coursePromotion?.status === 'pending' ||
                   selected.data.coursePromotion?.status === 'failed') ? (

@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react'
+import type { FormEventHandler, ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 
 type Props = {
@@ -10,6 +10,7 @@ type Props = {
   disablePar?: boolean
   disableLength: boolean
   saveStateLabel: string
+  onSubmit: FormEventHandler<HTMLFormElement>
   children: ReactNode
 }
 
@@ -22,14 +23,16 @@ export function HoleForm({
   disablePar = false,
   disableLength,
   saveStateLabel,
+  onSubmit,
   children,
 }: Props) {
   const { t } = useTranslation('common')
 
   return (
-    <section
+    <form
       className="scoring-panel__hole-form"
       aria-label={t('scoring.holeForm.sectionAria', { holeNumber })}
+      onSubmit={onSubmit}
     >
       <div className="scoring-panel__hole-meta-row">
         <label className="scoring-panel__field scoring-panel__field--compact field">
@@ -65,6 +68,6 @@ export function HoleForm({
         {saveStateLabel}
       </p>
       {children}
-    </section>
+    </form>
   )
 }
