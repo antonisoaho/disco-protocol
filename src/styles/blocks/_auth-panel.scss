@@ -6,28 +6,31 @@
 .auth-panel {
   width: 100%;
   margin: 0;
-  padding: $space-5 $layout-stack-gap;
-  border: 1px solid var(--border);
-  border-radius: $radius-md;
-  background: var(--surface-bg);
+  padding: $space-6;
+  border: 1px solid color-mix(in srgb, var(--border) 72%, #ffffff);
+  border-radius: calc(#{$radius-md} * 2);
+  background:
+    linear-gradient(145deg, color-mix(in srgb, var(--surface-bg) 96%, #ffffff), var(--surface-bg));
+  box-shadow: 0 1.25rem 3rem color-mix(in srgb, #000000 32%, transparent);
   box-sizing: border-box;
 }
 
 .auth-panel__title {
-  margin: 0 0 $space-2;
-  text-align: center;
-  font-size: 1.125rem;
-  font-weight: 700;
+  margin: 0 0 $space-3;
+  text-align: left;
+  font-size: clamp(1.75rem, 8vw, 2.25rem);
+  line-height: 1;
+  font-weight: 800;
   color: var(--text);
-  letter-spacing: -0.02em;
+  letter-spacing: -0.05em;
 }
 
 .auth-panel__hint {
-  margin: 0 0 $space-4;
-  text-align: center;
-  font-size: 0.8125rem;
+  margin: 0 0 $space-5;
+  text-align: left;
+  font-size: 0.9375rem;
   color: var(--text-muted);
-  line-height: 1.5;
+  line-height: 1.6;
 }
 
 .auth-panel__form {
@@ -44,7 +47,7 @@
 
 .auth-panel__label {
   font-size: 0.8125rem;
-  font-weight: 600;
+  font-weight: 700;
   color: var(--text);
 }
 
@@ -53,6 +56,8 @@
   margin: 0;
   display: block;
   font-size: 1rem;
+  border-radius: calc(#{$radius-md} + #{$space-1});
+  background: color-mix(in srgb, var(--body-bg) 84%, var(--surface-bg));
 }
 
 .auth-panel__error {
@@ -65,15 +70,18 @@
   margin-top: $space-1;
   width: 100%;
   min-height: $touch-target-comfortable;
-  font-weight: 600;
+  border-radius: 999px;
+  font-weight: 800;
   font-size: 0.9375rem;
   border-color: map.get($score-color, eagle);
   background: map.get($score-color, eagle);
   color: #fff;
+  box-shadow: 0 0.75rem 1.5rem color-mix(in srgb, map.get($score-color, eagle) 28%, transparent);
 
   &:hover:not(:disabled) {
     border-color: color-mix(in srgb, map.get($score-color, eagle) 82%, #000);
     background: color-mix(in srgb, map.get($score-color, eagle) 90%, #000);
+    box-shadow: 0 1rem 2rem color-mix(in srgb, map.get($score-color, eagle) 34%, transparent);
   }
 
   &:disabled {
@@ -82,12 +90,12 @@
 }
 
 .auth-panel__toggle {
-  margin-top: $space-3;
+  margin-top: $space-4;
   width: 100%;
   min-height: $touch-target-min;
-  border-radius: $radius-sm;
+  border-radius: 999px;
   border: 1px solid var(--border);
-  background: transparent;
+  background: color-mix(in srgb, var(--surface-bg) 78%, transparent);
   color: var(--text-muted);
   font-size: 0.875rem;
 
@@ -100,8 +108,10 @@
 
 [data-theme='light'] {
   .auth-panel {
-    background: var(--surface-bg);
-    border-color: var(--border);
+    background:
+      linear-gradient(145deg, #ffffff, color-mix(in srgb, var(--surface-bg) 92%, var(--body-bg)));
+    border-color: color-mix(in srgb, var(--border) 82%, #ffffff);
+    box-shadow: 0 1.25rem 3rem color-mix(in srgb, #94a3b8 24%, transparent);
   }
 
   .auth-panel__title,

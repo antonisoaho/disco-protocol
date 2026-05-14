@@ -113,25 +113,32 @@
   display: flex;
   flex-direction: column;
   justify-content: center;
-  padding-block: $space-5;
+  padding-block: $space-8;
+  background:
+    radial-gradient(circle at 50% 8%, color-mix(in srgb, map.get($score-color, eagle) 18%, transparent) 0 16rem, transparent 26rem),
+    linear-gradient(180deg, color-mix(in srgb, var(--surface-bg) 36%, transparent), transparent 42%),
+    var(--body-bg);
 }
 
 .app-shell__signed-out {
   width: 100%;
-  max-width: 22rem;
+  max-width: 24rem;
   margin-inline: auto;
   display: flex;
   flex-direction: column;
   align-items: stretch;
-  gap: $space-4;
+  gap: $space-3;
   box-sizing: border-box;
 }
 
 .app-shell__signed-out-intro {
   margin: 0;
   text-align: center;
-  font-size: 0.9375rem;
+  font-size: 0.8125rem;
+  font-weight: 700;
   line-height: 1.5;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
   color: var(--text-muted);
 }
 

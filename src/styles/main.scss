@@ -2,6 +2,7 @@
 @use 'variables' as *;
 @use 'mixins' as *;
 @use 'blocks/app-shell';
+@use 'blocks/auth-panel';
 @use 'blocks/bottom-nav';
 @use 'blocks/dashboard-home';
 @use 'blocks/delta-area-chart';
