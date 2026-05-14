@@ -219,26 +219,10 @@
   min-height: $touch-target-comfortable;
   padding-inline: $space-3;
   white-space: nowrap;
-  background: transparent;
-  color: var(--text-muted);
-  border-color: transparent;
-
-  &:hover:not(:disabled) {
-    color: var(--text);
-    border-color: var(--border);
-    background: transparent;
-  }
 }
 
 .app-shell__retry-btn {
-  background: transparent;
-  color: var(--text-muted);
-  border-color: var(--border);
-
-  &:hover:not(:disabled) {
-    color: var(--text);
-    background: transparent;
-  }
+  min-height: $touch-target-comfortable;
 }
 
 .app-shell__intro {
@@ -267,14 +251,7 @@
 }
 
 .app-shell__profile-actions button {
-  background: transparent;
-  color: var(--text-muted);
-  border-color: var(--border);
-
-  &:hover:not(:disabled) {
-    color: var(--text);
-    background: transparent;
-  }
+  min-height: $touch-target-comfortable;
 }
 
 .app-shell__section-title {
@@ -430,28 +407,10 @@
     border-color: #d1d5db;
   }
 
-  .app-shell__retry-btn {
-    color: #6b7280;
-    background: transparent;
-    border-color: #d1d5db;
-
-    &:hover:not(:disabled) {
-      color: #111827;
-      background: transparent;
-    }
-  }
-
   .app-shell__section-title,
   .app-shell__profile-label { color: #111827; }
 
   .app-shell__profile-actions button {
-    color: #6b7280;
-    background: transparent;
-    border-color: #d1d5db;
-
-    &:hover:not(:disabled) {
-      color: #111827;
-      background: transparent;
-    }
+    min-height: $touch-target-comfortable;
   }
 }

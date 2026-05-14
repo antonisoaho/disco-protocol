@@ -44,9 +44,9 @@
   align-items: center;
   justify-content: center;
   border: 1px solid var(--border);
-  border-radius: $radius-sm;
-  background: var(--body-bg);
-  color: var(--text);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--surface-bg) 78%, transparent);
+  color: var(--text-muted);
   min-height: $touch-target-comfortable;
   padding: $space-2 $space-3;
   font-weight: 600;
@@ -103,7 +103,7 @@
 }
 
 .scoring-panel__button {
-  min-height: $touch-target-min;
+  min-height: $touch-target-comfortable;
 
   &:disabled {
     opacity: 0.55;
@@ -115,9 +115,18 @@
   }
 
   &--primary {
-    border-color: map.get($score-color, birdie);
-    background: map.get($score-color, birdie);
-    color: #fff;
+    border-radius: 999px;
+    border-color: map.get($score-color, eagle);
+    background: map.get($score-color, eagle);
+    color: #111827;
+    box-shadow: 0 0.75rem 1.5rem color-mix(in srgb, map.get($score-color, eagle) 28%, transparent);
+
+    &:hover:not(:disabled) {
+      border-color: color-mix(in srgb, map.get($score-color, eagle) 82%, #000);
+      background: color-mix(in srgb, map.get($score-color, eagle) 90%, #000);
+      color: #111827;
+      box-shadow: 0 1rem 2rem color-mix(in srgb, map.get($score-color, eagle) 34%, transparent);
+    }
   }
 
   &--active {
@@ -414,9 +423,9 @@
   min-height: $touch-target-min;
   padding: 0;
   border: 1px solid var(--border);
-  border-radius: $radius-sm;
-  background: var(--body-bg);
-  color: var(--text);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--surface-bg) 78%, transparent);
+  color: var(--text-muted);
   font-size: 1.75rem;
   font-weight: 700;
   line-height: 1;
@@ -492,9 +501,16 @@
 }
 
 .scoring-panel__button--danger {
+  border-radius: 999px;
   border-color: color-mix(in srgb, map.get($score-color, double-bogey-plus) 55%, var(--border));
   color: map.get($score-color, double-bogey-plus);
   background: color-mix(in srgb, map.get($score-color, double-bogey-plus) 8%, var(--body-bg));
+
+  &:hover:not(:disabled) {
+    border-color: map.get($score-color, double-bogey-plus);
+    color: color-mix(in srgb, map.get($score-color, double-bogey-plus) 82%, #ffffff);
+    background: color-mix(in srgb, map.get($score-color, double-bogey-plus) 12%, var(--body-bg));
+  }
 }
 
 .scoring-panel__hole-form {

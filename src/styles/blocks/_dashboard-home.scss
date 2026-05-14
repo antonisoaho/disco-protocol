@@ -81,19 +81,19 @@
   justify-content: center;
   min-height: $touch-target-comfortable;
   padding: $space-2 $space-4;
-  border-radius: $radius-md;
+  border-radius: 999px;
   font-size: 0.875rem;
   font-weight: 600;
   text-decoration: none;
-  color: var(--text);
-  background: color-mix(in srgb, var(--surface-bg) 70%, var(--body-bg));
+  color: var(--text-muted);
+  background: color-mix(in srgb, var(--surface-bg) 78%, transparent);
   border: 1px solid var(--border);
   transition: border-color 0.15s ease, color 0.15s ease, background 0.15s ease;
 
   &:hover {
-    border-color: color-mix(in srgb, map.get($score-color, birdie) 55%, var(--border));
-    color: map.get($score-color, birdie);
-    background: color-mix(in srgb, map.get($score-color, birdie) 10%, var(--surface-bg));
+    border-color: var(--text-muted);
+    color: var(--text);
+    background: color-mix(in srgb, var(--surface-bg) 55%, transparent);
   }
 
   &:focus-visible {
@@ -102,11 +102,11 @@
   }
 
   &:visited {
-    color: var(--text);
+    color: var(--text-muted);
   }
 
   &:hover:visited {
-    color: map.get($score-color, birdie);
+    color: var(--text);
   }
 }
 
@@ -116,12 +116,25 @@
   justify-content: center;
   min-height: $touch-target-comfortable;
   padding: $space-3 $space-5;
-  border-radius: $radius-md;
-  font-weight: 700;
+  border-radius: 999px;
+  font-weight: 800;
   text-decoration: none;
-  color: #fff;
-  background: map.get($score-color, birdie);
-  border: 1px solid color-mix(in srgb, map.get($score-color, birdie) 70%, #000);
+  color: #111827;
+  background: map.get($score-color, eagle);
+  border: 1px solid map.get($score-color, eagle);
+  box-shadow: 0 0.75rem 1.5rem color-mix(in srgb, map.get($score-color, eagle) 28%, transparent);
+
+  &:hover {
+    color: #111827;
+    background: color-mix(in srgb, map.get($score-color, eagle) 90%, #000);
+    border-color: color-mix(in srgb, map.get($score-color, eagle) 82%, #000);
+    box-shadow: 0 1rem 2rem color-mix(in srgb, map.get($score-color, eagle) 34%, transparent);
+  }
+
+  &:focus-visible {
+    outline: 2px solid map.get($score-color, eagle);
+    outline-offset: 2px;
+  }
 }
 
 .dashboard-home__rounds-head {
@@ -143,21 +156,21 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-height: $touch-target-min;
-  padding: $space-1 $space-3;
-  border-radius: $radius-sm;
+  min-height: $touch-target-comfortable;
+  padding: $space-2 $space-4;
+  border-radius: 999px;
   font-size: 0.8125rem;
   font-weight: 600;
   text-decoration: none;
   color: var(--text-muted);
-  background: transparent;
+  background: color-mix(in srgb, var(--surface-bg) 78%, transparent);
   border: 1px solid var(--border);
   transition: border-color 0.15s ease, color 0.15s ease, background 0.15s ease;
 
   &:hover {
-    color: map.get($score-color, birdie);
-    border-color: color-mix(in srgb, map.get($score-color, birdie) 45%, var(--border));
-    background: color-mix(in srgb, map.get($score-color, birdie) 8%, transparent);
+    color: var(--text);
+    border-color: var(--text-muted);
+    background: color-mix(in srgb, var(--surface-bg) 55%, transparent);
   }
 
   &:focus-visible {
@@ -170,7 +183,7 @@
   }
 
   &:hover:visited {
-    color: map.get($score-color, birdie);
+    color: var(--text);
   }
 }
 

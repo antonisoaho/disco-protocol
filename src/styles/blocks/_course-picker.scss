@@ -32,13 +32,15 @@
 }
 
 .course-picker__btn--danger {
+  border-radius: 999px;
   border-color: color-mix(in srgb, map.get($score-color, double-bogey-plus) 50%, transparent);
   color: map.get($score-color, double-bogey-plus);
-  background: transparent;
+  background: color-mix(in srgb, map.get($score-color, double-bogey-plus) 8%, var(--body-bg));
 
   &:hover:not(:disabled) {
     border-color: map.get($score-color, double-bogey-plus);
-    background: color-mix(in srgb, map.get($score-color, double-bogey-plus) 8%, var(--surface-bg));
+    color: color-mix(in srgb, map.get($score-color, double-bogey-plus) 82%, #ffffff);
+    background: color-mix(in srgb, map.get($score-color, double-bogey-plus) 12%, var(--surface-bg));
   }
 }
 
@@ -169,8 +171,8 @@
   align-items: center;
   justify-content: center;
   border: 1px solid var(--border);
-  border-radius: $radius-md;
-  background: var(--body-bg);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--surface-bg) 78%, transparent);
   color: var(--text-muted);
   font-size: 1rem;
   line-height: 1;

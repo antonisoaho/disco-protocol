@@ -86,19 +86,22 @@ button {
   align-items: center;
   justify-content: center;
   gap: $space-2;
-  min-height: $touch-target-min;
+  min-height: $touch-target-comfortable;
   padding: $space-2 $space-4;
   border: 1px solid var(--border);
-  border-radius: $radius-sm;
+  border-radius: 999px;
   font: inherit;
   font-size: 0.875rem;
-  color: var(--text);
-  background: var(--surface-bg);
+  font-weight: 600;
+  color: var(--text-muted);
+  background: color-mix(in srgb, var(--surface-bg) 78%, transparent);
   cursor: pointer;
-  transition: border-color 0.15s ease, background 0.15s ease, color 0.15s ease;
+  transition: border-color 0.15s ease, background 0.15s ease, color 0.15s ease, box-shadow 0.15s ease;
 
   &:hover:not(:disabled) {
     border-color: var(--text-muted);
+    color: var(--text);
+    background: color-mix(in srgb, var(--surface-bg) 55%, transparent);
   }
 
   &:disabled {

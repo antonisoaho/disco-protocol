@@ -78,14 +78,15 @@
   flex-shrink: 0;
 
   &--following {
-    background: transparent;
+    border-radius: 999px;
+    background: color-mix(in srgb, map.get($score-color, double-bogey-plus) 8%, var(--body-bg));
     color: var(--text-muted);
-    border-color: var(--border);
+    border-color: color-mix(in srgb, map.get($score-color, double-bogey-plus) 35%, var(--border));
 
     &:hover:not(:disabled) {
       color: map.get($score-color, double-bogey-plus);
       border-color: color-mix(in srgb, map.get($score-color, double-bogey-plus) 50%, transparent);
-      background: transparent;
+      background: color-mix(in srgb, map.get($score-color, double-bogey-plus) 12%, var(--body-bg));
     }
   }
 }
