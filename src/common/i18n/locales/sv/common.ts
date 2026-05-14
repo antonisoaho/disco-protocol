@@ -310,7 +310,6 @@ export const commonSv = {
       nextHoleAria: 'Nästa hål',
       currentHoleCaption: 'Hål',
       currentHoleInputAria: 'Aktuellt hål, 1–{{total}}',
-      holeOfTotal: '{{current}} / {{total}}',
       honorThrowFirst: '{{names}} honör',
       nextHoleCta: 'Nästa hål',
     },

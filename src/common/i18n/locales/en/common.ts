@@ -313,7 +313,6 @@ export const commonEn = {
       nextHoleAria: 'Next hole',
       currentHoleCaption: 'Hole',
       currentHoleInputAria: 'Current hole number, 1–{{total}}',
-      holeOfTotal: '{{current}} / {{total}}',
       honorThrowFirst: 'Honors: {{names}} (throw first)',
       nextHoleCta: 'Next hole',
     },

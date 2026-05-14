@@ -51,12 +51,7 @@ export function HoleStepper({
           <span aria-hidden="true">‹</span>
         </button>
         <label className="scoring-panel__hole-nav-input-label">
-          <div className="scoring-panel__hole-nav-input-head">
-            <span className="scoring-panel__hole-nav-input-caption">{t('scoring.stepper.currentHoleCaption')}</span>
-            <span className="scoring-panel__hole-nav-meta scoring-panel__hole-nav-meta--inline">
-              {t('scoring.stepper.holeOfTotal', { current: currentHole, total: safeHoleCount })}
-            </span>
-          </div>
+          <span className="scoring-panel__hole-nav-input-caption">{t('scoring.stepper.currentHoleCaption')}</span>
           <input
             className="scoring-panel__hole-nav-input"
             type="text"
