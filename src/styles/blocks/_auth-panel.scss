@@ -92,18 +92,7 @@
 .auth-panel__toggle {
   margin-top: $space-4;
   width: 100%;
-  min-height: $touch-target-min;
-  border-radius: 999px;
-  border: 1px solid var(--border);
-  background: color-mix(in srgb, var(--surface-bg) 78%, transparent);
-  color: var(--text-muted);
   font-size: 0.875rem;
-
-  &:hover:not(:disabled) {
-    color: var(--text);
-    border-color: var(--text-muted);
-    background: color-mix(in srgb, var(--surface-bg) 55%, transparent);
-  }
 }
 
 [data-theme='light'] {
@@ -123,14 +112,4 @@
     color: var(--text-muted);
   }
 
-  .auth-panel__toggle {
-    color: var(--text-muted);
-    border-color: var(--border);
-
-    &:hover:not(:disabled) {
-      color: var(--text);
-      border-color: var(--text-muted);
-      background: color-mix(in srgb, var(--body-bg) 65%, var(--surface-bg));
-    }
-  }
 }
