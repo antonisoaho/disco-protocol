@@ -1,6 +1,7 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import { VitePWA } from 'vite-plugin-pwa'
+import { fileURLToPath, URL } from 'node:url'
 
 // https://vite.dev/config/
 // PWA: vite-plugin-pwa (Workbox) precaches the shell; peer range may lag Vite majors — use npm --legacy-peer-deps until upstream widens peers.
@@ -51,4 +52,11 @@ export default defineConfig({
       },
     }),
   ],
+  resolve: {
+    alias: {
+      '@core': fileURLToPath(new URL('./src/core', import.meta.url)),
+      '@common': fileURLToPath(new URL('./src/common', import.meta.url)),
+      '@modules': fileURLToPath(new URL('./src/modules', import.meta.url)),
+    },
+  },
 })

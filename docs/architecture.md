@@ -13,43 +13,55 @@ A **mobile-first** social web application for disc golf: users log **hole-by-hol
 | App shell | React 19 + TypeScript + Vite |
 | Backend | Firebase Authentication, Cloud Firestore, Firebase Hosting |
 | Offline | Service Worker (PWA): cache shell + queue writes for scoring where safe |
-| Styling | SCSS, **BEM** naming (`.block__element--modifier`), tokens in `src/styles/_variables.scss` |
+| Styling | SCSS, **BEM** naming (`.block__element--modifier`), tokens in `src/common/styles/_variables.scss` |
 | Collaboration | Git **worktrees** per issue; branch `issue/<N>` |
 
-## 3. Core domain rules
+## 3. Source layout
 
-### 3.1 Users and social graph
+Application source is organized by responsibility:
+
+- `src/core` contains app infrastructure and shared application contracts: route composition, auth/session wiring, Firebase primitives, domain models, and shared user/domain services.
+- `src/common` contains reusable code that is not owned by one product route: shared UI components, UI-independent helpers, hooks, i18n, theme, styles, and assets.
+- `src/modules` contains route-owned vertical slices. Each top-level module represents a route-level product area, and each primary route view is named `<folderName>View.tsx`; when a module owns multiple route screens, additional view files are named by route intent.
+
+Module folders may add `components/`, `hooks/`, `helpers/`, `data/`, and `domain/` only when those boundaries are useful. Modules can import from `@core/*`, `@common/*`, and their own local files, but must not import from another module. If reuse between modules is needed, promote the reused code into `src/common` for generic UI/helpers or `src/core` for app infrastructure, domain models, Firebase primitives, or shared domain services before importing it.
+
+Cross-bucket imports should use aliases (`@core/*`, `@common/*`, `@modules/*`) instead of deep relative paths.
+
+## 4. Core domain rules
+
+### 4.1 Users and social graph
 
 - Each authenticated user has a profile document (display name, avatar, optional bio, privacy flags).
 - **Following** is directional: `followerId` follows `followeeId`. Denormalize follower counts only if needed for read performance; source of truth is edge documents or subcollections (Worker decision with Planner review).
 - **Timeline**: default feed is rounds from users the current user follows, ordered by round start or last activity (Worker defines pagination and indexes).
 
-### 3.2 Rounds
+### 4.2 Rounds
 
 - A **round** belongs to one **course template** snapshot (see courses) and one **layout** instance (hole count, order, tees if modeled).
 - **Hole-by-hole** data: per hole store strokes, par at time of play (denormalized from template), optional lie/notes; **timestamps** per hole update or round-level `startedAt` / `completedAt`.
 - **Visibility (v1 product)**: completed rounds (and round history used for stats) are **listed on the player’s dashboard** for anyone who can view that profile; richer private/unlisted modes stay a later deliverable unless security review requires a minimum gate sooner.
 
-### 3.3 Shared rounds
+### 4.3 Shared rounds
 
 - Multiple **registered** users in the same round reference the same `roundId` (or shared session id that merges into one round document set).
 - **Automatic appearance**: when user A adds user B as a participant with B’s consent (or join flow), updates propagate so the round appears on **each participant’s** dashboard/history without manual duplication.
 - **Concurrency**: Firestore transactions or batched writes for hole updates; conflict policy (last-write vs operational transform) is an implementation detail documented in the Scoring epic.
 
-### 3.4 Courses and templates
+### 4.4 Courses and templates
 
 - **Course** is a logical entity (name, location, organization). **Template** holds normalized holes: number, par, length (optional), notes.
 - **v1 product constraint — one layout per course**: each course has a **single** canonical template (fixed `holeCount` and hole sequence). There is no separate 9- vs 18-hole template pair for the same course id; if a real venue needs both lengths later, model them as **two courses** or bump schema in a later version. *Rationale*: simpler round setup (“existing course” never re-asks hole count) and simpler queries; trade-off is less fidelity to multi-layout venues until explicitly extended.
 - If official data is missing, users may enter **par/length** during play; on **completion**, the system proposes or saves a **normalized template** (Planner-approved rules for deduplication and moderation).
 - **Admin-only**: delete course, rename canonical course fields, or merge duplicates. Enforce via **Custom Claims** + Security Rules.
 
-### 3.5 Analytics
+### 4.5 Analytics
 
 - **Head-to-head**: win/loss/ties filtered to rounds where both users participated (same event or overlapping course/day—Worker defines matching rules).
 - **± par**: aggregate and trends per user, per course template, date range.
 - **Hole-by-hole**: compare average strokes vs par per hole for two users or vs field (expensive queries → precomputed aggregates or Cloud Functions).
 
-### 3.6 Score protocol (v1 baseline)
+### 4.6 Score protocol (v1 baseline)
 
 - Every round stores a **score protocol envelope**: `scoreProtocolVersion` + `holeCount` + `holeScores`.
 - `holeScores` remains a map keyed by canonical decimal hole strings (`"1"`, `"2"`, ...). Each hole entry must include integer `strokes` and integer `par` snapshot.
@@ -57,7 +69,7 @@ A **mobile-first** social web application for disc golf: users log **hole-by-hol
 - Aggregation is protocol-driven: totals (`strokes`, `par`, `delta`) and missing-hole detection derive from normalized protocol data only (not UI assumptions).
 - **Extensibility rule**: future protocol changes are additive through explicit version bumps (`scoreProtocolVersion = 2+`) with dedicated normalization/validation adapters; clients must reject unknown versions until migration logic is implemented.
 
-## 4. Firestore data model (initial sketch)
+## 5. Firestore data model (initial sketch)
 
 Names are indicative; Workers normalize to consistent `camelCase` and collection IDs.
 
@@ -73,24 +85,24 @@ Names are indicative; Workers normalize to consistent `camelCase` and collection
 
 Security rules must enforce: only participants and owner mutate scores; only admins mutate canonical course delete/rename; reads respect visibility and blocks.
 
-## 5. Authentication and authorization
+## 6. Authentication and authorization
 
 - Email/password, OAuth providers as needed (Worker).
 - **Admin**: Firebase Auth custom claims `admin: true`; Firestore rules gate destructive course operations. No admin UI in main workspace until Auth + Course epics allow.
 
-## 6. PWA and offline scoring
+## 7. PWA and offline scoring
 
 - **Service Worker** (Vite PWA plugin or Workbox—Worker choice): precache app shell; runtime cache for static assets.
 - **Offline scoring**: queue hole updates locally (IndexedDB or Firestore persistence); sync when online. Document conflict handling in Scoring epic.
-- **Manifest**: name, icons, `display`, theme color aligned with `src/styles/_variables.scss`.
+- **Manifest**: name, icons, `display`, theme color aligned with `src/common/styles/_variables.scss`.
 
-## 7. UI architecture
+## 8. UI architecture
 
 - **Mobile-first** breakpoints use tokens in `_variables.scss` and mixins in `_mixins.scss`.
 - **BEM** for components: e.g. `.scorecard`, `.scorecard__row`, `.scorecard__cell--birdie`.
 - **Score colors**: use semantic map `eagle | birdie | par | bogey | double-bogey-plus` (see `_variables.scss`); never hard-code score hues in TSX.
 
-## 8. Delivery process
+## 9. Delivery process
 
 1. Planner breaks work into GitHub Issues (epics below).
 2. Worker: `python3 scripts/agent_worker.py <N>`.
@@ -99,7 +111,7 @@ Security rules must enforce: only participants and owner mutate scores; only adm
 
 By default the **Planner** uses GitHub CLI to **review**, **fix** if needed, and **merge** when checks and criteria are satisfied—**without** requiring a formal GitHub PR approval step—unless repository policy blocks merge (see `.cursorrules`).
 
-## 9. Epic backlog (GitHub Issues)
+## 10. Epic backlog (GitHub Issues)
 
 | # | Epic |
 |---|------|

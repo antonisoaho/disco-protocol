@@ -35,7 +35,7 @@ Branch protection or permissions may require checks from specific actors, mandat
 - **Do not implement substantive changes in the main workspace.** The default clone is for planning, docs, and orchestration only. Substantive work includes application features, Firebase/integration logic, rules/security policy changes, CI/workflow edits, and test-suite changes (except a one-line typo fix). Implementation lands via PRs from worktrees.
 - **Do not bypass the worktree workflow** for substantive app changes—file or update an issue and assign work to a Worker.
 - Use **English** for issues, comments, code review notes, and documentation.
-- New user-visible UI strings must use i18n keys (no hardcoded English in JSX except dev-only/debug-only text). Store app translations under `src/i18n/locales/`.
+- New user-visible UI strings must use i18n keys (no hardcoded English in JSX except dev-only/debug-only text). Store app translations under `src/common/i18n/locales/`.
 
 ### Planner delegation guardrails
 
@@ -58,7 +58,7 @@ Branch protection or permissions may require checks from specific actors, mandat
 ## References
 
 - Master architecture: `docs/architecture.md`
-- Styles: `src/styles/` (BEM-oriented SCSS; semantic score tokens in `_variables.scss`)
+- Styles: `src/common/styles/` (BEM-oriented SCSS; semantic score tokens in `_variables.scss`)
 
 ## Additional guidance (Claude / `.claude`)
 
