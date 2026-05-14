@@ -30,6 +30,7 @@ describe('signed-out auth styles', () => {
     expect(authPanelStyles).toMatch(/\.auth-panel__field\s*\{[\s\S]*flex-direction:\s*column;/)
     expect(authPanelStyles).toMatch(/\.auth-panel__submit\s*\{[\s\S]*width:\s*100%;/)
     expect(authPanelStyles).toMatch(/\.auth-panel__submit\s*\{[\s\S]*border-radius:\s*999px;/)
+    expect(authPanelStyles).toMatch(/\.auth-panel__submit\s*\{[\s\S]*color:\s*#111827;/)
   })
 
   it('gives the signed-out page a distinct centered surface behind the auth card', () => {

@@ -75,7 +75,7 @@
   font-size: 0.9375rem;
   border-color: map.get($score-color, eagle);
   background: map.get($score-color, eagle);
-  color: #fff;
+  color: #111827;
   box-shadow: 0 0.75rem 1.5rem color-mix(in srgb, map.get($score-color, eagle) 28%, transparent);
 
   &:hover:not(:disabled) {
