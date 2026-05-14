@@ -194,15 +194,12 @@ export const commonSv = {
     tabs: {
       scorecard: 'Scorecard',
       participants: 'Deltagare',
-      analytics: 'Analys',
-      follow: 'Följ',
     },
     sections: {
       startRound: 'Starta en runda',
       yourRounds: 'Dina rundor',
       holeByHole: 'Hål-för-hål-poäng',
       roundParticipants: 'Rundans deltagare',
-      analyticsStrip: 'Analysöversikt',
     },
     buttons: {
       savedCourse: 'Sparad bana',
@@ -291,18 +288,10 @@ export const commonSv = {
       addParticipants: 'Lägg till deltagare',
       searchUsersPlaceholder: 'Sök spelare via namn',
       addSelectedParticipants: 'Lägg till spelare',
-    },
-    analytics: {
-      empty: 'Slutför och poängsätt minst en runda för att låsa upp +/-par-analys.',
-      completedRoundsSummary:
-        'Avslutade rundor: {{completedRounds}} · poängsatta rundor: {{scoredRounds}} · poängsatta hål: {{scoredHoles}}',
-      deltaLabel: '+/- par:',
-      deltaFromTotals: 'från {{totalStrokes}} kast / {{totalPar}} par',
-      headToHeadOpponent: 'Head-to-head-motståndare',
-      headToHeadLabel: 'Head-to-head:',
-      acrossComparableRounds: 'över {{comparedRounds}} jämförbara rundor',
-      skippedRoundsReason: '{{skippedRounds}} hoppades över p.g.a. ofullständiga/ej matchande scorecards',
-      addRoundsToUnlock: 'Lägg till och slutför rundor med andra deltagare för att låsa upp head-to-head-analys.',
+      replaceIntro:
+        'Välj ett registrerat konto som tar platsen. Redan inlagda hålpoäng flyttas till den nya spelaren.',
+      replaceSearchLabel: 'Sök ersättningsspelare',
+      replaceSearchPlaceholder: 'Sök via visningsnamn',
     },
     stepper: {
       navigateHoleGroupAria: 'Hålnavigation',
@@ -437,6 +426,17 @@ export const commonSv = {
     viewAllRounds: 'Alla rundor',
     noRoundsYet: 'Inga rundor ännu. Starta en med knappen ovan.',
     browseCourses: 'Utforska banor',
+    headToHeadTitle: 'Du mot {{name}}',
+    headToHeadSectionAria: 'Gemensamma avslutade rundor mot {{name}}',
+    headToHeadStatsAria: 'Vinster, oavgjorda och förluster utifrån ditt perspektiv',
+    headToHeadWins: 'Dina vinster',
+    headToHeadTies: 'Oavgjort',
+    headToHeadLosses: 'Dina förluster',
+    headToHeadEmpty: 'Inga avslutade rundor tillsammans ännu.',
+    headToHeadNoComparable:
+      'Ni har avslutat rundor tillsammans, men inga gick att jämföra än (ofullständiga eller olika scorekort).',
+    headToHeadCompared: 'Baserat på {{count}} jämförbara rundor.',
+    headToHeadSkipped: '{{count}} rundor hoppades över (ofullständiga eller olika scorekort).',
   },
   rounds: {
     new: {

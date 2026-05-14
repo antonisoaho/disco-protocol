@@ -192,15 +192,12 @@ export const commonEn = {
     tabs: {
       scorecard: 'Scorecard',
       participants: 'Participants',
-      analytics: 'Analytics',
-      follow: 'Follow',
     },
     sections: {
       startRound: 'Start a round',
       yourRounds: 'Your rounds',
       holeByHole: 'Hole-by-hole scoring',
       roundParticipants: 'Round participants',
-      analyticsStrip: 'Analytics strip',
     },
     buttons: {
       savedCourse: 'Saved course',
@@ -294,18 +291,6 @@ export const commonEn = {
         'Choose a registered account to take this spot. Hole scores already entered move to the new player.',
       replaceSearchLabel: 'Search replacement player',
       replaceSearchPlaceholder: 'Search by display name',
-    },
-    analytics: {
-      empty: 'Finish and score at least one round to unlock +/-par analytics.',
-      completedRoundsSummary:
-        'Completed rounds: {{completedRounds}} · scored rounds: {{scoredRounds}} · scored holes: {{scoredHoles}}',
-      deltaLabel: '+/- par:',
-      deltaFromTotals: 'from {{totalStrokes}} strokes / {{totalPar}} par',
-      headToHeadOpponent: 'Head-to-head opponent',
-      headToHeadLabel: 'Head-to-head:',
-      acrossComparableRounds: 'across {{comparedRounds}} comparable rounds',
-      skippedRoundsReason: '{{skippedRounds}} skipped for incomplete/mismatched scorecards',
-      addRoundsToUnlock: 'Add and complete rounds with other participants to unlock head-to-head analytics.',
     },
     stepper: {
       navigateHoleGroupAria: 'Hole navigation',
@@ -440,6 +425,17 @@ export const commonEn = {
     viewAllRounds: 'All rounds',
     noRoundsYet: 'No rounds yet. Start one from the button above.',
     browseCourses: 'Browse courses',
+    headToHeadTitle: 'You vs {{name}}',
+    headToHeadSectionAria: 'Mutual completed rounds versus {{name}}',
+    headToHeadStatsAria: 'Win, tie, and loss counts from your perspective',
+    headToHeadWins: 'Your wins',
+    headToHeadTies: 'Ties',
+    headToHeadLosses: 'Your losses',
+    headToHeadEmpty: 'No completed rounds together yet.',
+    headToHeadNoComparable:
+      'You have finished rounds together, but none could be compared yet (incomplete or mismatched scorecards).',
+    headToHeadCompared: 'Based on {{count}} comparable rounds.',
+    headToHeadSkipped: '{{count}} rounds skipped (incomplete or mismatched scorecards).',
   },
   rounds: {
     new: {
