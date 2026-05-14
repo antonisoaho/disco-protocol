@@ -89,7 +89,7 @@ python3 scripts/cleanup.py 12
 
 ## Styling
 
-- **SCSS** under `src/styles/`: `_variables.scss` (semantic **score** colors), `_mixins.scss`, `main.scss`
+- **SCSS** under `src/common/styles/`: `_variables.scss` (semantic **score** colors), `_mixins.scss`, `main.scss`
 - **BEM** for UI components (`.block__element--modifier`)
 
 ## GitHub Actions secrets (CI)
@@ -126,7 +126,7 @@ gh secret set FIREBASE_SERVICE_ACCOUNT < path/to/serviceAccount.json
 
 ## Firebase (local)
 
-Copy [`.env.example`](.env.example) to **`.env.local`** and paste your Firebase web config (`VITE_*` keys). Vite only exposes variables prefixed with `VITE_`. The file is gitignored (`*.local`, `.env`, `.env.local`). Names match the Firebase console **Project settings → Your apps → Web app** SDK snippet (`apiKey` → `VITE_FIREBASE_API_KEY`, and so on); see [`src/firebase/app.ts`](src/firebase/app.ts).
+Copy [`.env.example`](.env.example) to **`.env.local`** and paste your Firebase web config (`VITE_*` keys). Vite only exposes variables prefixed with `VITE_`. The file is gitignored (`*.local`, `.env`, `.env.local`). Names match the Firebase console **Project settings → Your apps → Web app** SDK snippet (`apiKey` → `VITE_FIREBASE_API_KEY`, and so on); see [`src/core/firebase/app.ts`](src/core/firebase/app.ts).
 
 ### Authentication
 
@@ -154,7 +154,7 @@ gh secret set VITE_FIREBASE_STORAGE_BUCKET --body "your-project.appspot.com"
 gh secret set VITE_FIREBASE_MESSAGING_SENDER_ID --body "123456789012"
 gh secret set VITE_FIREBASE_APP_ID --body "1:123:web:abc"
 ```
-- **Profiles:** on first successful sign-in, the app creates `users/{uid}` in Firestore with `displayName`, `photoUrl`, `bio`, and `createdAt` (see `src/firebase/userProfile.ts`).
+- **Profiles:** on first successful sign-in, the app creates `users/{uid}` in Firestore with `displayName`, `photoUrl`, `bio`, and `createdAt` (see `src/core/users/userProfile.ts`).
 - **Security rules:** [`firestore.rules`](firestore.rules) restrict `users/{userId}` to the signed-in owner. Deploy with `firebase deploy --only firestore:rules` after `firebase login` and project selection.
 
 ### Admin (custom claims)

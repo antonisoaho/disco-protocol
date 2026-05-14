@@ -1,6 +1,6 @@
 # Course template normalization (round completion)
 
-This document describes how **user-supplied par and length** (when official template data is missing) flow into **normalized templates**, aligned with `docs/architecture.md` §3.4 and the Firestore sketch in §4.
+This document describes how **user-supplied par and length** (when official template data is missing) flow into **normalized templates**, aligned with `docs/architecture.md` §4.4 and the Firestore sketch in §5.
 
 ## Data placement
 
@@ -11,7 +11,7 @@ This document describes how **user-supplied par and length** (when official temp
 
 1. The player picks a `courseId` and `templateId`.
 2. For each hole, if the template row lacks `par` or `lengthMeters`, the client prompts and writes the missing fields into `rounds.{roundId}.holeOverrides[holeNumber]` (Firestore `update` with shallow merge on the map key).
-3. The active scorecard reads merged data via `mergeTemplateWithOverrides` in `src/courses/mergeTemplateWithOverrides.ts` so strokes vs par always use an effective par.
+3. The active scorecard reads merged data via `mergeTemplateWithOverrides` in `src/modules/courses/domain/mergeTemplateWithOverrides.ts` so strokes vs par always use an effective par.
 
 ## On round completion
 
