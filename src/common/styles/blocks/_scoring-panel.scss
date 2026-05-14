@@ -412,21 +412,22 @@
 .scoring-panel__hole-nav {
   display: flex;
   flex-direction: row;
-  align-items: stretch;
+  align-items: center;
   justify-content: center;
   gap: $space-2;
 }
 
 .scoring-panel__hole-nav-arrow {
   flex: 0 0 auto;
-  min-width: $touch-target-min;
-  min-height: $touch-target-min;
+  box-sizing: border-box;
+  width: $touch-target-min;
+  height: $touch-target-min;
   padding: 0;
   border: 1px solid var(--border);
-  border-radius: 999px;
+  border-radius: 50%;
   background: color-mix(in srgb, var(--surface-bg) 78%, transparent);
   color: var(--text-muted);
-  font-size: 1.75rem;
+  font-size: 1.5rem;
   font-weight: 700;
   line-height: 1;
   display: inline-flex;
@@ -452,12 +453,31 @@
   min-width: 0;
 }
 
+.scoring-panel__hole-nav-input-head {
+  display: flex;
+  flex-direction: row;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: $space-2;
+  width: 100%;
+  align-self: stretch;
+}
+
 .scoring-panel__hole-nav-input-caption {
   font-size: 0.7rem;
   font-weight: 600;
   letter-spacing: 0.04em;
   text-transform: uppercase;
   color: var(--text-muted);
+}
+
+.scoring-panel__hole-nav-meta--inline {
+  margin: 0;
+  font-size: 0.75rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-muted);
+  white-space: nowrap;
 }
 
 .scoring-panel__hole-nav-input {
@@ -477,13 +497,6 @@
   &:disabled {
     opacity: 0.55;
   }
-}
-
-.scoring-panel__hole-nav-meta {
-  margin: 0;
-  text-align: center;
-  font-size: 0.8rem;
-  color: var(--text-muted);
 }
 
 .scoring-panel__hole-honor {
