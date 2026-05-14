@@ -49,7 +49,7 @@ Use danger buttons for destructive or removal actions. Do not make destructive a
 CTA links may use button styling when they represent navigation actions. They should follow the same visual hierarchy:
 
 - Primary CTA links match primary buttons.
-- Secondary CTA links match secondary buttons.
+- Secondary CTA and back links match secondary buttons.
 - They keep `text-decoration: none`, visible focus rings, and visited color rules that do not create browser-default purple links.
 
 ### Exceptions

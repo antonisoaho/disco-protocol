@@ -321,8 +321,39 @@
   display: inline-flex;
   align-self: flex-start;
   align-items: center;
-  min-height: $touch-target-min;
+  justify-content: center;
+  gap: $space-2;
+  min-height: $touch-target-comfortable;
   margin-top: 0;
+  padding: $space-2 $space-4;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  text-decoration: none;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  background: color-mix(in srgb, var(--surface-bg) 78%, transparent);
+  transition: border-color 0.15s ease, background 0.15s ease, color 0.15s ease;
+
+  &:hover,
+  &:focus-visible {
+    border-color: var(--text-muted);
+    color: var(--text);
+    background: color-mix(in srgb, var(--surface-bg) 55%, transparent);
+  }
+
+  &:focus-visible {
+    outline: 2px solid map.get($score-color, eagle);
+    outline-offset: 2px;
+  }
+
+  &:visited {
+    color: var(--text-muted);
+  }
+
+  &:hover:visited {
+    color: var(--text);
+  }
 }
 
 .app-shell__code {
