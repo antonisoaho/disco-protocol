@@ -68,4 +68,13 @@ describe('shared button system styles', () => {
     expect(scoringPanelStyles).toMatch(/\.scoring-panel__button--danger\s*\{[\s\S]*border-radius:\s*999px;/)
     expect(scoringPanelStyles).toMatch(/\.scoring-panel__button--danger\s*\{[\s\S]*map\.get\(\$score-color, double-bogey-plus\)/)
   })
+
+  it('aligns control-like navigation links with the secondary button treatment', () => {
+    expect(appShellStyles).toMatch(/\.app-shell__link\s*\{[\s\S]*justify-content:\s*center;/)
+    expect(appShellStyles).toMatch(/\.app-shell__link\s*\{[\s\S]*min-height:\s*\$touch-target-comfortable;/)
+    expect(appShellStyles).toMatch(/\.app-shell__link\s*\{[\s\S]*border-radius:\s*999px;/)
+    expect(appShellStyles).toMatch(/\.app-shell__link\s*\{[\s\S]*text-decoration:\s*none;/)
+    expect(appShellStyles).toMatch(/\.app-shell__link\s*\{[\s\S]*background:\s*color-mix\(in srgb, var\(--surface-bg\) 78%, transparent\);/)
+    expect(dashboardHomeStyles).toMatch(/\.dashboard-home__back\s*\{[\s\S]*display:\s*inline-flex;/)
+  })
 })
